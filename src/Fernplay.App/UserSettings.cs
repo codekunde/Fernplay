@@ -40,6 +40,10 @@ public sealed class UserSettings
     public bool RememberPlaylist { get; set; } = true;
     /// <summary>Height of the playlist's list area in skin pixels.</summary>
     public double PlaylistHeight { get; set; } = Fernplay.Core.PlaylistHeight.Default;
+    /// <summary>Height of the playlist on a classic skin, in 29 px tiles (at least 2).</summary>
+    public int PlaylistTiles { get; set; } = Fernplay.Core.Skins.ClassicPlaylist.DefaultTiles;
+    /// <summary>Width of the playlist on a classic skin, in 25 px steps beyond 275.</summary>
+    public int PlaylistWidthSteps { get; set; }
     /// <summary>Skin scale the panel positions were saved at; 0 = before this was saved (2.0).</summary>
     public double Scale { get; set; }
 

@@ -2,11 +2,13 @@
 
 ## Unreleased
 
-- Classic skins (in progress: the player and equalizer panels so far): Fernplay reads classic skin files (`.wsz`, the 2.x format) and draws the player from them, pixel-sharp at 1x, 2x or 3x. Choose a skin in Settings (SKIN: CHOOSE SKIN…, FERNPLAY LOOK, SIZE) or drop a `.wsz` on the player; it is copied to the skins folder next to the settings and remembered. Fernplay ships no skins; its own look stays the default. A file that is not a usable skin says why in the title display.
+- Classic skins: Fernplay reads classic skin files (`.wsz`, the 2.x format) and draws the player, equalizer and playlist from them, pixel-sharp at 1x, 2x or 3x. Choose a skin in Settings (SKIN: CHOOSE SKIN…, FERNPLAY LOOK, SIZE) or drop a `.wsz` on the player; it is copied to the skins folder next to the settings and remembered. Fernplay ships no skins; its own look stays the default. A file that is not a usable skin says why in the title display.
 - Skinned equalizer: preamp and 10 band sliders whose colour follows the gain, ON, PRESETS and the curve graph in the skin's colours; AUTO is drawn but not active yet. Panels docked below move when the skin changes the equalizer's height.
+- Skinned playlist: the skin's frame, colours and font (PLEDIT.TXT), scroll knob and arrows, running time (selected/total), mini transport and clock. Button menus as on the classic player: ADD (folder, files; stream address not yet), REM (all, crop, selected, missing files), SEL (invert, none, all), MISC (drawn, not active yet), LIST (new, save, open). The bottom-right corner drags the height in 29 px steps and the width in 25 px steps (from 275; the skin's visualizer panel shows from 350), remembered. Drag-reorder, keys and screen-reader names work as in Fernplay's look.
 - Balance: a BAL slider on the player in Fernplay's own look and on classic skins, sharing one setting. Within 15 % of the centre it snaps there on a click, a key or when let go; the mouse wheel and arrow keys move it 10 % per notch, and a step away from the centre goes straight to 20 %.
 - Fernplay's own look: title bars show three thin, evenly spaced bars instead of fine grooves, sharp at 100 % scaling.
 - Space is always play/pause, also right after clicking a button (it used to press the clicked button again, so clicking Play and then Space restarted the track). Enter presses the focused button.
+- README: classic skins section, Space and Enter in the keys table, new screenshots of Fernplay's own look.
 - Track names read "03 - Artist - Title", or "Artist - Title" without a track number. A number written into the title tag ("03 - Title") moves to the front instead of showing twice; a title such as "1979" keeps its digits.
 
 ## 0.1.0 (2026-10-30)

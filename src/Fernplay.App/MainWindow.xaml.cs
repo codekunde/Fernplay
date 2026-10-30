@@ -193,6 +193,9 @@ public partial class MainWindow : SkinWindow
 
     // ================= Opening =================
 
+    /// <summary>The open dialog (eject), also used by the skinned playlist's mini transport.</summary>
+    public void OpenFilesDialog() => Open_Click(this, new RoutedEventArgs());
+
     private void Open_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFileDialog

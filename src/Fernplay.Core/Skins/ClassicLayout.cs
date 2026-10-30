@@ -116,6 +116,82 @@ public static class ClassicLayout
     }
 }
 
+/// <summary>
+/// The classic playlist window (PLEDIT.BMP): a 20 px title row, side tiles of 29 px, a 38 px bottom bar; 275 px wide
+/// or wider in 25 px steps. The list sits inside the frame. Parts of the bottom-right piece (150 px, always at the right
+/// edge) are given relative to it; Y positions in the bottom bar are from its top.
+/// </summary>
+public static class ClassicPlaylist
+{
+    public const int MinWidth = 275, WidthStep = 25, TopHeight = 20, BottomHeight = 38, TileHeight = 29, MinTiles = 2, DefaultTiles = 4;
+    public const int ListLeft = 12, ListRight = 20, BottomLeftWidth = 125, BottomRightWidth = 150, VisualizerWidth = 75, RowHeight = 13;
+
+    public static int Width(int widthSteps) => MinWidth + WidthStep * Math.Max(widthSteps, 0);
+    public static int Height(int tiles) => TopHeight + TileHeight * Math.Max(tiles, MinTiles) + BottomHeight;
+    public static int ListWidth(int width) => width - ListLeft - ListRight;
+    public static int BottomRightX(int width) => width - BottomRightWidth;
+
+    /// <summary>The title sprite (100 px) centred in the top row: x 88 at 275 px.</summary>
+    public static int TitleX(int width) => (width - 100 + 1) / 2;
+
+    /// <summary>The visualizer piece of the bottom bar, left of the bottom-right piece, once the window is wide enough (350 px).</summary>
+    public static int? VisualizerX(int width) =>
+        width - BottomRightWidth - VisualizerWidth >= BottomLeftWidth ? width - BottomRightWidth - VisualizerWidth : null;
+
+    /// <summary>Title row, from the right edge: close button (its normal look is part of the title sprite) and shade.</summary>
+    public const int CloseFromRight = 11, ShadeFromRight = 20, ButtonsY = 3;
+
+    /// <summary>Bottom bar menu buttons on the left piece (left edges; 22x18 at y 8).</summary>
+    public const int AddX = 13, RemX = 42, SelX = 71, MiscX = 100;
+    public const int ButtonY = 8, ButtonWidth = 22, ButtonHeight = 18;
+
+    // ----- In the bottom-right piece (x relative to it) -----
+
+    /// <summary>LIST OPTS button.</summary>
+    public const int ListX = 105;
+
+    /// <summary>Mini transport (previous, play, pause, stop, next, eject): hit areas, y 22, 9 tall.</summary>
+    public static readonly (int X, int W)[] MiniButtons = [(5, 8), (13, 10), (23, 10), (33, 9), (42, 9), (51, 9)];
+    public const int MiniButtonY = 22, MiniButtonHeight = 9;
+
+    /// <summary>Running time "selected/total" (TEXT.BMP font) and the mini clock either side of the colon drawn in the skin.</summary>
+    public static readonly (int X, int Y) RunningTime = (7, 10), MiniMinutes = (73, 23), MiniSeconds = (86, 23);
+    public const int RunningTimeChars = 14;
+
+    /// <summary>Scroll arrows and the resize grip (bottom-right corner).</summary>
+    public static readonly (int X, int Y) ScrollUp = (133, 1), ScrollDown = (133, 7), Grip = (130, 18);
+
+    /// <summary>The scroll knob runs in the right tile, 15 px from the right edge.</summary>
+    public const int ScrollFromRight = 15;
+
+    /// <summary>
+    /// Steps after dragging the grip by <paramref name="delta"/> skin px: whole steps of <paramref name="stepSize"/>,
+    /// between <paramref name="min"/> and <paramref name="max"/> (the screen edge).
+    /// </summary>
+    public static int StepsAfterDrag(int start, double delta, int stepSize, int min, int max) =>
+        Math.Clamp(start + (int)Math.Round(delta / stepSize), min, Math.Max(min, max));
+
+    /// <summary>Tiles after dragging the grip by <paramref name="dy"/> skin px: whole 29 px steps, at least 2, at most <paramref name="maxTiles"/>.</summary>
+    public static int TilesAfterDrag(int startTiles, double dy, int maxTiles) => StepsAfterDrag(startTiles, dy, TileHeight, MinTiles, maxTiles);
+
+    /// <summary>Width steps after dragging the grip by <paramref name="dx"/> skin px: whole 25 px steps, at least 0 (275 px).</summary>
+    public static int WidthStepsAfterDrag(int startSteps, double dx, int maxSteps) => StepsAfterDrag(startSteps, dx, WidthStep, 0, maxSteps);
+
+    /// <summary>"3:12/45:01": length of the selected tracks / of the whole list, minutes not wrapped; "+" when some lengths are unknown.</summary>
+    public static string RunningTimeText(TimeSpan selected, TimeSpan total, bool someUnknown)
+    {
+        static string M(TimeSpan t) => $"{(int)t.TotalMinutes}:{t.Seconds:00}";
+        return $"{M(selected)}/{M(total)}{(someUnknown ? "+" : "")}";
+    }
+
+    /// <summary>The mini clock's two boxes: minutes right-aligned in two characters (wrapping past 99), seconds.</summary>
+    public static (string Minutes, string Seconds) MiniClock(TimeSpan t)
+    {
+        long total = (long)Math.Abs(Math.Floor(t.TotalSeconds));
+        return (((total / 60) % 100).ToString().PadLeft(2), (total % 60).ToString("00"));
+    }
+}
+
 /// <summary>The folder of classic skins Fernplay knows (one .wsz per skin) and copying new ones into it.</summary>
 public sealed class SkinLibrary(string folder)
 {

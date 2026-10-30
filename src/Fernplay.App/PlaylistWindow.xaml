@@ -3,7 +3,56 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Fernplay.App"
         Title="Fernplay playlist" ShowInTaskbar="False" AllowDrop="True" DragOver="Window_DragOver" Drop="Window_Drop">
-    <Border Width="280" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
+    <local:SkinWindow.Resources>
+        <!-- Rows on a classic skin: PLEDIT.TXT colours and font, set as PlNormal, PlCurrent, PlSelectedBg, PlFont on the list. -->
+        <Style x:Key="ClassicRowContainer" TargetType="ListBoxItem">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Row" Background="Transparent" Height="13" Padding="2,0,2,0">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource PlSelectedBg}" />
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsKeyboardFocused" Value="True" />
+                                    <Condition Property="local:FocusRing.Visible" Value="True" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource PlNormal}" />
+                                <Setter TargetName="Row" Property="BorderThickness" Value="0.5" />
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="ClassicRowText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource PlNormal}" />
+            <Setter Property="FontFamily" Value="{DynamicResource PlFont}" />
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource PlCurrent}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <DataTemplate x:Key="ClassicRowTemplate" DataType="{x:Type local:PlaylistRow}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding Length}" Style="{StaticResource ClassicRowText}" Margin="6,0,0,0" />
+                <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis" Style="{StaticResource ClassicRowText}" />
+            </DockPanel>
+        </DataTemplate>
+    </local:SkinWindow.Resources>
+    <Grid>
+    <!-- A classic skin (.wsz) is built in code into ClassicHost, and the list (ListHost) moves into its frame. -->
+    <ContentControl x:Name="ClassicHost" Focusable="False" Visibility="Collapsed" />
+    <Border x:Name="FernplayView" Width="280" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
         <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
         <StackPanel>
             <Grid x:Name="TitleBar" Height="10" Margin="2,2,2,0" Background="{StaticResource TitleRibs}">
@@ -145,4 +194,5 @@
             </Thumb>
         </StackPanel>
     </Border>
+    </Grid>
 </local:SkinWindow>

@@ -20,6 +20,45 @@ public sealed class ClassicLayoutTests
     }
 
     [Fact]
+    public void Playlist_height_grows_in_29_px_tiles_from_116()
+    {
+        Assert.Equal(116, ClassicPlaylist.Height(2));
+        Assert.Equal(116, ClassicPlaylist.Height(0)); // never below two tiles
+        Assert.Equal(174, ClassicPlaylist.Height(4));
+        Assert.Equal(243, ClassicPlaylist.ListWidth(275));
+        Assert.Equal(5, ClassicPlaylist.TilesAfterDrag(4, 20, 10));   // 20 px rounds to one tile
+        Assert.Equal(4, ClassicPlaylist.TilesAfterDrag(4, 14, 10));   // under half a tile: no change
+        Assert.Equal(2, ClassicPlaylist.TilesAfterDrag(4, -200, 10)); // at least two
+        Assert.Equal(6, ClassicPlaylist.TilesAfterDrag(4, 500, 6));   // not past the screen bottom
+    }
+
+    [Fact]
+    public void Playlist_width_grows_in_25_px_steps_with_the_parts_following_the_right_edge()
+    {
+        Assert.Equal(275, ClassicPlaylist.Width(0));
+        Assert.Equal(275, ClassicPlaylist.Width(-3));
+        Assert.Equal(400, ClassicPlaylist.Width(5));
+        Assert.Equal(125, ClassicPlaylist.BottomRightX(275));
+        Assert.Equal(250, ClassicPlaylist.BottomRightX(400));
+        Assert.Equal(88, ClassicPlaylist.TitleX(275));
+        Assert.Equal(150, ClassicPlaylist.TitleX(400));
+        Assert.Null(ClassicPlaylist.VisualizerX(325));      // no room yet
+        Assert.Equal(125, ClassicPlaylist.VisualizerX(350)); // right after the bottom-left piece
+        Assert.Equal(2, ClassicPlaylist.WidthStepsAfterDrag(0, 60, 10));  // 60 px rounds to two steps
+        Assert.Equal(0, ClassicPlaylist.WidthStepsAfterDrag(2, -400, 10)); // never narrower than 275
+        Assert.Equal(3, ClassicPlaylist.WidthStepsAfterDrag(0, 400, 3));   // not past the screen edge
+    }
+
+    [Fact]
+    public void Playlist_running_time_and_mini_clock()
+    {
+        Assert.Equal("0:00/0:00", ClassicPlaylist.RunningTimeText(TimeSpan.Zero, TimeSpan.Zero, false));
+        Assert.Equal("3:12/125:01+", ClassicPlaylist.RunningTimeText(TimeSpan.FromSeconds(192), TimeSpan.FromSeconds(7501), true));
+        Assert.Equal((" 1", "05"), ClassicPlaylist.MiniClock(TimeSpan.FromSeconds(65.9)));
+        Assert.Equal(("12", "00"), ClassicPlaylist.MiniClock(TimeSpan.FromMinutes(112)));
+    }
+
+    [Fact]
     public void Eq_slider_step_runs_from_green_at_the_bottom_to_red_at_the_top()
     {
         Assert.Equal(0, ClassicLayout.EqSliderStep(-12));

@@ -55,6 +55,9 @@ public partial class App : Application
         eq.ApplySkin(main.Skin, _settings.SkinSize);
         var playlist = new PlaylistWindow(c) { Owner = main };
         playlist.ListHeight = _settings.PlaylistHeight; // snapped to rows once shown and filled (below)
+        playlist.ClassicTiles = _settings.PlaylistTiles;
+        playlist.ClassicWidthSteps = _settings.PlaylistWidthSteps;
+        playlist.ApplySkin(main.Skin, _settings.SkinSize);
         // Positions saved at another skin scale no longer line up: stack the panels under the player again.
         bool sameScale = (_settings.Scale == 0 ? 2.0 : _settings.Scale) == SkinWindow.Scale;
         // Show to measure, then place: below the main panel unless a position was saved.
@@ -85,6 +88,8 @@ public partial class App : Application
             _settings.EqualizerVisible = eq.IsVisible;
             _settings.PlaylistVisible = playlist.IsVisible;
             _settings.PlaylistHeight = playlist.ListHeight;
+            _settings.PlaylistTiles = playlist.ClassicTiles;
+            _settings.PlaylistWidthSteps = playlist.ClassicWidthSteps;
             _settings.EqEnabled = eqSettings.Enabled;
             _settings.Preamp = eqSettings.Preamp;
             _settings.Bands = eqSettings.Bands;
