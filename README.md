@@ -8,7 +8,7 @@ Windows 10 (1607 or later) and 11, x64.
 
 ## The three panels
 
-- **Player:** 7-segment clock (click it for time left), spectrum analyser, scrolling title, kbps, kHz, mono/stereo, volume (mouse wheel works too), position bar, previous / play / pause / stop / next, open (right-click it for a folder), SHUFFLE, REPEAT (off, whole list, this track), and EQ / PL switches that show or hide the other panels.
+- **Player:** 7-segment clock (click it for time left), spectrum analyser, scrolling title, kbps, kHz, mono/stereo, volume and balance (the mouse wheel works on both; balance snaps back to the centre within 15 %), position bar, previous / play / pause / stop / next, open (right-click it for a folder), SHUFFLE, REPEAT (off, whole list, this track), and EQ / PL switches that show or hide the other panels.
 - **Equalizer:** ON switch, curve preview, preamp and 10 bands (60 Hz to 16 kHz, ±12 dB; bars turn from green to orange as they boost), PRESETS (Flat, Rock, Pop, Classical, Dance, Bass boost, Treble boost, Vocal). Changes apply live.
 - **Playlist:** tracks as "03 - Artist - Title" (or "Artist - Title" without a track number) with their length, the playing one highlighted; double-click or Enter plays, Delete or REM removes, ADD adds files or a folder, CLEAR empties it, LIST opens or saves a playlist file; total length in the corner. Drag tracks to reorder them (several at once), or use Alt+Up / Alt+Down. Drag the panel's bottom edge to show more or fewer rows.
 
@@ -47,11 +47,12 @@ Stream addresses (`http://` or `https://`) in a `.m3u`, `.m3u8` or `.pls` file, 
 | Key | Does |
 |---|---|
 | Z X C V B | Previous, play, pause, stop, next (in every panel) |
-| Space | Play / pause |
+| Space | Play / pause (in every panel, also right after clicking a button) |
+| Enter | Press the focused button; in the playlist, play the selected track |
 | Left / Right | Seek 5 s back or forward (player panel) |
 | Up / Down | Volume (player panel) |
 | Ctrl+O | Open files |
-| Enter, Delete | Play or remove the selected tracks (playlist) |
+| Delete | Remove the selected tracks (playlist) |
 | Alt+Up / Alt+Down | Move the selected tracks (playlist) |
 | Esc | Close Settings or About |
 
@@ -61,7 +62,7 @@ If the media keys do nothing while Fernplay plays, another program has taken the
 
 ## Settings
 
-![Fernplay settings: keep on top, snap panels, remember the playlist, open from Explorer](docs/screenshots/settings.png)
+![Fernplay settings: keep on top, snap panels, remember the playlist, open from Explorer, skin and skin size](docs/screenshots/settings.png)
 
 Open them from the Fernplay icon at the top left of the player (Settings…, About Fernplay, Exit).
 
@@ -69,8 +70,21 @@ Open them from the Fernplay icon at the top left of the player (Settings…, Abo
 - **Snap panels** to each other and to the screen edges.
 - **Remember the playlist** between runs.
 - **Open music and playlists from Explorer** (off by default, for the current user only, no admin rights): adds Fernplay to Open with and Default apps, gives the files it plays its file icon, and adds "Add to Fernplay playlist" (files and folders) and "Play in Fernplay" (folders) to the right-click menu. Untick it to remove everything again. **Make Fernplay the default player…** then opens Windows' own page for the choice.
+- **Skin:** CHOOSE SKIN… picks a classic skin file, FERNPLAY LOOK goes back to Fernplay's own drawing, SIZE sets 1x, 2x or 3x for skins (see below).
 
-Fernplay remembers the panel positions, which panels are shown, volume, EQ, shuffle, repeat, the playlist height, the playlist and station names in `%APPDATA%\CodeKunde\Fernplay\settings.json`. The `FERNPLAY_DATA` environment variable points it at another folder.
+Fernplay remembers the panel positions, which panels are shown, volume, balance, EQ, shuffle, repeat, the playlist size, the skin and its size, the playlist and station names in `%APPDATA%\CodeKunde\Fernplay\settings.json`. The `FERNPLAY_DATA` environment variable points it at another folder.
+
+## Classic skins
+
+Fernplay can wear classic player skins: the `.wsz` files made for the 2.x generation of skinnable players (many are still shared online). Choose one in Settings (CHOOSE SKIN…) or drop a `.wsz` on the player. Fernplay copies it into a `Skins` folder next to its settings and remembers it. Fernplay ships no skins; its own look stays the default.
+
+With a skin, all three panels are drawn from the skin's pictures, pixel-sharp at 1x, 2x or 3x:
+
+- **Player:** everything as above, plus the skin's balance slider.
+- **Equalizer:** preamp and bands whose colour follows the gain, ON, PRESETS and the curve in the skin's colours.
+- **Playlist:** the skin's frame, colours and font, scroll knob, selected/total running time, a small transport and clock, and the classic button menus: ADD (folder, files), REM (all, crop, selected, missing files), SEL (invert, none, all), LIST (new, save, open). Drag the bottom-right corner to make it taller (29 px steps) or wider (25 px steps).
+
+Not there yet: EQ AUTO, the MISC menu (sort, file info, options), adding a stream address from ADD, windowshade mode, window outlines and cursors from the skin. These are drawn but do nothing. A file that is not a usable skin is refused with the reason in the title display, and the current look stays.
 
 ## Build
 
@@ -92,12 +106,12 @@ Three parts in a chain, each replaceable on its own: **decoder → EQ → output
 
 | Folder | What |
 |---|---|
-| `src/Fernplay.Core` | No UI. `PlayerEngine` (load in the background, play, pause, stop, seek, volume, track end, stream titles), `Audio/` (`MediaFoundationDecoder`; `IcyMp3Decoder`, `IcyStream` and `IcyMetadata` for radio song titles; `Equalizer` and `EqualizerStage` (RBJ peaking biquads), `SpectrumTap` (FFT), `GainStage`, `WasapiAudioOutput`), `Playlist` (shuffle, repeat, remove, move, opening playlists), `M3u` and `Pls`, `PanelLayout` (snapping and docking maths), `PlaylistHeight`, `Track` and `TagReader` (Windows property system), `ShellRegistration` (Explorer entries under HKCU), `OpenRequest`, `PlaybackErrors`, `TimeFormat` |
-| `src/Fernplay.App` | `Fernplay.exe`, WPF: `Skin.xaml` (palette, buttons, sliders, menus, scroll bar, glyphs; all drawn, no bitmaps), `SkinControls` (7-segment clock, spectrum, marquee, EQ curve), `SkinWindow` (dragging, snapping), `MainWindow`, `EqWindow`, `PlaylistWindow`, `SettingsWindow`, `AboutWindow`, `PlayerController`, `MediaSession` (Windows media session through COM, no WinRT package), `SingleInstance`, `ShellNotify`, `FocusRing`, `UserSettings` |
+| `src/Fernplay.Core` | No UI. `PlayerEngine` (load in the background, play, pause, stop, seek, volume, track end, stream titles), `Audio/` (`MediaFoundationDecoder`; `IcyMp3Decoder`, `IcyStream` and `IcyMetadata` for radio song titles; `Equalizer` and `EqualizerStage` (RBJ peaking biquads), `SpectrumTap` (FFT), `GainStage`, `WasapiAudioOutput`), `Playlist` (shuffle, repeat, remove, move, opening playlists), `M3u` and `Pls`, `PanelLayout` (snapping and docking maths), `PlaylistHeight`, `Track` and `TagReader` (Windows property system), `ShellRegistration` (Explorer entries under HKCU), `OpenRequest`, `PlaybackErrors`, `TimeFormat`; `Skins/` (`ClassicSkin`: `.wsz` reader with size limits, own `BmpDecoder`, `SkinTextFiles` for PLEDIT/VISCOLOR/REGION, `SpriteMap`, `SkinFont`, `ClassicLayout` and `ClassicPlaylist` positions, `SkinLibrary`) |
+| `src/Fernplay.App` | `Fernplay.exe`, WPF: `Skin.xaml` (Fernplay's own look: palette, buttons, sliders, menus, scroll bar, glyphs; all drawn, no bitmaps), `SkinControls` (7-segment clock, spectrum, marquee, EQ curve), `SkinWindow` (dragging, snapping, docked panels following a size change), `MainWindow`, `EqWindow`, `PlaylistWindow` (each with a `.Classic.cs` part that builds the skinned view over the same controls), `Classic/` (sprite buttons, sliders, text, clock, spectrum, EQ graph), `SettingsWindow`, `AboutWindow`, `PlayerController`, `MediaSession` (Windows media session through COM, no WinRT package), `SingleInstance`, `ShellNotify`, `FocusRing`, `UserSettings` |
 | `tests/Fernplay.Tests` | xUnit tests; they write their own audio and use a fake output, so they need no sound card or network |
 
 Audio: [NAudio](https://github.com/naudio/NAudio) 3.2 (MIT), Media Foundation for decoding, Windows' MP3 codec (ACM) for radio stations with song titles, WASAPI shared mode for output (follows the default device when it changes). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-The look follows the classic skinned players in spirit; every part of it is Fernplay's own drawing. The screenshots show made-up demo tracks and a local test station.
+Fernplay's own look follows the classic skinned players in spirit; every part of it is Fernplay's own drawing. Classic skins are files the user supplies; the sprite positions follow the public classic skin layout as documented in Webamp's sprite table (MIT, see THIRD-PARTY-NOTICES). The screenshots show made-up demo tracks and a local test station.
 
 MIT licence. Copyright (c) 2026 CodeKunde.

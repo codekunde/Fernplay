@@ -10,7 +10,7 @@ using Track = Fernplay.Core.Track;
 
 namespace Fernplay.App;
 
-/// <summary>One line in the playlist: "03 - Title - Artist" and the length. Number = place in the list (1-based).</summary>
+/// <summary>One line in the playlist: "03 - Artist - Title" and the length. Number = place in the list (1-based).</summary>
 public sealed class PlaylistRow(int number, Track track) : INotifyPropertyChanged
 {
     private Track _track = track;
@@ -53,6 +53,19 @@ public partial class PlaylistWindow : SkinWindow
         _c.Playlist.ItemUpdated += (_, i) => { if (i < _rows.Count) _rows[i].Refresh(_c.Playlist.Tracks[i]); UpdateTotal(); };
         _c.Playlist.CurrentChanged += (_, _) => MarkCurrent();
         Rebuild();
+        // Classic skin: title bar state, sharp pixels, running time, mini clock, scroll knob.
+        Activated += (_, _) => ClassicActivation(true);
+        Deactivated += (_, _) => ClassicActivation(false);
+        DpiChanged += (_, _) => ApplyClassicScale();
+        List.SelectionChanged += (_, _) => UpdateRunningTime();
+        List.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((_, _) => SyncScroll()));
+        _miniClock.Tick += (_, _) => UpdateMiniClock();
+        // A skin applied before the window was shown could not reach the list's scroll bar yet.
+        List.Loaded += (_, _) =>
+        {
+            if (_classic is not null && ScrollBarOf(FindScroller()) is { } bar) bar.Visibility = Visibility.Collapsed;
+            SyncScroll();
+        };
     }
 
     private void Rebuild()
@@ -76,7 +89,11 @@ public partial class PlaylistWindow : SkinWindow
         }
     }
 
-    private void UpdateTotal() => TotalText.Text = _c.Playlist.Summary;
+    private void UpdateTotal()
+    {
+        TotalText.Text = _c.Playlist.Summary;
+        UpdateRunningTime();
+    }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Hide();
 

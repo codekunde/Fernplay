@@ -68,6 +68,7 @@ public partial class MainWindow
             UpdateState();
         });
         (_eq as EqWindow)?.ApplySkin(skin, _skinSize);
+        (_playlist as PlaylistWindow)?.ApplySkin(skin, _skinSize);
     }
 
     /// <summary>Applies a skin file: checks it, copies it into the skins folder, switches to it, remembers it.</summary>
