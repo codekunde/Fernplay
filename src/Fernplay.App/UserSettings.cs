@@ -30,6 +30,8 @@ public sealed class UserSettings
     public bool AlwaysOnTop { get; set; }
     public bool SnapPanels { get; set; } = true;
     public bool RememberPlaylist { get; set; } = true;
+    /// <summary>Height of the playlist's list area in skin pixels.</summary>
+    public double PlaylistHeight { get; set; } = Fernplay.Core.PlaylistHeight.Default;
     /// <summary>Skin scale the panel positions were saved at; 0 = before this was saved (2.0).</summary>
     public double Scale { get; set; }
 

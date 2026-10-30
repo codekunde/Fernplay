@@ -8,6 +8,28 @@ public readonly record struct Box(double Left, double Top, double Width, double 
 }
 
 /// <summary>
+/// Height of the playlist's list area (skin pixels), set by dragging the panel's bottom edge.
+/// It snaps to whole rows so no half-cut line shows at the bottom.
+/// </summary>
+public static class PlaylistHeight
+{
+    public const double Default = 116;
+    public const int MinRows = 4;
+
+    /// <param name="raw">Height the drag asks for.</param>
+    /// <param name="rowHeight">Height of one row.</param>
+    /// <param name="inset">Fixed part of the list area (its border).</param>
+    /// <param name="max">Tallest allowed (down to the bottom of the screen).</param>
+    public static double Snap(double raw, double rowHeight, double inset, double max)
+    {
+        if (rowHeight <= 0) return Math.Max(raw, inset);
+        int rows = (int)Math.Round((raw - inset) / rowHeight);
+        int maxRows = Math.Max(MinRows, (int)Math.Floor((max - inset) / rowHeight));
+        return Math.Clamp(rows, MinRows, maxRows) * rowHeight + inset;
+    }
+}
+
+/// <summary>
 /// How the player, EQ and playlist panels stick together: edges snap within a distance, and panels whose
 /// edges touch form a group that moves with the main panel.
 /// </summary>
