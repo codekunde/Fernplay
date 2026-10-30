@@ -37,7 +37,7 @@ public sealed class PlaylistAndFormatTests : IDisposable
         File.WriteAllText(single, "");
 
         var result = Playlist.ExpandPaths([sub.FullName, single, Path.Combine(_audio.Folder, "missing.mp3")])
-            .Select(Path.GetFileName).ToList();
+            .Select(e => Path.GetFileName(e.Path)).ToList();
 
         Assert.Equal(["01.FLAC", "02.mp3", "single.wav"], result);
     }

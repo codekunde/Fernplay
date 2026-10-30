@@ -123,7 +123,7 @@ public partial class MainWindow : SkinWindow
         if (!onPlayerPanel) return false;
         switch (key)
         {
-            case Key.Left or Key.Right when _c.Engine.IsLoaded:
+            case Key.Left or Key.Right when _c.Engine.IsLoaded && _c.Engine.CanSeek:
                 var to = _c.Engine.Position + TimeSpan.FromSeconds(key == Key.Left ? -5 : 5);
                 _c.Engine.Seek(to < TimeSpan.Zero ? TimeSpan.Zero : to > _c.Engine.Duration ? _c.Engine.Duration : to);
                 UpdateClock();
@@ -161,7 +161,7 @@ public partial class MainWindow : SkinWindow
     {
         if (_media is null) return;
         var t = _c.NowPlaying;
-        _media.SetTrack(t is null ? null : t.Title ?? System.IO.Path.GetFileNameWithoutExtension(t.Path), t?.Artist);
+        _media.SetTrack(t is null ? null : t.IsStream ? t.DisplayName : t.Title ?? System.IO.Path.GetFileNameWithoutExtension(t.Path), t?.Artist);
         _media.SetStatus(!_c.Engine.IsLoaded ? MediaSession.Status.Closed : _c.Engine.State switch
         {
             PlayState.Playing => MediaSession.Status.Playing,
@@ -309,7 +309,8 @@ public partial class MainWindow : SkinWindow
     {
         var duration = _c.Engine.Duration;
         var position = _seekDragging ? TimeSpan.FromSeconds(SeekSlider.Value) : _c.Engine.Position;
-        string text = _showRemaining ? TimeFormat.Clock(duration - position, remaining: true) : TimeFormat.Clock(position);
+        // A live station has no length: the clock always counts up.
+        string text = _showRemaining && _c.Engine.CanSeek ? TimeFormat.Clock(duration - position, remaining: true) : TimeFormat.Clock(position);
         // The clock blinks while paused, as the old players did.
         Clock.Visibility = _c.Engine.State == PlayState.Paused && (_frame / 15) % 2 == 1 ? Visibility.Hidden : Visibility.Visible;
         if (Clock.Text != text) Clock.Text = text;
@@ -354,7 +355,7 @@ public partial class MainWindow : SkinWindow
         NextButton.IsEnabled = hasList;
         PauseButton.IsEnabled = loaded && state != PlayState.Stopped;
         StopButton.IsEnabled = loaded && state != PlayState.Stopped;
-        SeekSlider.IsEnabled = loaded;
+        SeekSlider.IsEnabled = loaded && _c.Engine.CanSeek; // off for a live station
         UpdateClock();
         UpdateMediaSession();
     }

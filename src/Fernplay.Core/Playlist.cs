@@ -170,30 +170,39 @@ public sealed class Playlist
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".mp3", ".flac", ".wav", ".wma", ".m4a", ".aac" };
 
     /// <summary>
-    /// Expands files, folders (recursively, sorted by path) and .m3u/.m3u8 playlists (their entries, in order)
-    /// to playable files. Playlist entries that are missing or not playable are left out.
+    /// Expands files, folders (recursively, sorted by path; playlists inside folders are not opened, they
+    /// usually list the same songs), .m3u/.m3u8/.pls playlists (their entries, in order) and stream addresses
+    /// to playable entries. Playlist entries that are missing or not playable are left out.
     /// </summary>
-    public static IEnumerable<string> ExpandPaths(IEnumerable<string> paths)
+    public static IEnumerable<PlaylistEntry> ExpandPaths(IEnumerable<string> paths)
     {
         foreach (var p in paths)
         {
-            if (M3u.IsPlaylist(p) && File.Exists(p))
+            if (Track.IsStreamPath(p)) yield return new PlaylistEntry(p);
+            else if (IsPlaylistFile(p) && File.Exists(p))
             {
-                List<string> entries;
-                try { entries = M3u.Read(p); }
+                List<PlaylistEntry> entries;
+                try { entries = ReadPlaylistFile(p); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { continue; }
-                foreach (var f in entries.Where(f => File.Exists(f) && IsSupported(f))) yield return f;
+                foreach (var e in entries.Where(IsPlayable)) yield return e;
             }
             else if (Directory.Exists(p))
             {
                 IEnumerable<string> files;
                 try { files = Directory.EnumerateFiles(p, "*", SearchOption.AllDirectories).Where(IsSupported).Order(StringComparer.OrdinalIgnoreCase).ToList(); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { continue; }
-                foreach (var f in files) yield return f;
+                foreach (var f in files) yield return new PlaylistEntry(f);
             }
-            else if (File.Exists(p) && IsSupported(p)) yield return p;
+            else if (File.Exists(p) && IsSupported(p)) yield return new PlaylistEntry(p);
         }
     }
+
+    public static bool IsPlaylistFile(string path) => M3u.IsPlaylist(path) || Pls.IsPlaylist(path);
+
+    public static List<PlaylistEntry> ReadPlaylistFile(string path) => Pls.IsPlaylist(path) ? Pls.Read(path) : M3u.Read(path);
+
+    /// <summary>A stream, or a file that exists and Windows can decode.</summary>
+    public static bool IsPlayable(PlaylistEntry e) => e.IsStream || (File.Exists(e.Path) && IsSupported(e.Path));
 
     public static bool IsSupported(string path) => SupportedExtensions.Contains(Path.GetExtension(path));
 }

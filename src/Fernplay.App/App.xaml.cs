@@ -90,10 +90,13 @@ public partial class App : Application
             _settings.Repeat = c.Playlist.Repeat;
             _settings.Playlist = _settings.RememberPlaylist ? c.Playlist.Tracks.Select(t => t.Path).ToList() : [];
             _settings.CurrentIndex = _settings.RememberPlaylist ? c.Playlist.CurrentIndex : -1;
+            _settings.StationNames = _settings.RememberPlaylist
+                ? c.Playlist.Tracks.Where(t => t is { IsStream: true, Title: not null }).DistinctBy(t => t.Path).ToDictionary(t => t.Path, t => t.Title!)
+                : [];
             _settings.Save();
         };
 
-        if (request.Paths.Count == 0 || request.Add) c.Restore(_settings.Playlist, _settings.CurrentIndex);
+        if (request.Paths.Count == 0 || request.Add) c.Restore(_settings.Playlist, _settings.CurrentIndex, _settings.StationNames);
         if (request.Paths.Count > 0) Queue(request);
         _instance.Listen(r => Dispatcher.BeginInvoke(() => { Queue(r); BringToFront(main); }));
     }

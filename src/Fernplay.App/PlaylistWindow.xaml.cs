@@ -18,7 +18,7 @@ public sealed class PlaylistRow(int number, Track track) : INotifyPropertyChange
 
     public int Number { get; set; } = number;
     public string Text => _track.DisplayName;
-    public string Length => _track.Duration is { } d ? TimeFormat.Clock(d) : "";
+    public string Length => _track.IsStream ? "LIVE" : _track.Duration is { } d ? TimeFormat.Clock(d) : "";
     public string AccessibleName => (IsCurrent ? "Playing: " : "") + Text + (Length == "" ? "" : ", " + Length);
 
     public bool IsCurrent
@@ -283,7 +283,7 @@ public partial class PlaylistWindow : SkinWindow
 
     private void OpenList_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Open a playlist", Filter = "Playlists|*.m3u;*.m3u8|All files|*.*" };
+        var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Open a playlist", Filter = "Playlists|*.m3u;*.m3u8;*.pls|All files|*.*" };
         if (dialog.ShowDialog(this) == true) _ = _c.OpenAsync([dialog.FileName], replace: true);
     }
 
