@@ -27,6 +27,11 @@ public sealed class UserSettings
     public WindowPlace? PlaylistWindow { get; set; }
     public bool EqualizerVisible { get; set; } = true;
     public bool PlaylistVisible { get; set; } = true;
+    public bool AlwaysOnTop { get; set; }
+    public bool SnapPanels { get; set; } = true;
+    public bool RememberPlaylist { get; set; } = true;
+    /// <summary>Skin scale the panel positions were saved at; 0 = before this was saved (2.0).</summary>
+    public double Scale { get; set; }
 
     public static string FilePath { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CodeKunde", "Fernplay", "settings.json");

@@ -28,6 +28,7 @@ public partial class MainWindow : SkinWindow
         InitializeComponent();
         CarriesDocked = true;
         AttachDragHandle(TitleBar);
+        AppMenuIcon.Source = AppIcon.Frame(16);
 
         VolumeSlider.Value = Math.Round(settings.Volume * 100);
         _c.Engine.Volume = (float)settings.Volume;
@@ -59,6 +60,16 @@ public partial class MainWindow : SkinWindow
     }
 
     // ================= Title bar and panels =================
+
+    private void AppMenu_Click(object sender, RoutedEventArgs e)
+    {
+        AppMenu.PlacementTarget = AppMenuButton;
+        AppMenu.Placement = PlacementMode.Bottom;
+        AppMenu.IsOpen = true;
+    }
+
+    private void Settings_Click(object sender, RoutedEventArgs e) => new SettingsWindow(_settings) { Owner = this }.ShowDialog();
+    private void About_Click(object sender, RoutedEventArgs e) => new AboutWindow { Owner = this }.ShowDialog();
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void Close_Click(object sender, RoutedEventArgs e) => Close();

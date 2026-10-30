@@ -35,15 +35,16 @@
         <GradientStop Color="#1E2029" Offset="1" />
     </LinearGradientBrush>
 
-    <!-- Title bar ribbing: fine horizontal fern-green grooves. -->
+    <!-- Title bar ribbing: fine horizontal amber grooves. -->
     <DrawingBrush x:Key="TitleRibs" TileMode="Tile" Viewport="0,0,4,2" ViewportUnits="Absolute">
         <DrawingBrush.Drawing>
             <DrawingGroup>
-                <GeometryDrawing Brush="#3E7038" Geometry="M0,0 H4 V1 H0 Z" />
-                <GeometryDrawing Brush="#1F3A1D" Geometry="M0,1 H4 V2 H0 Z" />
+                <GeometryDrawing Brush="#8A7424" Geometry="M0,0 H4 V1 H0 Z" />
+                <GeometryDrawing Brush="#3B3112" Geometry="M0,1 H4 V2 H0 Z" />
             </DrawingGroup>
         </DrawingBrush.Drawing>
     </DrawingBrush>
+    <SolidColorBrush x:Key="TitleText" Color="#F2E19A" />
 
     <LinearGradientBrush x:Key="ButtonFace" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="#666B7C" Offset="0" />
@@ -305,12 +306,94 @@
         <Setter Property="SnapsToDevicePixels" Value="False" />
     </Style>
 
-    <!-- Context menus in the same colours. -->
+    <!--
+        Context menus (presets, open, add): own templates so the Fluent theme's icon column and accent colour
+        do not show. Amber LCD text on charcoal; the highlighted item is a solid amber bar with dark text.
+    -->
+    <Color x:Key="AmberColor">#E8C547</Color>
+    <SolidColorBrush x:Key="Amber" Color="{StaticResource AmberColor}" />
+
     <Style TargetType="ContextMenu">
-        <Setter Property="Background" Value="#22252E" />
-        <Setter Property="Foreground" Value="{StaticResource SkinText}" />
-        <Setter Property="BorderBrush" Value="#4A4F62" />
+        <Setter Property="Background" Value="#1A1C23" />
+        <Setter Property="Foreground" Value="{StaticResource Amber}" />
+        <Setter Property="BorderBrush" Value="#5A5F72" />
+        <Setter Property="BorderThickness" Value="1" />
         <Setter Property="FontFamily" Value="{StaticResource SkinFont}" />
         <Setter Property="FontSize" Value="12" />
+        <Setter Property="HasDropShadow" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" Padding="2" SnapsToDevicePixels="True">
+                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="Separator">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator"><Border Height="1" Margin="6,3" Background="#4A4F62" /></ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Check box with an amber LED (settings). -->
+    <Style x:Key="SkinCheck" TargetType="CheckBox">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource SkinFocus}" />
+        <Setter Property="Foreground" Value="{StaticResource SkinText}" />
+        <Setter Property="FontFamily" Value="{StaticResource SkinFont}" />
+        <Setter Property="FontSize" Value="6" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Border Width="6" Height="6" BorderBrush="{StaticResource Shadow}" BorderThickness="0.5" Background="#0E1014" VerticalAlignment="Center">
+                            <Rectangle x:Name="Led" Margin="1" Fill="#3A3214" />
+                        </Border>
+                        <ContentPresenter Margin="4,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="False" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Led" Property="Fill" Value="{StaticResource Amber}" />
+                            <Setter TargetName="Led" Property="Effect">
+                                <Setter.Value><DropShadowEffect Color="{StaticResource AmberColor}" BlurRadius="4" ShadowDepth="0" Opacity="0.9" /></Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="#FFFFFF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{StaticResource Amber}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="Bd" Background="Transparent" Padding="10,3,18,3" MinWidth="110" SnapsToDevicePixels="True">
+                        <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Amber}" />
+                            <Setter Property="Foreground" Value="#1A1C23" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 </ResourceDictionary>

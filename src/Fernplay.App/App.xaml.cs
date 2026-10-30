@@ -32,18 +32,22 @@ public partial class App : Application
 
         var eq = new EqWindow(c.Engine.Equalizer) { Owner = main };
         var playlist = new PlaylistWindow(c) { Owner = main };
+        // Positions saved at another skin scale no longer line up: stack the panels under the player again.
+        bool sameScale = (_settings.Scale == 0 ? 2.0 : _settings.Scale) == SkinWindow.Scale;
         // Show to measure, then place: below the main panel unless a position was saved.
         eq.Show();
-        Place(eq, _settings.Equalizer, new Point(main.Left, main.Top + main.ActualHeight));
+        Place(eq, sameScale ? _settings.Equalizer : null, new Point(main.Left, main.Top + main.ActualHeight));
         playlist.Show();
-        Place(playlist, _settings.PlaylistWindow, new Point(eq.Left, eq.Top + eq.ActualHeight));
+        Place(playlist, sameScale ? _settings.PlaylistWindow : null, new Point(eq.Left, eq.Top + eq.ActualHeight));
         if (!_settings.EqualizerVisible) eq.Hide();
         if (!_settings.PlaylistVisible) playlist.Hide();
         main.AttachPanels(eq, playlist);
+        ApplyWindowSettings(_settings);
         main.Activate();
 
         main.Closing += (_, _) =>
         {
+            _settings.Scale = SkinWindow.Scale;
             _settings.Main = new WindowPlace(main.Left, main.Top);
             _settings.Equalizer = new WindowPlace(eq.Left, eq.Top);
             _settings.PlaylistWindow = new WindowPlace(playlist.Left, playlist.Top);
@@ -54,8 +58,8 @@ public partial class App : Application
             _settings.Bands = eqSettings.Bands;
             _settings.Shuffle = c.Playlist.Shuffle;
             _settings.Repeat = c.Playlist.Repeat;
-            _settings.Playlist = c.Playlist.Tracks.Select(t => t.Path).ToList();
-            _settings.CurrentIndex = c.Playlist.CurrentIndex;
+            _settings.Playlist = _settings.RememberPlaylist ? c.Playlist.Tracks.Select(t => t.Path).ToList() : [];
+            _settings.CurrentIndex = _settings.RememberPlaylist ? c.Playlist.CurrentIndex : -1;
             _settings.Save();
         };
 
@@ -67,6 +71,14 @@ public partial class App : Application
     {
         _controller?.Dispose();
         base.OnExit(e);
+    }
+
+    /// <summary>Applies the options from the settings dialog to every panel.</summary>
+    public static void ApplyWindowSettings(UserSettings s)
+    {
+        SkinWindow.SnapEnabled = s.SnapPanels;
+        foreach (Window w in Current.Windows)
+            if (w is SkinWindow) w.Topmost = s.AlwaysOnTop;
     }
 
     /// <summary>Uses the saved position when it is still on a screen, otherwise the fallback.</summary>

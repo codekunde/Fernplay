@@ -10,14 +10,35 @@
         <CommandBinding Command="ApplicationCommands.Open" Executed="Open_Click" />
     </Window.CommandBindings>
 
-    <!-- Skin pixels, scaled 2x. -->
+    <!-- Skin pixels, scaled by SkinWindow.Scale. -->
     <Border Width="280" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
-        <Border.LayoutTransform><ScaleTransform ScaleX="2" ScaleY="2" /></Border.LayoutTransform>
+        <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
         <StackPanel>
             <!-- Title bar: drag handle -->
             <Grid x:Name="TitleBar" Height="10" Margin="2,2,2,0" Background="{StaticResource TitleRibs}">
+                <!-- App menu: settings and about (click or right-click). -->
+                <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Left" Padding="1,1">
+                    <Button x:Name="AppMenuButton" Width="8" Height="8" Click="AppMenu_Click" Cursor="Hand"
+                            FocusVisualStyle="{StaticResource SkinFocus}"
+                            ToolTip="Settings and about" AutomationProperties.Name="Fernplay menu">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="Transparent"><ContentPresenter /></Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <Image x:Name="AppMenuIcon" Width="8" Height="8" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <Button.ContextMenu>
+                            <ContextMenu x:Name="AppMenu">
+                                <MenuItem Header="Settings…" Click="Settings_Click" />
+                                <MenuItem Header="About Fernplay" Click="About_Click" />
+                                <Separator />
+                                <MenuItem Header="Exit" Click="Close_Click" />
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                </Border>
                 <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Center" Padding="5,0">
-                    <TextBlock Text="FERNPLAY" Style="{StaticResource SkinLabel}" Foreground="#C9E6BE" VerticalAlignment="Center" />
+                    <TextBlock Text="FERNPLAY" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" VerticalAlignment="Center" />
                 </Border>
                 <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Right" Padding="1,1">
                     <StackPanel Orientation="Horizontal">

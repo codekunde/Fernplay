@@ -14,6 +14,12 @@ public class SkinWindow : Window
 {
     private static readonly List<SkinWindow> Panels = [];
 
+    /// <summary>Screen pixels per skin pixel for every panel and dialog (1.7 = 476 px wide; was 2.0 until 0.1.x).</summary>
+    public const double Scale = 1.7;
+
+    /// <summary>Settings: snap to other panels and the screen edges while dragging.</summary>
+    public static bool SnapEnabled { get; set; } = true;
+
     private Point _dragStart;
     private List<(SkinWindow Window, double Left, double Top)>? _dragGroup;
 
@@ -52,7 +58,7 @@ public class SkinWindow : Window
             var moving = new Box(me.Left + dx, me.Top + dy, ActualWidth, ActualHeight);
             var others = Panels.Where(w => w.IsVisible && _dragGroup.All(g => g.Window != w)).Select(w => w.Box);
             var wa = SystemParameters.WorkArea;
-            var (sx, sy) = PanelLayout.SnapOffset(moving, others, new Box(wa.Left, wa.Top, wa.Width, wa.Height));
+            var (sx, sy) = SnapEnabled ? PanelLayout.SnapOffset(moving, others, new Box(wa.Left, wa.Top, wa.Width, wa.Height)) : (0, 0);
             foreach (var (w, l, t) in _dragGroup)
             {
                 w.Left = l + dx + sx;
@@ -77,7 +83,7 @@ public class SkinWindow : Window
     }
 
     private Box Box => new(Left, Top, ActualWidth, ActualHeight);
-    private static bool IsInsideButton(DependencyObject d, FrameworkElement stopAt)
+    internal static bool IsInsideButton(DependencyObject d, FrameworkElement stopAt)
     {
         for (var x = d; x is not null && x != stopAt; x = x is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(x) : LogicalTreeHelper.GetParent(x))
             if (x is System.Windows.Controls.Primitives.ButtonBase) return true;

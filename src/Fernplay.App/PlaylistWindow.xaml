@@ -4,11 +4,11 @@
         xmlns:local="clr-namespace:Fernplay.App"
         Title="Fernplay playlist" ShowInTaskbar="False" AllowDrop="True" DragOver="Window_DragOver" Drop="Window_Drop">
     <Border Width="280" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
-        <Border.LayoutTransform><ScaleTransform ScaleX="2" ScaleY="2" /></Border.LayoutTransform>
+        <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
         <StackPanel>
             <Grid x:Name="TitleBar" Height="10" Margin="2,2,2,0" Background="{StaticResource TitleRibs}">
                 <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Center" Padding="5,0">
-                    <TextBlock Text="FERNPLAY PLAYLIST" Style="{StaticResource SkinLabel}" Foreground="#C9E6BE" VerticalAlignment="Center" />
+                    <TextBlock Text="FERNPLAY PLAYLIST" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" VerticalAlignment="Center" />
                 </Border>
                 <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Right" Padding="1,1">
                     <Button x:Name="CloseButton" Style="{StaticResource TitleButton}" Content="x" Click="Close_Click"
