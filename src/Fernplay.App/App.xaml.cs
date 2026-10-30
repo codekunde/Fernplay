@@ -1,4 +1,7 @@
+using System.IO;
 using System.Windows;
+using System.Windows.Threading;
+using Fernplay.Core;
 
 namespace Fernplay.App;
 
@@ -6,12 +9,28 @@ public partial class App : Application
 {
     private PlayerController? _controller;
     private UserSettings _settings = new();
+    private SingleInstance? _instance;
+    private readonly OpenBatch _batch = new();
+    private DispatcherTimer? _batchTimer;
 
-    /// <summary>Arguments: music files or folders to play (Explorer's "Open with" passes them this way).</summary>
+    /// <summary>The exe and file icon Explorer is pointed at.</summary>
+    public static ShellRegistration Shell { get; } = ShellRegistration.ForCurrentUser(
+        Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Fernplay.exe"),
+        Path.Combine(AppContext.BaseDirectory, "Assets", "FernplayFile.ico"));
+
+    /// <summary>
+    /// Arguments: music files, folders or playlists to play; with /add they go to the end of the list
+    /// (Explorer's "Open", "Play in Fernplay" and "Add to Fernplay playlist" pass them this way).
+    /// </summary>
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        var request = OpenRequest.FromArgs(e.Args, Environment.CurrentDirectory);
+        _instance = SingleInstance.Claim(request);
+        if (_instance is null) { Shutdown(); return; } // handed to the running Fernplay
+
         FocusRing.Install();
+        KeepShellRegistrationCurrent();
         _settings = UserSettings.Load();
         var c = _controller = new PlayerController(Dispatcher);
         var eqSettings = c.Engine.Equalizer;
@@ -72,13 +91,53 @@ public partial class App : Application
             _settings.Save();
         };
 
-        if (e.Args.Length > 0) _ = c.OpenAsync(e.Args, replace: true);
-        else c.Restore(_settings.Playlist, _settings.CurrentIndex);
+        if (request.Paths.Count == 0 || request.Add) c.Restore(_settings.Playlist, _settings.CurrentIndex);
+        if (request.Paths.Count > 0) Queue(request);
+        _instance.Listen(r => Dispatcher.BeginInvoke(() => { Queue(r); BringToFront(main); }));
+    }
+
+    /// <summary>Gathers requests until 350 ms pass without a new one, then opens them as one batch.</summary>
+    private void Queue(OpenRequest request)
+    {
+        _batch.Add(request);
+        if (_batchTimer is null)
+        {
+            _batchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+            _batchTimer.Tick += async (_, _) =>
+            {
+                _batchTimer.Stop();
+                var (open, add) = _batch.Take();
+                if (_controller is null) return;
+                if (open.Count > 0) await _controller.OpenAsync(open, replace: true);
+                if (add.Count > 0) await _controller.OpenAsync(add, replace: false);
+            };
+        }
+        _batchTimer.Stop();
+        _batchTimer.Start();
+    }
+
+    private static void BringToFront(Window main)
+    {
+        if (main.WindowState == WindowState.Minimized) main.WindowState = WindowState.Normal;
+        main.Activate();
+    }
+
+    /// <summary>If Fernplay was set up for Explorer from another folder, point Explorer at this exe.</summary>
+    private static void KeepShellRegistrationCurrent()
+    {
+        try
+        {
+            if (!Shell.NeedsRefresh()) return;
+            Shell.Register();
+            ShellNotify.AssociationsChanged();
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException) { }
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
         _controller?.Dispose();
+        _instance?.Dispose();
         base.OnExit(e);
     }
 

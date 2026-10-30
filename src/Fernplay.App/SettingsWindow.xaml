@@ -22,8 +22,19 @@
                           Checked="Option_Changed" Unchecked="Option_Changed" />
                 <CheckBox x:Name="RememberCheck" Style="{StaticResource SkinCheck}" Content="Remember the playlist between runs" Margin="0,6,0,0"
                           Checked="Option_Changed" Unchecked="Option_Changed" />
-                <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5" Margin="10,9,0,0" TextWrapping="Wrap"
+                <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5" Margin="10,5,0,0" TextWrapping="Wrap"
                            Text="Changes apply at once and are saved when Fernplay closes." />
+
+                <Border Height="0.5" Background="#4A4F62" Margin="0,7,0,6" />
+                <TextBlock Text="EXPLORER" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" Margin="0,0,0,4" />
+                <CheckBox x:Name="ExplorerCheck" Style="{StaticResource SkinCheck}" Content="Open music and playlists from Explorer"
+                          Checked="Explorer_Changed" Unchecked="Explorer_Changed" />
+                <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5" Margin="10,3,0,0" TextWrapping="Wrap"
+                           Text="Adds Fernplay to Open with, and Add to Fernplay playlist to the right-click menu. For you only; untick to remove it again." />
+                <Button x:Name="DefaultButton" Style="{StaticResource SkinButton}" Content="MAKE FERNPLAY THE DEFAULT PLAYER…" Height="11" Padding="6,0"
+                        Margin="10,5,0,0" HorizontalAlignment="Left" Click="Default_Click"
+                        ToolTip="Opens Windows' own page: Windows lets only you choose the default app"
+                        AutomationProperties.Name="Make Fernplay the default player" />
                 <Button Style="{StaticResource SkinButton}" Content="CLOSE" Height="11" Padding="8,0" Margin="0,7,0,0" HorizontalAlignment="Right"
                         IsDefault="True" Click="Close_Click" AutomationProperties.Name="Close settings" />
             </StackPanel>

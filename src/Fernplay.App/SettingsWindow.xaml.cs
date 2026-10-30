@@ -5,7 +5,7 @@ namespace Fernplay.App;
 public partial class SettingsWindow : SkinDialog
 {
     private readonly UserSettings _settings;
-    private readonly bool _ready; // false while the constructor sets the boxes from the saved settings
+    private bool _ready; // false while the constructor (or a rollback) sets the boxes
 
     public SettingsWindow(UserSettings settings)
     {
@@ -15,8 +15,31 @@ public partial class SettingsWindow : SkinDialog
         OnTopCheck.IsChecked = settings.AlwaysOnTop;
         SnapCheck.IsChecked = settings.SnapPanels;
         RememberCheck.IsChecked = settings.RememberPlaylist;
+        ExplorerCheck.IsChecked = App.Shell.IsRegistered();
+        DefaultButton.IsEnabled = ExplorerCheck.IsChecked == true;
         _ready = true;
     }
+
+    // Checked/Unchecked rather than Click (see Option_Changed).
+    private void Explorer_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_ready) return;
+        bool on = ExplorerCheck.IsChecked == true;
+        try
+        {
+            if (on) App.Shell.Register(); else App.Shell.Unregister();
+            ShellNotify.AssociationsChanged();
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or System.IO.IOException)
+        {
+            _ready = false;
+            ExplorerCheck.IsChecked = App.Shell.IsRegistered();
+            _ready = true;
+        }
+        DefaultButton.IsEnabled = ExplorerCheck.IsChecked == true;
+    }
+
+    private void Default_Click(object sender, RoutedEventArgs e) => ShellNotify.OpenDefaultApps();
 
     // Checked/Unchecked rather than Click: Narrator and other UI Automation clients toggle without a click.
     private void Option_Changed(object sender, RoutedEventArgs e)
