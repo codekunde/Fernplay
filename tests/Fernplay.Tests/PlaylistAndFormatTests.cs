@@ -63,19 +63,23 @@ public sealed class PlaylistAndFormatTests : IDisposable
     [Fact]
     public void Display_name_uses_tags_then_the_file_name()
     {
-        Assert.Equal("Song - Artist", new Track(@"C:\m\x.mp3", "Song", "Artist", null, null, null).DisplayName);
+        Assert.Equal("Artist - Song", new Track(@"C:\m\x.mp3", "Song", "Artist", null, null, null).DisplayName);
         Assert.Equal("Song", new Track(@"C:\m\x.mp3", "Song", null, null, null, null).DisplayName);
         Assert.Equal("01 - Intro", new Track(@"C:\m\01 - Intro.mp3", " ", "Artist", null, null, null).DisplayName);
     }
 
     [Fact]
-    public void Display_name_is_track_number_title_artist()
+    public void Display_name_is_track_number_artist_title()
     {
-        Assert.Equal("03 - Inverted - Mark Absence", new Track("x.mp3", "Inverted", "Mark Absence", null, null, null, 3).DisplayName);
+        Assert.Equal("03 - Mark Absence - Inverted", new Track("x.mp3", "Inverted", "Mark Absence", null, null, null, 3).DisplayName);
         Assert.Equal("12 - Song", new Track("x.mp3", "Song", null, null, null, null, 12).DisplayName);
-        // The number is already in the title (as on the owner's album): not added twice.
-        Assert.Equal("03 - Inverted - Mark Absence", new Track("x.mp3", "03 - Inverted", "Mark Absence", null, null, null, 3).DisplayName);
-        Assert.Equal("03 - Inverted - Mark Absence", new Track("x.mp3", "03 - Inverted", "Mark Absence", null, null, null).DisplayName);
+        // The number is already in the title (as on the owner's album): moved to the front, not added twice.
+        Assert.Equal("03 - Mark Absence - Inverted", new Track("x.mp3", "03 - Inverted", "Mark Absence", null, null, null, 3).DisplayName);
+        Assert.Equal("03 - Mark Absence - Inverted", new Track("x.mp3", "03 - Inverted", "Mark Absence", null, null, null).DisplayName);
+        Assert.Equal("07 - Artist - Song", new Track("x.mp3", "7. Song", "Artist", null, null, null).DisplayName);
+        // A title that only starts with digits keeps them and still gets the tag number.
+        Assert.Equal("03 - Smashing Pumpkins - 1979", new Track("x.mp3", "1979", "Smashing Pumpkins", null, null, null, 3).DisplayName);
+        Assert.Equal("Blink-182 - 7 Years", new Track("x.mp3", "7 Years", "Blink-182", null, null, null).DisplayName);
         // M3U keeps the usual "Artist - Title".
         Assert.Equal("Mark Absence - Inverted", new Track("x.mp3", "Inverted", "Mark Absence", null, null, null, 3).ArtistTitle);
     }

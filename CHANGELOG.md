@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Track names read "03 - Artist - Title", or "Artist - Title" without a track number. A number written into the title tag ("03 - Title") moves to the front instead of showing twice; a title such as "1979" keeps its digits.
+
 ## 0.1.0 (2026-10-30)
 
 First release. Windows 10 (1607 or later) and 11, x64; needs the .NET 10 Desktop Runtime.

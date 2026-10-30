@@ -1,9 +1,10 @@
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 namespace Fernplay.Core;
 
 /// <summary>One file in the playlist, with what Windows knows about it.</summary>
-public sealed record Track(string Path, string? Title, string? Artist, string? Album, TimeSpan? Duration, int? BitrateKbps, int? TrackNumber = null)
+public sealed partial record Track(string Path, string? Title, string? Artist, string? Album, TimeSpan? Duration, int? BitrateKbps, int? TrackNumber = null)
 {
     /// <summary>An internet radio stream (http or https address) rather than a file.</summary>
     public bool IsStream => IsStreamPath(Path);
@@ -15,8 +16,8 @@ public sealed record Track(string Path, string? Title, string? Artist, string? A
     public static Track Stream(string url, string? name) => new(url, string.IsNullOrWhiteSpace(name) ? null : name.Trim(), null, null, null, null);
 
     /// <summary>
-    /// "03 - Title - Artist": track number (when tagged and the title does not already start with a number),
-    /// title, artist. The file name when there is no title.
+    /// "03 - Artist - Title"; "Artist - Title" without a track number. A title tagged "03 - Title" gives its
+    /// number when the tag has none and is never numbered twice. The file name when there is no title.
     /// </summary>
     public string DisplayName
     {
@@ -24,10 +25,21 @@ public sealed record Track(string Path, string? Title, string? Artist, string? A
         {
             if (string.IsNullOrWhiteSpace(Title)) return IsStream ? StreamLabel(Path) : System.IO.Path.GetFileNameWithoutExtension(Path);
             var title = Title!.Trim();
-            var name = TrackNumber is > 0 && !StartsWithNumber(title) ? $"{TrackNumber:00} - {title}" : title;
-            return string.IsNullOrWhiteSpace(Artist) ? name : $"{name} - {Artist!.Trim()}";
+            int? number = TrackNumber is > 0 ? TrackNumber : null;
+            var lead = LeadingNumber().Match(title);
+            if (lead.Success)
+            {
+                number ??= int.Parse(lead.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                title = lead.Groups[2].Value;
+            }
+            var name = string.IsNullOrWhiteSpace(Artist) ? title : $"{Artist!.Trim()} - {title}";
+            return number is > 0 ? $"{number:00} - {name}" : name;
         }
     }
+
+    /// <summary>"03 - Title", "03. Title", "3 – Title": a track number written into the title tag.</summary>
+    [GeneratedRegex(@"^(\d{1,3})\s*[-.–]\s+(\S.*)$")]
+    private static partial Regex LeadingNumber();
 
     /// <summary>"Artist - Title", the form other players expect in an M3U #EXTINF line.</summary>
     public string ArtistTitle =>
@@ -38,8 +50,6 @@ public sealed record Track(string Path, string? Title, string? Artist, string? A
     /// <summary>"stream.antenne.de/2000er-hits" for a station without a name.</summary>
     private static string StreamLabel(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var u) ? (u.Host + u.AbsolutePath).TrimEnd('/') : url;
-
-    private static bool StartsWithNumber(string s) => s.Length > 0 && char.IsAsciiDigit(s[0]);
 
     /// <summary>Reads tags through the Windows property system (the same data Explorer shows). Never throws.</summary>
     public static Track FromFile(string path)
