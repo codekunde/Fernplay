@@ -44,6 +44,11 @@ public sealed class UserSettings
     public int PlaylistTiles { get; set; } = Fernplay.Core.Skins.ClassicPlaylist.DefaultTiles;
     /// <summary>Width of the playlist on a classic skin, in 25 px steps beyond 275.</summary>
     public int PlaylistWidthSteps { get; set; }
+    /// <summary>The library window: shown at the last close, its place, its size in skin pixels (0 = default).</summary>
+    public bool LibraryVisible { get; set; }
+    public WindowPlace? Library { get; set; }
+    public double LibraryWidth { get; set; }
+    public double LibraryHeight { get; set; }
     /// <summary>Skin scale the panel positions were saved at; 0 = before this was saved (2.0).</summary>
     public double Scale { get; set; }
 
