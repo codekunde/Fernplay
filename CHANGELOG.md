@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-10-31)
+
+Same requirements as 0.1.0: Windows 10 (1607 or later) and 11, x64, with the .NET 10 Desktop Runtime.
 
 - Classic skins: Fernplay reads classic skin files (`.wsz`, the 2.x format) and draws the player, equalizer and playlist from them, pixel-sharp at 1x, 2x or 3x. Choose a skin in Settings (SKIN: CHOOSE SKIN…, FERNPLAY LOOK, SIZE) or drop a `.wsz` on the player; it is copied to the skins folder next to the settings and remembered. Fernplay ships no skins; its own look stays the default. A file that is not a usable skin says why in the title display.
 - Skinned equalizer: preamp and 10 band sliders whose colour follows the gain, ON, PRESETS and the curve graph in the skin's colours; AUTO is drawn but not active yet. Panels docked below move when the skin changes the equalizer's height.
