@@ -21,6 +21,8 @@ public sealed class UserSettings
     public RepeatMode Repeat { get; set; }
     public bool ShowRemaining { get; set; }
     public List<string> Playlist { get; set; } = [];
+    /// <summary>Names of the radio stations in <see cref="Playlist"/> (address → name).</summary>
+    public Dictionary<string, string> StationNames { get; set; } = [];
     public int CurrentIndex { get; set; } = -1;
     public WindowPlace? Main { get; set; }
     public WindowPlace? Equalizer { get; set; }

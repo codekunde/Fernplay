@@ -10,8 +10,12 @@ namespace Fernplay.App;
 public sealed class PlayerController : IDisposable
 {
     private readonly Dispatcher _ui;
-    private bool _busy;
+    private int _request; // the newest play request wins; older ones stop when they see a newer number
     private CancellationTokenSource? _tags;
+    private readonly List<DateTime> _reconnects = []; // recent automatic reconnects of the current station
+
+    private const int MaxReconnects = 3;
+    private static readonly TimeSpan ReconnectWindow = TimeSpan.FromMinutes(1);
 
     public PlayerController(Dispatcher ui)
     {
@@ -20,9 +24,35 @@ public sealed class PlayerController : IDisposable
         Engine.StateChanged += (_, _) => _ui.BeginInvoke(() => StateChanged?.Invoke(this, EventArgs.Empty));
         Engine.TrackEnded += (_, _) => _ui.BeginInvoke(async () =>
         {
+            // A radio stream never ends by itself: the station dropped the connection.
+            if (NowPlaying is { IsStream: true } station) { await ReconnectAsync(station, null); return; }
             if (Playlist.NextIndex(trackEnded: true) is { } next) await PlayIndexAsync(next, forward: true);
         });
-        Engine.PlaybackFailed += (_, ex) => _ui.BeginInvoke(() => SetStatus(PlaybackErrors.Describe(ex, Engine.CurrentPath ?? "")));
+        Engine.PlaybackFailed += (_, ex) => _ui.BeginInvoke(async () =>
+        {
+            if (NowPlaying is { IsStream: true } station) { await ReconnectAsync(station, ex); return; }
+            SetStatus(PlaybackErrors.Describe(ex, Engine.CurrentPath ?? ""));
+        });
+    }
+
+    /// <summary>The station dropped out: try again a few times, then say so.</summary>
+    private async Task ReconnectAsync(Track station, Exception? error)
+    {
+        var now = DateTime.UtcNow;
+        _reconnects.RemoveAll(t => now - t > ReconnectWindow);
+        if (_reconnects.Count >= MaxReconnects || Playlist.Current?.Path != station.Path)
+        {
+            SetStatus(error is null
+                ? $"Lost the connection to {station.DisplayName}. Press play to try again."
+                : PlaybackErrors.Describe(error, station.Path, station.DisplayName));
+            return;
+        }
+        _reconnects.Add(now);
+        int request = _request;
+        SetStatus($"Reconnecting to {station.DisplayName}…");
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        if (request != _request || Playlist.Current?.Path != station.Path) return; // the user moved on meanwhile
+        await PlayIndexAsync(Playlist.CurrentIndex, forward: true, reconnecting: true);
     }
 
     public PlayerEngine Engine { get; } = PlayerEngine.CreateDefault();
@@ -43,10 +73,10 @@ public sealed class PlayerController : IDisposable
     public async Task OpenAsync(IReadOnlyList<string> paths, bool replace)
     {
         var (files, missing) = await Task.Run(() => (Playlist.ExpandPaths(paths).ToList(), MissingInPlaylists(paths)));
-        var playlistName = paths.Where(M3u.IsPlaylist).Select(System.IO.Path.GetFileName).FirstOrDefault();
+        var playlistName = paths.Where(Playlist.IsPlaylistFile).Select(System.IO.Path.GetFileName).FirstOrDefault();
         if (files.Count == 0)
         {
-            var rejected = paths.FirstOrDefault(p => System.IO.File.Exists(p) && !Playlist.IsSupported(p) && !M3u.IsPlaylist(p));
+            var rejected = paths.FirstOrDefault(p => System.IO.File.Exists(p) && !Playlist.IsSupported(p) && !Playlist.IsPlaylistFile(p));
             if (playlistName is not null && rejected is null) { SetStatus($"None of the files in {playlistName} were found."); return; }
             SetStatus(rejected is not null
                 ? $"Can't play {System.IO.Path.GetFileName(rejected)}: Windows has no decoder for {System.IO.Path.GetExtension(rejected).TrimStart('.').ToUpperInvariant()} files. Fernplay plays MP3, FLAC, WAV, WMA and AAC (M4A)."
@@ -59,20 +89,22 @@ public sealed class PlayerController : IDisposable
             Playlist.Clear();
             SetNowPlaying(null);
         }
-        int first = Playlist.AddRange(files.Select(f => new Track(f, null, null, null, null, null)));
+        int first = Playlist.AddRange(files.Select(ToTrack));
         ReadTagsInBackground();
         if (replace) await PlayIndexAsync(first, forward: true);
         if (missing > 0)
             SetStatus($"{missing} {(missing == 1 ? "file" : "files")} in {playlistName} could not be found or played and {(missing == 1 ? "was" : "were")} left out.");
     }
 
-    /// <summary>Entries of the .m3u/.m3u8 files among paths that are missing or not playable.</summary>
+    private static Track ToTrack(PlaylistEntry e) => e.IsStream ? Track.Stream(e.Path, e.Title) : new Track(e.Path, null, null, null, null, null);
+
+    /// <summary>Entries of the playlist files among paths that are missing or not playable (streams count as playable).</summary>
     private static int MissingInPlaylists(IEnumerable<string> paths)
     {
         int n = 0;
-        foreach (var p in paths.Where(p => M3u.IsPlaylist(p) && System.IO.File.Exists(p)))
+        foreach (var p in paths.Where(p => Playlist.IsPlaylistFile(p) && System.IO.File.Exists(p)))
         {
-            try { n += M3u.Read(p).Count(f => !System.IO.File.Exists(f) || !Playlist.IsSupported(f)); }
+            try { n += Playlist.ReadPlaylistFile(p).Count(e => !Playlist.IsPlayable(e)); }
             catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { }
         }
         return n;
@@ -88,20 +120,22 @@ public sealed class PlayerController : IDisposable
         }
     }
 
-    /// <summary>Restores a saved list without playing it.</summary>
-    public void Restore(IEnumerable<string> paths, int current)
+    /// <summary>Restores a saved list without playing it. Station names come from <paramref name="stationNames"/> (address → name).</summary>
+    public void Restore(IEnumerable<string> paths, int current, IReadOnlyDictionary<string, string>? stationNames = null)
     {
-        Playlist.AddRange(paths.Where(System.IO.File.Exists).Select(f => new Track(f, null, null, null, null, null)));
+        Playlist.AddRange(paths
+            .Where(p => Track.IsStreamPath(p) || System.IO.File.Exists(p))
+            .Select(p => Track.IsStreamPath(p) ? Track.Stream(p, stationNames?.GetValueOrDefault(p)) : new Track(p, null, null, null, null, null)));
         if (current >= 0 && current < Playlist.Tracks.Count) Playlist.MoveTo(current);
         ReadTagsInBackground();
     }
 
-    /// <summary>Reads title, artist and length for every track without a title yet, in batches, off the UI thread.</summary>
+    /// <summary>Reads title, artist and length for every file without them yet, in batches, off the UI thread (never streams).</summary>
     private void ReadTagsInBackground()
     {
         _tags?.Cancel();
         var cts = _tags = new CancellationTokenSource();
-        var todo = Playlist.Tracks.Select((t, i) => (t.Path, i)).Where(x => Playlist.Tracks[x.i].Duration is null).ToList();
+        var todo = Playlist.Tracks.Select((t, i) => (t.Path, i)).Where(x => Playlist.Tracks[x.i] is { Duration: null, IsStream: false }).ToList();
         _ = Task.Run(() =>
         {
             foreach (var chunk in todo.Chunk(25))
@@ -116,40 +150,51 @@ public sealed class PlayerController : IDisposable
     // ================= Playing =================
 
     /// <summary>
-    /// Plays the track at index; if it cannot be opened, tries the next one in that direction
-    /// and says which file was skipped and why.
+    /// Plays the track at index; if a file cannot be opened, tries the next one in that direction and says
+    /// which file was skipped and why. A station that cannot be reached is not skipped: its message stays.
+    /// A newer request (another click while a station connects) takes over; this one then stops quietly.
     /// </summary>
-    public async Task PlayIndexAsync(int index, bool forward)
+    public async Task PlayIndexAsync(int index, bool forward, bool reconnecting = false)
     {
-        if (_busy) return;
-        _busy = true;
+        int request = ++_request;
+        if (!reconnecting) _reconnects.Clear();
         string? skipped = null;
-        try
+        for (int i = index, tries = 0; i >= 0 && i < Playlist.Tracks.Count && tries < Playlist.Tracks.Count; i += forward ? 1 : -1, tries++)
         {
-            for (int i = index, tries = 0; i >= 0 && i < Playlist.Tracks.Count && tries < Playlist.Tracks.Count; i += forward ? 1 : -1, tries++)
+            var entry = Playlist.Tracks[i];
+            if (entry.IsStream)
             {
-                var path = Playlist.Tracks[i].Path;
-                try { await Engine.LoadAsync(path); }
-                catch (Exception ex)
-                {
-                    skipped ??= PlaybackErrors.Describe(ex, path);
-                    continue;
-                }
                 Playlist.MoveTo(i);
-                var track = Track.FromFile(path);
-                Playlist.Update(i, track);
-                SetNowPlaying(track);
-                Engine.Play();
-                SetStatus(skipped is null ? null : skipped + " Skipped.");
-                return;
+                SetNowPlaying(entry);
+                SetStatus($"Connecting to {entry.DisplayName}…");
             }
-            if (skipped is not null)
+            try { await Engine.LoadAsync(entry.Path); }
+            catch (OperationCanceledException) { return; } // a newer request is loading
+            catch (Exception ex)
             {
-                SetNowPlaying(null);
-                SetStatus(skipped);
+                if (request != _request) return;
+                if (entry.IsStream)
+                {
+                    SetStatus(PlaybackErrors.Describe(ex, entry.Path, entry.DisplayName));
+                    return;
+                }
+                skipped ??= PlaybackErrors.Describe(ex, entry.Path);
+                continue;
             }
+            if (request != _request) return;
+            Playlist.MoveTo(i);
+            var track = entry.IsStream ? entry : Track.FromFile(entry.Path);
+            if (!entry.IsStream) Playlist.Update(i, track);
+            SetNowPlaying(track);
+            Engine.Play();
+            SetStatus(skipped is null ? null : skipped + " Skipped.");
+            return;
         }
-        finally { _busy = false; }
+        if (skipped is not null && request == _request)
+        {
+            SetNowPlaying(null);
+            SetStatus(skipped);
+        }
     }
 
     /// <summary>Play: resume, start again, or start the list (opens files when the list is empty).</summary>
@@ -172,7 +217,17 @@ public sealed class PlayerController : IDisposable
         else if (Engine.State == PlayState.Paused) Engine.Play();
     }
 
-    public void Stop() => Engine.Stop();
+    /// <summary>Stop. A station is disconnected (Play connects again, live); a file goes back to its start.</summary>
+    public void Stop()
+    {
+        _request++; // a station still connecting gives up
+        if (NowPlaying is { IsStream: true })
+        {
+            Engine.Unload();
+            if (Status is { } s && (s.StartsWith("Connecting", StringComparison.Ordinal) || s.StartsWith("Reconnecting", StringComparison.Ordinal))) SetStatus(null);
+        }
+        else Engine.Stop();
+    }
 
     /// <summary>Empties the list and stops: nothing loaded, nothing shown.</summary>
     public void ClearList()
@@ -199,7 +254,7 @@ public sealed class PlayerController : IDisposable
 
     /// <summary>File dialog filter for opening or adding music and playlists.</summary>
     public const string OpenFilter =
-        "Music files and playlists|*.mp3;*.flac;*.wav;*.wma;*.m4a;*.aac;*.m3u;*.m3u8|Playlists|*.m3u;*.m3u8|All files|*.*";
+        "Music files and playlists|*.mp3;*.flac;*.wav;*.wma;*.m4a;*.aac;*.m3u;*.m3u8;*.pls|Playlists|*.m3u;*.m3u8;*.pls|All files|*.*";
 
     /// <summary>A short message in the title display that clears itself after a few seconds.</summary>
     public void ShowNotice(string text)

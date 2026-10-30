@@ -8,8 +8,21 @@ public static class PlaybackErrors
     private const int UnsupportedByteStream = unchecked((int)0xC00D36C4); // MF_E_UNSUPPORTED_BYTESTREAM_TYPE
     private const int ClassNotRegistered = unchecked((int)0x80040154);    // REGDB_E_CLASSNOTREG
 
-    public static string Describe(Exception ex, string path)
+    /// <param name="stationName">For a stream: the name to show (the station), instead of the address.</param>
+    public static string Describe(Exception ex, string path, string? stationName = null)
     {
+        if (Track.IsStreamPath(path))
+        {
+            var station = stationName ?? path;
+            return ex switch
+            {
+                DllNotFoundException or TypeInitializationException => MissingMediaFeatures,
+                COMException { HResult: ClassNotRegistered } => MissingMediaFeatures,
+                _ when ex.HResult == UnsupportedByteStream
+                    => $"Can't play {station}: the station sends a format Windows can't decode.",
+                _ => $"Can't connect to {station}: the station is offline, its address has changed, or there is no internet connection.",
+            };
+        }
         var name = Path.GetFileName(path);
         return ex switch
         {

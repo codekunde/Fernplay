@@ -39,6 +39,8 @@ public sealed class PlayerEngine : IDisposable
     public TimeSpan Duration => _decoder?.TotalTime ?? TimeSpan.Zero;
     public TimeSpan Position => _decoder?.CurrentTime ?? TimeSpan.Zero;
     public bool IsLoaded => _decoder is not null;
+    /// <summary>False for a live stream (no length, no seeking).</summary>
+    public bool CanSeek => Duration > TimeSpan.Zero;
 
     /// <summary>EQ settings; kept across tracks.</summary>
     public Equalizer Equalizer { get; } = new();
@@ -63,11 +65,16 @@ public sealed class PlayerEngine : IDisposable
     public event EventHandler? TrackEnded;
     public event EventHandler<Exception>? PlaybackFailed;
 
-    /// <summary>Opens a file, ready to play. Throws when the file cannot be decoded; the previous track is unloaded either way.</summary>
+    /// <summary>
+    /// Opens a file or stream, ready to play. Throws when it cannot be decoded; the previous track is unloaded
+    /// either way. Opening runs off the caller's thread: a radio stream takes a few seconds to connect.
+    /// </summary>
     public async Task LoadAsync(string path)
     {
         Unload();
-        var decoder = _openDecoder(path);
+        int opening = _generation;
+        var decoder = await Task.Run(() => _openDecoder(path));
+        if (opening != _generation) { decoder.Dispose(); throw new OperationCanceledException("Another track was loaded meanwhile."); }
         try
         {
             var output = await _createOutput();
@@ -133,7 +140,7 @@ public sealed class PlayerEngine : IDisposable
 
     private void Rewind()
     {
-        _decoder!.Seek(TimeSpan.Zero);
+        _decoder!.Seek(TimeSpan.Zero); // a no-op for a live stream
         _end!.Reset();
     }
 

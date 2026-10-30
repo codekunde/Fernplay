@@ -35,6 +35,7 @@ public sealed class MediaFoundationDecoder : ITrackDecoder
 
     public void Seek(TimeSpan position)
     {
+        if (TotalTime <= TimeSpan.Zero) return; // a live stream: nothing to seek in
         if (position < TimeSpan.Zero) position = TimeSpan.Zero;
         if (position > TotalTime) position = TotalTime;
         lock (_gate) _reader.CurrentTime = position;
@@ -45,7 +46,7 @@ public sealed class MediaFoundationDecoder : ITrackDecoder
         lock (_gate) _reader.Dispose();
     }
 
-    internal static string CodecName(string path) => Path.GetExtension(path).ToLowerInvariant() switch
+    internal static string CodecName(string path) => Track.IsStreamPath(path) ? "STREAM" : Path.GetExtension(path).ToLowerInvariant() switch
     {
         ".mp3" => "MP3",
         ".flac" => "FLAC",

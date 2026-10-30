@@ -22,7 +22,7 @@ public sealed class ShellRegistration(RegistryKey root, string exePath, string f
     private const string PlayVerb = "Fernplay.Play";
 
     public static readonly IReadOnlyList<string> AudioExtensions = [.. Playlist.SupportedExtensions.Order()];
-    public static readonly IReadOnlyList<string> PlaylistExtensions = [".m3u", ".m3u8"];
+    public static readonly IReadOnlyList<string> PlaylistExtensions = [".m3u", ".m3u8", ".pls"];
 
     /// <summary>The current user's registry; use another key for tests.</summary>
     public static ShellRegistration ForCurrentUser(string exePath, string fileIconPath) => new(Registry.CurrentUser, exePath, fileIconPath);
@@ -37,11 +37,22 @@ public sealed class ShellRegistration(RegistryKey root, string exePath, string f
         return k is not null;
     }
 
-    /// <summary>True when registered for another exe path (the app was moved): call <see cref="Register"/> again.</summary>
+    /// <summary>
+    /// True when registered, but for another exe path (the app was moved) or without a file type a newer
+    /// Fernplay plays (.pls came later): call <see cref="Register"/> again.
+    /// </summary>
     public bool NeedsRefresh()
     {
         using var k = root.OpenSubKey($@"{Classes}\{AudioProgId}\shell\open\command");
-        return k is not null && !string.Equals(k.GetValue(null) as string, OpenCommand, StringComparison.OrdinalIgnoreCase);
+        if (k is null) return false;
+        if (!string.Equals(k.GetValue(null) as string, OpenCommand, StringComparison.OrdinalIgnoreCase)) return true;
+        return AudioExtensions.Any(e => !HasProgId(e, AudioProgId)) || PlaylistExtensions.Any(e => !HasProgId(e, PlaylistProgId));
+    }
+
+    private bool HasProgId(string ext, string progId)
+    {
+        using var owp = root.OpenSubKey($@"{Classes}\{ext}\OpenWithProgids");
+        return owp?.GetValueNames().Contains(progId) == true;
     }
 
     public void Register()
