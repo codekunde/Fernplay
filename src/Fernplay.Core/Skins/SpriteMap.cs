@@ -35,6 +35,22 @@ public static class SpriteMap
 
     static SpriteMap()
     {
+        // "General" windows (the library): GEN.BMP. Title pieces 25x20, active row 0 and inactive row 21.
+        string[] genTop = ["TopLeft", "TopLeftEnd", "TopCenterFill", "TopRightEnd", "TopFill", "TopRight"];
+        for (int i = 0; i < genTop.Length; i++)
+        {
+            Add($"Gen.{genTop[i]}.Active", "GEN", i * 26, 0, 25, 20);
+            Add($"Gen.{genTop[i]}.Inactive", "GEN", i * 26, 21, 25, 20);
+        }
+        Add("Gen.BottomLeft", "GEN", 0, 42, 125, 14);
+        Add("Gen.BottomRight", "GEN", 0, 57, 125, 14);
+        Add("Gen.BottomFill", "GEN", 127, 72, 25, 14);
+        Add("Gen.MiddleLeft", "GEN", 127, 42, 11, 29);
+        Add("Gen.MiddleLeftBottom", "GEN", 158, 42, 11, 24);
+        Add("Gen.MiddleRight", "GEN", 139, 42, 8, 29);
+        Add("Gen.MiddleRightBottom", "GEN", 170, 42, 8, 24);
+        Add("Gen.Close.Pressed", "GEN", 148, 42, 9, 9);
+
         // Player background.
         Add("Main.Background", "MAIN", 0, 0, 275, 116);
 

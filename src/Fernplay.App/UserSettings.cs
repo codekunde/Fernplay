@@ -49,6 +49,8 @@ public sealed class UserSettings
     public WindowPlace? Library { get; set; }
     public double LibraryWidth { get; set; }
     public double LibraryHeight { get; set; }
+    /// <summary>False: the library is as tall as the player's stack and follows it; true once resized with its grip.</summary>
+    public bool LibraryHeightByHand { get; set; }
     /// <summary>Skin scale the panel positions were saved at; 0 = before this was saved (2.0).</summary>
     public double Scale { get; set; }
 

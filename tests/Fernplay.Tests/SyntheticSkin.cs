@@ -15,6 +15,7 @@ internal static class SyntheticSkin
         ["MAIN"] = (275, 116), ["TITLEBAR"] = (344, 87), ["CBUTTONS"] = (136, 36), ["POSBAR"] = (307, 10),
         ["VOLUME"] = (68, 433), ["BALANCE"] = (68, 433), ["SHUFREP"] = (92, 85), ["NUMBERS"] = (99, 13),
         ["TEXT"] = (155, 18), ["MONOSTER"] = (58, 24), ["PLAYPAUS"] = (42, 9), ["EQMAIN"] = (275, 315), ["PLEDIT"] = (280, 186),
+        ["GEN"] = (194, 109), ["GENEX"] = (130, 75),
     };
 
     public static uint PositionColor(int x, int y) => 0xFF000000u | (uint)x << 12 | (uint)y;

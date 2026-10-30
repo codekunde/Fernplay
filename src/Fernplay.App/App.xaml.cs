@@ -72,20 +72,46 @@ public partial class App : Application
         // The library: nothing is scanned or saved until a folder is added; hidden unless it was open at the last close.
         var library = new LibraryService(c);
         var libraryWindow = new LibraryWindow(c, library) { Owner = main };
+        libraryWindow.ApplySkin(main.Skin, _settings.SkinSize);
         libraryWindow.LibrarySize = new Size(_settings.LibraryWidth, _settings.LibraryHeight);
+        libraryWindow.ResizedByHand += (_, _) => _settings.LibraryHeightByHand = true;
         bool libraryPlaced = false, quitting = false;
+
+        // As tall as the stack docked to the player (its top to the lowest panel's bottom), until resized by hand.
+        void FitLibraryToStack()
+        {
+            if (_settings.LibraryHeightByHand) return;
+            double stack = SkinWindow.DockedTo(main).Where(w => w.IsVisible && w != libraryWindow).Max(w => w.Top + w.ActualHeight) - main.Top;
+            libraryWindow.LibrarySize = new Size(libraryWindow.LibrarySize.Width, stack / SkinWindow.Scale);
+        }
+
+        // A new skin or size changes the player's width and the stack's height: the library stays beside the player.
+        int librarySide = 0; // 1 = docked right of the player, -1 = left, 0 = elsewhere
+        main.SkinApplying += () =>
+        {
+            bool level = libraryWindow.IsVisible && Math.Abs(libraryWindow.Top - main.Top) < 1;
+            librarySide = !level ? 0
+                : Math.Abs(libraryWindow.Left - (main.Left + main.ActualWidth)) < 1 ? 1
+                : Math.Abs(libraryWindow.Left + libraryWindow.ActualWidth - main.Left) < 1 ? -1 : 0;
+        };
+        main.SkinApplied += (skin, size) =>
+        {
+            libraryWindow.ApplySkin(skin, size);
+            if (librarySide == 0) return;
+            main.UpdateLayout();
+            FitLibraryToStack();
+            libraryWindow.UpdateLayout();
+            libraryWindow.Left = librarySide > 0 ? main.Left + main.ActualWidth : main.Left - libraryWindow.ActualWidth;
+            libraryWindow.Top = main.Top;
+        };
+
         void ShowLibrary(bool show)
         {
             if (!show) { libraryWindow.Hide(); return; }
             if (!libraryPlaced)
             {
                 libraryPlaced = true;
-                // No saved height: as tall as the stack docked to the player (its top to the playlist's bottom).
-                if (_settings.LibraryHeight <= 0)
-                {
-                    double stack = SkinWindow.DockedTo(main).Where(w => w.IsVisible).Max(w => w.Top + w.ActualHeight) - main.Top;
-                    libraryWindow.LibrarySize = new Size(libraryWindow.LibrarySize.Width, stack / SkinWindow.Scale);
-                }
+                FitLibraryToStack();
                 // Beside the player (left of it when there is no room on the right) unless a place was saved.
                 var wa = SystemParameters.WorkArea;
                 double width = libraryWindow.LibrarySize.Width * SkinWindow.Scale;
