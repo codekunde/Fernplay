@@ -8,6 +8,24 @@ public sealed class PlaylistAndFormatTests : IDisposable
     public void Dispose() => _audio.Dispose();
 
     private static Track T(string name) => new(name, null, null, null, null, null);
+    private static Track F(string name, int seconds) => new(name, null, null, null, TimeSpan.FromSeconds(seconds), null);
+
+    [Fact]
+    public void Summary_counts_stations_apart_and_never_shows_their_zero_length()
+    {
+        var list = new Playlist();
+        Assert.Equal("0 tracks", list.Summary);
+        list.AddRange([Track.Stream("http://a.example/live", "A"), Track.Stream("https://b.example/live", null)]);
+        Assert.Equal("2 stations", list.Summary);
+        list.Clear();
+        list.AddRange([F("a.mp3", 191), F("b.mp3", 167)]);
+        Assert.Equal("2 tracks  5:58", list.Summary);
+        list.AddRange([Track.Stream("http://a.example/live", "A")]);
+        Assert.Equal("2 tracks  5:58 + 1 station", list.Summary);
+        list.Clear();
+        list.AddRange([F("a.mp3", 60), Track.Stream("http://a.example/live", "A"), Track.Stream("http://c.example/live", "C")]);
+        Assert.Equal("1 track  1:00 + 2 stations", list.Summary);
+    }
 
     [Fact]
     public void Next_and_previous_walk_the_list_and_stop_at_the_ends()

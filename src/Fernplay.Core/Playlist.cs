@@ -36,6 +36,22 @@ public sealed class Playlist
     /// <summary>Sum of the durations that are known so far.</summary>
     public TimeSpan TotalDuration => TimeSpan.FromTicks(_tracks.Sum(t => t.Duration?.Ticks ?? 0));
 
+    /// <summary>
+    /// Text for the playlist's total box: "6 tracks  19:09", "3 stations", or "6 tracks  19:09 + 3 stations".
+    /// Stations have no length, so they are counted apart and never add "0:00".
+    /// </summary>
+    public string Summary
+    {
+        get
+        {
+            int stations = _tracks.Count(t => t.IsStream), files = _tracks.Count - stations;
+            static string Plural(int n, string word) => $"{n} {word}{(n == 1 ? "" : "s")}";
+            if (files == 0) return stations == 0 ? "0 tracks" : Plural(stations, "station");
+            var text = $"{Plural(files, "track")}  {TimeFormat.Clock(TotalDuration)}";
+            return stations == 0 ? text : $"{text} + {Plural(stations, "station")}";
+        }
+    }
+
     /// <summary>Adds tracks at the end; returns the index of the first one added.</summary>
     public int AddRange(IEnumerable<Track> tracks)
     {
