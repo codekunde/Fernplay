@@ -32,6 +32,7 @@
                         <Image x:Name="AppMenuIcon" Width="8" Height="8" RenderOptions.BitmapScalingMode="HighQuality" />
                         <Button.ContextMenu>
                             <ContextMenu x:Name="AppMenu">
+                                <MenuItem Header="Media library…" Click="Library_Click" ToolTip="Alt+L" />
                                 <MenuItem Header="Settings…" Click="Settings_Click" />
                                 <MenuItem Header="About Fernplay" Click="About_Click" />
                                 <Separator />

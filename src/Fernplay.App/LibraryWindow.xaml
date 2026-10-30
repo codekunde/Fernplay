@@ -31,7 +31,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ListViewItem">
                         <Border x:Name="Row" Background="Transparent" Padding="0,0.5">
-                            <GridViewRowPresenter TextBlock.FontFamily="{StaticResource SkinFont}" TextBlock.FontSize="7" />
+                            <local:TightRowPresenter TextBlock.FontFamily="{StaticResource SkinFont}" TextBlock.FontSize="7" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
@@ -125,7 +125,7 @@
     </local:SkinWindow.Resources>
 
     <!-- Skin pixels, scaled by SkinWindow.Scale; the size changes with the corner grip and is remembered. -->
-    <Border x:Name="Root" Width="420" Height="260" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
+    <Border x:Name="Root" Width="460" Height="270" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
         <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
         <Grid>
             <Grid.RowDefinitions>
@@ -198,7 +198,7 @@
                                 <ListView.View>
                                     <GridView>
                                         <GridViewColumn Header="ARTIST" Width="92" DisplayMemberBinding="{Binding Name}" />
-                                        <GridViewColumn Header="ALBUMS" Width="28" DisplayMemberBinding="{Binding Albums}" />
+                                        <GridViewColumn Header="ALBUMS" Width="30" DisplayMemberBinding="{Binding Albums}" />
                                     </GridView>
                                 </ListView.View>
                             </ListView>
@@ -210,8 +210,8 @@
                                     <GridView>
                                         <GridViewColumn Header="ALBUM" Width="70" DisplayMemberBinding="{Binding Album}" />
                                         <GridViewColumn Header="ARTIST" Width="52" DisplayMemberBinding="{Binding Artist}" />
-                                        <GridViewColumn Header="TRACKS" Width="24" DisplayMemberBinding="{Binding Tracks}" />
-                                        <GridViewColumn Header="YEAR" Width="20" DisplayMemberBinding="{Binding Year}" />
+                                        <GridViewColumn Header="TRACKS" Width="30" DisplayMemberBinding="{Binding Tracks}" />
+                                        <GridViewColumn Header="YEAR" Width="22" DisplayMemberBinding="{Binding Year}" />
                                         <GridViewColumn Header="GENRE" Width="34" DisplayMemberBinding="{Binding Genre}" />
                                     </GridView>
                                 </ListView.View>

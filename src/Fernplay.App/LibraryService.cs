@@ -51,10 +51,26 @@ public sealed class LibraryService
 
     public bool IsScanning => _scan is not null;
 
-    /// <summary>Scans all library folders in the background and applies the result on the UI thread.</summary>
+    /// <summary>
+    /// Scans all library folders in the background and applies the result on the UI thread. Asked again while a scan
+    /// runs (a folder was added), it scans once more when the running one ends.
+    /// </summary>
     public async Task ScanAsync()
     {
-        if (_scan is not null || Index.Folders.Count == 0) return;
+        if (_scan is not null) { _again = true; return; }
+        do
+        {
+            _again = false;
+            if (Index.Folders.Count == 0) return;
+            await ScanOnceAsync();
+        }
+        while (_again);
+    }
+
+    private bool _again;
+
+    private async Task ScanOnceAsync()
+    {
         _scan = new CancellationTokenSource();
         var token = _scan.Token;
         var folders = Index.Folders.ToList();
@@ -65,6 +81,8 @@ public sealed class LibraryService
         {
             var changes = await Task.Run(() => new LibraryScanner().Scan(folders, known, progress, token), token);
             Index.Apply(changes);
+            // A folder removed while the scan ran: its files came back with the scan; take them out again.
+            foreach (var gone in folders.Where(f => !Index.Folders.Contains(f, StringComparer.OrdinalIgnoreCase))) Index.RemoveFolder(gone);
             int added = changes.Upserts.Count(u => !known.ContainsKey(u.Path)), changed = changes.Upserts.Count - added;
             string missing = changes.MissingFolders.Count == 0 ? "" : $"; not found: {string.Join(", ", changes.MissingFolders.Select(Path.GetFileName))}";
             LastScan = $"Scanned in {changes.Elapsed.TotalSeconds:0.0} s: {added:N0} new, {changed:N0} changed, {changes.Removed.Count:N0} gone{missing}";
@@ -78,7 +96,11 @@ public sealed class LibraryService
         }
     }
 
-    public void StopScan() => _scan?.Cancel();
+    public void StopScan()
+    {
+        _again = false;
+        _scan?.Cancel();
+    }
 
     private void SetScanStatus(string? text)
     {

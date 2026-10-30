@@ -257,4 +257,15 @@ public sealed class LibraryTests : IDisposable
         Assert.Equal(1.0, info!.Duration!.Value.TotalSeconds, 1);
         Assert.Null(TagInfo.FromFile(Path.Combine(_dir.FullName, "nope.mp3")));
     }
+
+    [Fact]
+    public void The_sample_rate_is_never_read_as_the_year()
+    {
+        // System.Audio.SampleRate shares its id (5) with System.Media.Year in another property set: an untagged
+        // 8 kHz WAV once got the year 8000.
+        using var audio = new TestAudio();
+        var info = TagInfo.FromFile(audio.Tone("tone8k.wav", 0.5, sampleRate: 8000));
+        Assert.NotNull(info);
+        Assert.Null(info!.Year);
+    }
 }

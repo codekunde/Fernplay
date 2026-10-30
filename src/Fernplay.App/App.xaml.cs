@@ -68,12 +68,55 @@ public partial class App : Application
         if (!_settings.EqualizerVisible) eq.Hide();
         if (!_settings.PlaylistVisible) playlist.Hide();
         main.AttachPanels(eq, playlist);
-        foreach (var panel in new Window[] { main, eq, playlist })
+
+        // The library: nothing is scanned or saved until a folder is added; hidden unless it was open at the last close.
+        var library = new LibraryService(c);
+        var libraryWindow = new LibraryWindow(c, library) { Owner = main };
+        libraryWindow.LibrarySize = new Size(_settings.LibraryWidth, _settings.LibraryHeight);
+        bool libraryPlaced = false, quitting = false;
+        void ShowLibrary(bool show)
+        {
+            if (!show) { libraryWindow.Hide(); return; }
+            if (!libraryPlaced)
+            {
+                libraryPlaced = true;
+                // No saved height: as tall as the stack docked to the player (its top to the playlist's bottom).
+                if (_settings.LibraryHeight <= 0)
+                {
+                    double stack = SkinWindow.DockedTo(main).Where(w => w.IsVisible).Max(w => w.Top + w.ActualHeight) - main.Top;
+                    libraryWindow.LibrarySize = new Size(libraryWindow.LibrarySize.Width, stack / SkinWindow.Scale);
+                }
+                // Beside the player (left of it when there is no room on the right) unless a place was saved.
+                var wa = SystemParameters.WorkArea;
+                double width = libraryWindow.LibrarySize.Width * SkinWindow.Scale;
+                double x = main.Left + main.ActualWidth;
+                if (x + width > wa.Right) x = Math.Max(wa.Left, main.Left - width);
+                Place(libraryWindow, sameScale ? _settings.Library : null, new Point(x, main.Top));
+            }
+            if (!libraryWindow.IsVisible) libraryWindow.Show();
+            libraryWindow.Activate();
+        }
+        main.ShowLibrary = ShowLibrary;
+        main.LibraryShown = () => libraryWindow.IsVisible;
+        libraryWindow.Closing += (_, args) =>
+        {
+            if (quitting) return;
+            args.Cancel = true; // Alt+F4 on the library hides it, as its x does
+            libraryWindow.Hide();
+        };
+        if (_settings.LibraryVisible) ShowLibrary(true);
+        if (library.Index.Folders.Count > 0)
+            Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => _ = library.ScanAsync()); // pick up changes since the last run
+
+        foreach (var panel in new Window[] { main, eq, playlist, libraryWindow })
         {
             panel.PreviewKeyDown += (s, args) =>
             {
                 var key = args.Key == System.Windows.Input.Key.System ? args.SystemKey : args.Key;
-                if (main.HandleKey(key, System.Windows.Input.Keyboard.Modifiers, s == main)) args.Handled = true;
+                var mods = System.Windows.Input.Keyboard.Modifiers;
+                // Typing in the library's search box: letters and Space are text, not player keys (Alt+L still works).
+                if (System.Windows.Input.Keyboard.FocusedElement is System.Windows.Controls.TextBox && !(key == System.Windows.Input.Key.L && mods == System.Windows.Input.ModifierKeys.Alt)) return;
+                if (main.HandleKey(key, mods, s == main)) args.Handled = true;
             };
         }
         ApplyWindowSettings(_settings);
@@ -81,6 +124,13 @@ public partial class App : Application
 
         main.Closing += (_, _) =>
         {
+            quitting = true;
+            library.StopScan();
+            library.SaveNow();
+            _settings.LibraryVisible = libraryWindow.IsVisible;
+            if (libraryPlaced) _settings.Library = new WindowPlace(libraryWindow.Left, libraryWindow.Top);
+            _settings.LibraryWidth = libraryWindow.LibrarySize.Width;
+            _settings.LibraryHeight = libraryWindow.LibrarySize.Height;
             _settings.Scale = SkinWindow.Scale;
             _settings.Main = new WindowPlace(main.Left, main.Top);
             _settings.Equalizer = new WindowPlace(eq.Left, eq.Top);

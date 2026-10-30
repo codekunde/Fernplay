@@ -77,6 +77,13 @@ public partial class MainWindow : SkinWindow
         AppMenu.IsOpen = true;
     }
 
+    /// <summary>Shows or hides the library window (set by App).</summary>
+    public Action<bool>? ShowLibrary { get; set; }
+    /// <summary>Whether the library window is shown (set by App).</summary>
+    public Func<bool>? LibraryShown { get; set; }
+
+    private void Library_Click(object sender, RoutedEventArgs e) => ShowLibrary?.Invoke(true);
+
     private void Settings_Click(object sender, RoutedEventArgs e) => new SettingsWindow(_settings) { Owner = this }.ShowDialog();
     private void About_Click(object sender, RoutedEventArgs e) => new AboutWindow { Owner = this }.ShowDialog();
 
@@ -112,6 +119,11 @@ public partial class MainWindow : SkinWindow
             case Key.MediaStop: _c.Stop(); return true;
             case Key.MediaNextTrack: _ = _c.NextAsync(); return true;
             case Key.MediaPreviousTrack: _ = _c.PreviousAsync(); return true;
+        }
+        if (key == Key.L && mods == ModifierKeys.Alt && ShowLibrary is not null)
+        {
+            ShowLibrary(LibraryShown?.Invoke() != true); // Alt+L shows or hides the library
+            return true;
         }
         if (mods != ModifierKeys.None) return false; // Ctrl+O, Alt+Up in the playlist and so on
 

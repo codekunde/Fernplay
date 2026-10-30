@@ -20,7 +20,7 @@ internal static class TagReader
     private static readonly PropertyKey TrackNumber = new(Music, 7);     // System.Music.TrackNumber
     private static readonly PropertyKey AlbumArtist = new(Music, 13);    // System.Music.AlbumArtist
     private static readonly PropertyKey Genre = new(Music, 11);          // System.Music.Genre
-    private static readonly PropertyKey Year = new(Media, 5);            // System.Media.Year
+    private static readonly PropertyKey Year = new(Music, 5);            // System.Media.Year (Media, 5 is System.Audio.SampleRate)
     private static readonly PropertyKey Rating = new(new Guid("64440492-4C8B-11D1-8B70-080036B11A03"), 9); // System.Rating, 1-99
 
     public static Track Read(string path) => ReadTags(path).ToTrack(path);
