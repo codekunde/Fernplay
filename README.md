@@ -1,6 +1,6 @@
 # Fernplay
 
-A small music player for Windows in the style of the late-90s desktop players: a player panel with a green LCD, a 10-band equalizer and a playlist, as three panels that snap together and come apart. It also plays internet radio. Offline, no account, no library database.
+A small music player for Windows in the style of the late-90s desktop players: a player panel with a green LCD, a 10-band equalizer and a playlist, as three panels that snap together and come apart. It also plays internet radio and has an optional media library. Offline, no account.
 
 Windows 10 (1607 or later) and 11, x64.
 
@@ -42,6 +42,22 @@ Stream addresses (`http://` or `https://`) in a `.m3u`, `.m3u8` or `.pls` file, 
 - The seek bar is off and the clock counts up. Stop disconnects, Play connects again.
 - A station that drops or goes quiet for 15 seconds reconnects (up to three times a minute). An unreachable station says so instead of skipping to the next entry.
 
+## Media library
+
+![Fernplay's media library: views on the left, search, artist and album panes with the album cover, and the tracks with ratings and play counts](docs/screenshots/library.png)
+
+Open it from the app menu (Media library…) or with Alt+L. It is optional: nothing is scanned or saved until you add a folder, and the three panels work as before without it.
+
+- **Folders:** FOLDERS adds a music folder (scanned in the background), rescans, stops a scan, or removes a folder from the library (the files stay on disk). Fernplay looks for new and changed files at every start; files it already knows are not read again.
+- **Views:** Audio (everything), Most Played, Recently Added and Recently Played (the last two weeks), Never Played, Top Rated (three stars or more), the playlist files found in your folders, and History (every play, newest first). A play counts after half the track or four minutes.
+- **Finding music:** type in SEARCH (every word must match; accents do not matter), pick an artist and an album, click a column header to sort (again to reverse).
+- **Playing:** PLAY replaces the playlist with the selected tracks (or all shown), ENQUEUE adds them to the end; double-click or Enter plays, Shift+Enter adds. Drag tracks to the playlist or the player.
+- **Covers:** the picture inside the file, or `folder.jpg`, `cover.jpg`, `front.jpg` or an `AlbumArt` picture in the album's folder.
+- **Ratings:** click the stars (the same star again clears it), press 0 to 5, or right-click. Ratings stay in Fernplay's library; music files are never changed.
+- **Missing tags** are filled from folder and file names: `Artist\Album\01 - Title.mp3` or `01 - Artist - Title.mp3`.
+
+The library docks beside the player, as tall as the panels together, and keeps that height when the skin or its size changes, until you drag its bottom-right corner. It is kept in `library.json` next to the settings.
+
 ## Keys
 
 | Key | Does |
@@ -54,6 +70,11 @@ Stream addresses (`http://` or `https://`) in a `.m3u`, `.m3u8` or `.pls` file, 
 | Ctrl+O | Open files |
 | Delete | Remove the selected tracks (playlist) |
 | Alt+Up / Alt+Down | Move the selected tracks (playlist) |
+| Alt+L | Show or hide the media library |
+| Ctrl+F | Search the library; Esc clears the search |
+| Shift+Enter | Add the selected tracks to the playlist (library) |
+| 0 to 5 | Rate the selected tracks (library) |
+| Delete | Remove the selected plays (library, History) |
 | Esc | Close Settings or About |
 
 **Media keys and the Windows media overlay.** Fernplay registers with Windows' media session, so the keyboard's play/pause, stop, next and previous keys work while other apps have focus, and Windows' media overlay (next to the volume flyout) shows the track with its buttons.
@@ -78,11 +99,12 @@ Fernplay remembers the panel positions, which panels are shown, volume, balance,
 
 Fernplay can wear classic player skins: the `.wsz` files made for the 2.x generation of skinnable players (many are still shared online). Choose one in Settings (CHOOSE SKIN…) or drop a `.wsz` on the player. Fernplay copies it into a `Skins` folder next to its settings and remembers it. Fernplay ships no skins; its own look stays the default.
 
-With a skin, all three panels are drawn from the skin's pictures, pixel-sharp at 1x, 2x or 3x:
+With a skin, all three panels and the library are drawn from the skin's pictures, pixel-sharp at 1x, 2x or 3x:
 
 - **Player:** everything as above, plus the skin's balance slider.
 - **Equalizer:** preamp and bands whose colour follows the gain, ON, PRESETS and the curve in the skin's colours.
 - **Playlist:** the skin's frame, colours and font, scroll knob, selected/total running time, a small transport and clock, and the classic button menus: ADD (folder, files), REM (all, crop, selected, missing files), SEL (invert, none, all), LIST (new, save, open). Drag the bottom-right corner to make it taller (29 px steps) or wider (25 px steps).
+- **Library:** the skin's frame and title letters (GEN.BMP) and its library colours for lists, selection, headers, buttons and scroll bars (GENEX.BMP). The text keeps Fernplay's size. A skin without these pictures leaves the library in Fernplay's look.
 
 Not there yet: EQ AUTO, the MISC menu (sort, file info, options), adding a stream address from ADD, windowshade mode, window outlines and cursors from the skin. These are drawn but do nothing. A file that is not a usable skin is refused with the reason in the title display, and the current look stays.
 
@@ -96,7 +118,7 @@ dotnet test Fernplay.slnx
 dotnet publish src/Fernplay.App -c Release -o publish   # publish\Fernplay.exe
 ```
 
-The published exe (about 1.8 MB) is framework-dependent: it needs the .NET 10 Desktop Runtime on the PC.
+The published exe (about 2 MB) is framework-dependent: it needs the .NET 10 Desktop Runtime on the PC.
 
 App and file icons are drawn by `tools/Make-FernplayIcons.ps1`.
 
@@ -106,8 +128,8 @@ Three parts in a chain, each replaceable on its own: **decoder → EQ → output
 
 | Folder | What |
 |---|---|
-| `src/Fernplay.Core` | No UI. `PlayerEngine` (load in the background, play, pause, stop, seek, volume, track end, stream titles), `Audio/` (`MediaFoundationDecoder`; `IcyMp3Decoder`, `IcyStream` and `IcyMetadata` for radio song titles; `Equalizer` and `EqualizerStage` (RBJ peaking biquads), `SpectrumTap` (FFT), `GainStage`, `WasapiAudioOutput`), `Playlist` (shuffle, repeat, remove, move, opening playlists), `M3u` and `Pls`, `PanelLayout` (snapping and docking maths), `PlaylistHeight`, `Track` and `TagReader` (Windows property system), `ShellRegistration` (Explorer entries under HKCU), `OpenRequest`, `PlaybackErrors`, `TimeFormat`; `Skins/` (`ClassicSkin`: `.wsz` reader with size limits, own `BmpDecoder`, `SkinTextFiles` for PLEDIT/VISCOLOR/REGION, `SpriteMap`, `SkinFont`, `ClassicLayout` and `ClassicPlaylist` positions, `SkinLibrary`) |
-| `src/Fernplay.App` | `Fernplay.exe`, WPF: `Skin.xaml` (Fernplay's own look: palette, buttons, sliders, menus, scroll bar, glyphs; all drawn, no bitmaps), `SkinControls` (7-segment clock, spectrum, marquee, EQ curve), `SkinWindow` (dragging, snapping, docked panels following a size change), `MainWindow`, `EqWindow`, `PlaylistWindow` (each with a `.Classic.cs` part that builds the skinned view over the same controls), `Classic/` (sprite buttons, sliders, text, clock, spectrum, EQ graph), `SettingsWindow`, `AboutWindow`, `PlayerController`, `MediaSession` (Windows media session through COM, no WinRT package), `SingleInstance`, `ShellNotify`, `FocusRing`, `UserSettings` |
+| `src/Fernplay.Core` | No UI. `PlayerEngine` (load in the background, play, pause, stop, seek, volume, track end, stream titles), `Audio/` (`MediaFoundationDecoder`; `IcyMp3Decoder`, `IcyStream` and `IcyMetadata` for radio song titles; `Equalizer` and `EqualizerStage` (RBJ peaking biquads), `SpectrumTap` (FFT), `GainStage`, `WasapiAudioOutput`), `Playlist` (shuffle, repeat, remove, move, opening playlists), `M3u` and `Pls`, `PanelLayout` (snapping and docking maths), `PlaylistHeight`, `Track` and `TagReader` (Windows property system), `ShellRegistration` (Explorer entries under HKCU), `OpenRequest`, `PlaybackErrors`, `TimeFormat`; `Skins/` (`ClassicSkin`: `.wsz` reader with size limits, own `BmpDecoder`, `SkinTextFiles` for PLEDIT/VISCOLOR/REGION, `SpriteMap`, `SkinFont`, `ClassicLayout` and `ClassicPlaylist` positions, `SkinLibrary`, `GenSkin` for the library's frame and colours); `Library/` (`LibraryIndex` (the JSON index, play counts, ratings, history), `LibraryScanner` (background scan, only changed files re-read), `LibraryQuery` (views, search, panes, status line), `PathTags`, `CoverFiles`, `PlayRules`) |
+| `src/Fernplay.App` | `Fernplay.exe`, WPF: `Skin.xaml` (Fernplay's own look: palette, buttons, sliders, menus, scroll bar, glyphs; all drawn, no bitmaps), `SkinControls` (7-segment clock, spectrum, marquee, EQ curve), `SkinWindow` (dragging, snapping, docked panels following a size change), `MainWindow`, `EqWindow`, `PlaylistWindow` (each with a `.Classic.cs` part that builds the skinned view over the same controls), `Classic/` (sprite buttons, sliders, text, clock, spectrum, EQ graph, `GenFrame` for the library), `LibraryWindow` and `LibraryService` (index file, scans, play counting), `CoverCache` (Windows thumbnails and folder pictures), `StarRating`, `SettingsWindow`, `AboutWindow`, `PlayerController`, `MediaSession` (Windows media session through COM, no WinRT package), `SingleInstance`, `ShellNotify`, `FocusRing`, `UserSettings` |
 | `tests/Fernplay.Tests` | xUnit tests; they write their own audio and use a fake output, so they need no sound card or network |
 
 Audio: [NAudio](https://github.com/naudio/NAudio) 3.2 (MIT), Media Foundation for decoding, Windows' MP3 codec (ACM) for radio stations with song titles, WASAPI shared mode for output (follows the default device when it changes). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

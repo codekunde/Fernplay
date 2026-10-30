@@ -574,7 +574,7 @@ public partial class LibraryWindow : SkinWindow
         (string Key, string Header, double Width)[] columns =
         [
             ("Artist", "ARTIST", 50), ("Album", "ALBUM", 50), ("Number", "#", 12), ("Title", "TITLE", 60), ("Length", "TIME", 22),
-            ("Genre", "GENRE", 32), ("Year", "YEAR", 22), ("Rating", "RATING", 34), ("Plays", "PLAYS", 24), ("LastPlayed", "LAST PLAYED", 52),
+            ("Genre", "GENRE", 32), ("Year", "YEAR", 22), ("Rating", "RATING", 34), ("Plays", "PLAYS", 24), ("LastPlayed", "LAST PLAYED", 62), // fits "2026-10-31 10:40"
         ];
         foreach (var (key, header, width) in columns)
         {
