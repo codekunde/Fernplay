@@ -7,6 +7,7 @@
 - Balance: a BAL slider on the player in Fernplay's own look and on classic skins, sharing one setting. Within 15 % of the centre it snaps there on a click, a key or when let go; the mouse wheel and arrow keys move it 10 % per notch, and a step away from the centre goes straight to 20 %.
 - Fernplay's own look: title bars show three thin, evenly spaced bars instead of fine grooves, sharp at 100 % scaling.
 - Space is always play/pause, also right after clicking a button (it used to press the clicked button again, so clicking Play and then Space restarted the track). Enter presses the focused button.
+- Track names read "03 - Artist - Title", or "Artist - Title" without a track number. A number written into the title tag ("03 - Title") moves to the front instead of showing twice; a title such as "1979" keeps its digits.
 
 ## 0.1.0 (2026-10-30)
 
