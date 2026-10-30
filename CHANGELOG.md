@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0 (2026-10-31)
+
+Same requirements as 0.1.0: Windows 10 (1607 or later) and 11, x64, with the .NET 10 Desktop Runtime.
+
+- Media library, in its own window (app menu "Media library…" or Alt+L). Optional: nothing is scanned or saved until a folder is added, and the player, equalizer and playlist work as before without it.
+- Folders: FOLDERS adds a music folder (scanned in the background), rescans, stops a scan, or removes a folder from the library (files stay on disk). Fernplay rescans at start; only new or changed files are read again. A folder on a drive that is not plugged in keeps its tracks.
+- Views: Audio, Most Played, Recently Added, Recently Played, Never Played, Top Rated, the playlist files found in the folders (stations show as LIVE, missing entries are counted), and History (each play, newest first; Delete removes plays, "Clear history…" empties it). A play counts after half the track or four minutes.
+- Search as you type (every word must match; accents ignored; Ctrl+F, Esc clears), artist and album panes, sortable columns (Artist, Album, #, Title, Time, Genre, Year, Rating, Plays, Last played). PLAY replaces the playlist, ENQUEUE adds to it (the selected tracks, or all shown); double-click and Enter play, Shift+Enter enqueues; drag tracks to the playlist or the player. A status line shows items, total time, size and query time.
+- Missing tags are filled from folder and file names ("Artist\Album\01 - Title", "01 - Artist - Title"); real tags win.
+- Covers: the art inside the file, else folder.jpg, cover.jpg, front.jpg or AlbumArt pictures in its folder.
+- Ratings: click the stars (click the same star again to clear), press 0 to 5, or use the right-click menu. Ratings are kept in Fernplay's library only, never written to music files. The right-click menu also has Play, Enqueue and Show in Explorer.
+- The library window docks beside the player, as tall as the player's panels together, and stays so when the skin or its size changes, until it is resized with its corner grip. Place, size and whether it was open are remembered.
+- Classic skins: the library is drawn from the skin's GEN.BMP (frame, title in the skin's letters, close button) and GENEX.BMP (colours of lists, selection, headers, buttons, scroll bars). Its text stays at Fernplay's size.
+- The library is kept in `library.json` next to the settings.
+
 ## 0.2.0 (2026-10-31)
 
 Same requirements as 0.1.0: Windows 10 (1607 or later) and 11, x64, with the .NET 10 Desktop Runtime.
