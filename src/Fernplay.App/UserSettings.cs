@@ -33,8 +33,15 @@ public sealed class UserSettings
     /// <summary>Skin scale the panel positions were saved at; 0 = before this was saved (2.0).</summary>
     public double Scale { get; set; }
 
+    /// <summary>
+    /// The FERNPLAY_DATA environment variable points it at another folder (test runs: the owner's settings stay
+    /// untouched). Changing APPDATA does not work for this: GetFolderPath asks Windows, not the environment.
+    /// </summary>
     public static string FilePath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CodeKunde", "Fernplay", "settings.json");
+        Environment.GetEnvironmentVariable("FERNPLAY_DATA") is { Length: > 0 } dir
+            ? dir
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CodeKunde", "Fernplay"),
+        "settings.json");
 
     private static readonly JsonSerializerOptions Json = new()
     {

@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:Fernplay.App">
     <!--
         Fernplay's own skin in the late-90s player style: bevelled charcoal panels, green LCD, fern-green title bars.
         All drawn here and in code; no bitmaps. Sizes are in "skin pixels": every window is scaled 2x.
@@ -63,12 +64,14 @@
 
     <FontFamily x:Key="SkinFont">Tahoma</FontFamily>
 
-    <!-- Keyboard focus: a fern-green dotted ring, visible on every control. -->
+    <!-- Keyboard focus: a fern-green dotted ring on every control, shown only while the keyboard is in use (FocusRing.cs). -->
+    <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
     <Style x:Key="SkinFocus">
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Rectangle Margin="-1" Stroke="#9BE38C" StrokeThickness="0.75" StrokeDashArray="1.5 1" SnapsToDevicePixels="True" />
+                    <Rectangle Margin="-1" Stroke="#9BE38C" StrokeThickness="0.75" StrokeDashArray="1.5 1" SnapsToDevicePixels="True"
+                               Visibility="{Binding Path=(local:FocusRing.Visible), RelativeSource={RelativeSource Self}, Converter={StaticResource BoolToVisibility}}" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -286,6 +289,64 @@
                                 <Thumb Style="{StaticResource SkinThumb}" Width="11" Height="6" />
                             </Track.Thumb>
                         </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Scroll bar (playlist): narrow well, bevelled thumb. Sits in its own column, never over the text. -->
+    <Style x:Key="SkinScrollThumb" TargetType="Thumb">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border BorderBrush="{StaticResource Shadow}" BorderThickness="0.5" SnapsToDevicePixels="True">
+                        <Border Background="{StaticResource ButtonFace}" BorderThickness="0.5,0.5,0,0" BorderBrush="#9CA2B5" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SkinScrollBar" TargetType="ScrollBar">
+        <Setter Property="Width" Value="6" />
+        <Setter Property="MinWidth" Value="6" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Border Background="#0E1014" BorderBrush="{StaticResource Shadow}" BorderThickness="0.5,0,0,0">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand" Style="{StaticResource TrackBlank}" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand" Style="{StaticResource TrackBlank}" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource SkinScrollThumb}" MinHeight="8" />
+                            </Track.Thumb>
+                        </Track>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SkinScrollViewer" TargetType="ScrollViewer">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollViewer">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" CanContentScroll="{TemplateBinding CanContentScroll}"
+                                                Margin="{TemplateBinding Padding}" />
+                        <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Style="{StaticResource SkinScrollBar}" Margin="1,0,0,0"
+                                   Minimum="0" Maximum="{TemplateBinding ScrollableHeight}" Value="{TemplateBinding VerticalOffset}"
+                                   ViewportSize="{TemplateBinding ViewportHeight}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                   AutomationProperties.Name="Scroll the playlist" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>

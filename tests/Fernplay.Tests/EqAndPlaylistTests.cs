@@ -150,7 +150,7 @@ public sealed class EqAndPlaylistTests
         var p = List(2);
         p.Update(0, new Track("0.mp3", "Title", "Artist", null, null, 320));
         p.Update(1, new Track("other.mp3", "X", null, null, null, null));
-        Assert.Equal("Artist - Title", p.Tracks[0].DisplayName);
+        Assert.Equal("Title - Artist", p.Tracks[0].DisplayName);
         Assert.Equal("1", p.Tracks[1].DisplayName);
     }
 }

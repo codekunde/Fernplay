@@ -11,6 +11,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        FocusRing.Install();
         _settings = UserSettings.Load();
         var c = _controller = new PlayerController(Dispatcher);
         var eqSettings = c.Engine.Equalizer;
@@ -42,6 +43,14 @@ public partial class App : Application
         if (!_settings.EqualizerVisible) eq.Hide();
         if (!_settings.PlaylistVisible) playlist.Hide();
         main.AttachPanels(eq, playlist);
+        foreach (var panel in new Window[] { main, eq, playlist })
+        {
+            panel.PreviewKeyDown += (s, args) =>
+            {
+                var key = args.Key == System.Windows.Input.Key.System ? args.SystemKey : args.Key;
+                if (main.HandleKey(key, System.Windows.Input.Keyboard.Modifiers, s == main)) args.Handled = true;
+            };
+        }
         ApplyWindowSettings(_settings);
         main.Activate();
 

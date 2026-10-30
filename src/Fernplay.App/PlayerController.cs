@@ -42,10 +42,12 @@ public sealed class PlayerController : IDisposable
     /// </summary>
     public async Task OpenAsync(IReadOnlyList<string> paths, bool replace)
     {
-        var files = await Task.Run(() => Playlist.ExpandPaths(paths).ToList());
+        var (files, missing) = await Task.Run(() => (Playlist.ExpandPaths(paths).ToList(), MissingInPlaylists(paths)));
+        var playlistName = paths.Where(M3u.IsPlaylist).Select(System.IO.Path.GetFileName).FirstOrDefault();
         if (files.Count == 0)
         {
-            var rejected = paths.FirstOrDefault(p => System.IO.File.Exists(p) && !Playlist.IsSupported(p));
+            var rejected = paths.FirstOrDefault(p => System.IO.File.Exists(p) && !Playlist.IsSupported(p) && !M3u.IsPlaylist(p));
+            if (playlistName is not null && rejected is null) { SetStatus($"None of the files in {playlistName} were found."); return; }
             SetStatus(rejected is not null
                 ? $"Can't play {System.IO.Path.GetFileName(rejected)}: Windows has no decoder for {System.IO.Path.GetExtension(rejected).TrimStart('.').ToUpperInvariant()} files. Fernplay plays MP3, FLAC, WAV, WMA and AAC (M4A)."
                 : "No music files there. Fernplay plays MP3, FLAC, WAV, WMA and AAC (M4A) files.");
@@ -60,6 +62,30 @@ public sealed class PlayerController : IDisposable
         int first = Playlist.AddRange(files.Select(f => new Track(f, null, null, null, null, null)));
         ReadTagsInBackground();
         if (replace) await PlayIndexAsync(first, forward: true);
+        if (missing > 0)
+            SetStatus($"{missing} {(missing == 1 ? "file" : "files")} in {playlistName} could not be found or played and {(missing == 1 ? "was" : "were")} left out.");
+    }
+
+    /// <summary>Entries of the .m3u/.m3u8 files among paths that are missing or not playable.</summary>
+    private static int MissingInPlaylists(IEnumerable<string> paths)
+    {
+        int n = 0;
+        foreach (var p in paths.Where(p => M3u.IsPlaylist(p) && System.IO.File.Exists(p)))
+        {
+            try { n += M3u.Read(p).Count(f => !System.IO.File.Exists(f) || !Playlist.IsSupported(f)); }
+            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { }
+        }
+        return n;
+    }
+
+    /// <summary>Saves the list as an extended M3U; returns an error to show, or null.</summary>
+    public string? SavePlaylist(string path)
+    {
+        try { M3u.Write(path, Playlist.Tracks); return null; }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            return $"Could not save {System.IO.Path.GetFileName(path)}: {ex.Message}";
+        }
     }
 
     /// <summary>Restores a saved list without playing it.</summary>
@@ -169,6 +195,19 @@ public sealed class PlayerController : IDisposable
         if (i < 0) return;
         if (i == Playlist.CurrentIndex && Engine.IsLoaded) { Engine.Seek(TimeSpan.Zero); return; }
         await PlayIndexAsync(i, forward: false);
+    }
+
+    /// <summary>File dialog filter for opening or adding music and playlists.</summary>
+    public const string OpenFilter =
+        "Music files and playlists|*.mp3;*.flac;*.wav;*.wma;*.m4a;*.aac;*.m3u;*.m3u8|Playlists|*.m3u;*.m3u8|All files|*.*";
+
+    /// <summary>A short message in the title display that clears itself after a few seconds.</summary>
+    public void ShowNotice(string text)
+    {
+        SetStatus(text);
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        timer.Tick += (_, _) => { timer.Stop(); if (Status == text) SetStatus(null); };
+        timer.Start();
     }
 
     public void SetStatus(string? text)

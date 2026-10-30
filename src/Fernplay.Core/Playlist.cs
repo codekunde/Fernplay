@@ -48,9 +48,37 @@ public sealed class Playlist
     /// <summary>Replaces a track's details (tags read later) without moving anything.</summary>
     public void Update(int index, Track track)
     {
-        if (index < 0 || index >= _tracks.Count || _tracks[index].Path != track.Path) return;
+        // The track may have moved since its tags were requested: look it up by path then.
+        if (index < 0 || index >= _tracks.Count || _tracks[index].Path != track.Path)
+            index = _tracks.FindIndex(t => t.Path == track.Path && t.Duration is null);
+        if (index < 0) return;
         _tracks[index] = track;
         ItemUpdated?.Invoke(this, index);
+    }
+
+    /// <summary>
+    /// Moves tracks (kept in their order) so they sit before the track that was at <paramref name="insertAt"/>
+    /// (Count = the end). The playing track and the shuffle order follow. Returns the moved tracks' new indexes.
+    /// </summary>
+    public IReadOnlyList<int> Move(IEnumerable<int> indexes, int insertAt)
+    {
+        var moved = indexes.Where(i => i >= 0 && i < _tracks.Count).Distinct().Order().ToList();
+        if (moved.Count == 0) return [];
+        insertAt = Math.Clamp(insertAt, 0, _tracks.Count);
+        var movedSet = moved.ToHashSet();
+        var rest = Enumerable.Range(0, _tracks.Count).Where(i => !movedSet.Contains(i)).ToList();
+        int at = rest.Count(i => i < insertAt);
+        var newOrder = rest.Take(at).Concat(moved).Concat(rest.Skip(at)).ToList(); // newOrder[new] = old
+        if (newOrder.Select((old, n) => old == n).All(same => same)) return moved;
+
+        var map = new int[newOrder.Count]; // map[old] = new
+        for (int n = 0; n < newOrder.Count; n++) map[newOrder[n]] = n;
+        var old = _tracks.ToList();
+        for (int n = 0; n < newOrder.Count; n++) _tracks[n] = old[newOrder[n]];
+        if (CurrentIndex >= 0) CurrentIndex = map[CurrentIndex];
+        _order = _order.Select(i => map[i]).ToList();
+        Changed?.Invoke(this, EventArgs.Empty);
+        return Enumerable.Range(at, moved.Count).ToList();
     }
 
     /// <summary>Removes tracks. When the current one goes, the next track to play is the one that followed it.</summary>
@@ -141,12 +169,22 @@ public sealed class Playlist
     public static readonly IReadOnlySet<string> SupportedExtensions =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".mp3", ".flac", ".wav", ".wma", ".m4a", ".aac" };
 
-    /// <summary>Expands files and folders (folders recursively, sorted by path) to playable files.</summary>
+    /// <summary>
+    /// Expands files, folders (recursively, sorted by path) and .m3u/.m3u8 playlists (their entries, in order)
+    /// to playable files. Playlist entries that are missing or not playable are left out.
+    /// </summary>
     public static IEnumerable<string> ExpandPaths(IEnumerable<string> paths)
     {
         foreach (var p in paths)
         {
-            if (Directory.Exists(p))
+            if (M3u.IsPlaylist(p) && File.Exists(p))
+            {
+                List<string> entries;
+                try { entries = M3u.Read(p); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { continue; }
+                foreach (var f in entries.Where(f => File.Exists(f) && IsSupported(f))) yield return f;
+            }
+            else if (Directory.Exists(p))
             {
                 IEnumerable<string> files;
                 try { files = Directory.EnumerateFiles(p, "*", SearchOption.AllDirectories).Where(IsSupported).Order(StringComparer.OrdinalIgnoreCase).ToList(); }

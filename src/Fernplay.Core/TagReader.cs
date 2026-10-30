@@ -17,6 +17,7 @@ internal static class TagReader
     private static readonly PropertyKey Album = new(Music, 4);
     private static readonly PropertyKey Duration = new(Media, 3);        // 100 ns units
     private static readonly PropertyKey EncodingBitrate = new(Media, 4); // bits per second
+    private static readonly PropertyKey TrackNumber = new(Music, 7);     // System.Music.TrackNumber
 
     public static Track Read(string path)
     {
@@ -26,13 +27,15 @@ internal static class TagReader
         {
             ulong ticks = GetUInt64(store, Duration);
             uint bps = (uint)GetUInt64(store, EncodingBitrate);
+            ulong number = GetUInt64(store, TrackNumber);
             return new Track(
                 path,
                 GetString(store, Title),
                 GetString(store, Artist),
                 GetString(store, Album),
                 ticks > 0 ? TimeSpan.FromTicks((long)ticks) : null,
-                bps > 0 ? (int)Math.Round(bps / 1000.0) : null);
+                bps > 0 ? (int)Math.Round(bps / 1000.0) : null,
+                number is > 0 and < 10000 ? (int)number : null);
         }
         finally { Marshal.ReleaseComObject(store); }
     }
