@@ -324,7 +324,8 @@ public partial class MainWindow : SkinWindow
         if (_seekDragging) return;
         _updatingSeek = true;
         SeekSlider.Maximum = Math.Max(duration.TotalSeconds, 1);
-        SeekSlider.Value = Math.Min(position.TotalSeconds, SeekSlider.Maximum);
+        // A live station has no length: keep the knob at the start instead of pinned to the end.
+        SeekSlider.Value = _c.Engine.CanSeek ? Math.Min(position.TotalSeconds, SeekSlider.Maximum) : 0;
         _updatingSeek = false;
     }
 

@@ -76,11 +76,7 @@ public partial class PlaylistWindow : SkinWindow
         }
     }
 
-    private void UpdateTotal()
-    {
-        int n = _rows.Count;
-        TotalText.Text = n == 0 ? "0 tracks" : $"{n} track{(n == 1 ? "" : "s")}  {TimeFormat.Clock(_c.Playlist.TotalDuration)}";
-    }
+    private void UpdateTotal() => TotalText.Text = _c.Playlist.Summary;
 
     private void Close_Click(object sender, RoutedEventArgs e) => Hide();
 
