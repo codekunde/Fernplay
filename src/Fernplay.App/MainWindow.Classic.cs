@@ -45,6 +45,7 @@ public partial class MainWindow
     /// </summary>
     public void ApplySkin(ClassicSkin? skin, int size)
     {
+        SkinApplying?.Invoke();
         _skinSize = Math.Clamp(size, 1, 3);
         Skin = skin;
         ChangeLook(() =>
@@ -69,7 +70,14 @@ public partial class MainWindow
         });
         (_eq as EqWindow)?.ApplySkin(skin, _skinSize);
         (_playlist as PlaylistWindow)?.ApplySkin(skin, _skinSize);
+        SkinApplied?.Invoke(skin, _skinSize);
     }
+
+    /// <summary>After every change of skin or size (the library follows).</summary>
+    public event Action<ClassicSkin?, int>? SkinApplied;
+
+    /// <summary>Just before a change of skin or size, while every panel is still where it was.</summary>
+    public event Action? SkinApplying;
 
     /// <summary>Applies a skin file: checks it, copies it into the skins folder, switches to it, remembers it.</summary>
     public bool ApplySkinFile(string path)

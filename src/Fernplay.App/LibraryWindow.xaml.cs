@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Fernplay.Core;
 using Fernplay.Core.Library;
+using Fernplay.Core.Skins;
 
 namespace Fernplay.App;
 
@@ -122,8 +123,15 @@ public partial class LibraryWindow : SkinWindow
         _c = controller;
         _lib = library;
         InitializeComponent();
-        Background = Root.BorderBrush; // the strip below the panel (see LibrarySize) reads as its bottom edge
+        ApplyColors(null);
         AttachDragHandle(TitleBar);
+        AttachDragHandle(FrameTitle);
+        Activated += (_, _) => Frame.IsActiveLook = true;
+        Deactivated += (_, _) => Frame.IsActiveLook = false;
+        DpiChanged += (_, _) => ApplyFrameScale();
+        SourceInitialized += (_, _) => ApplyFrameScale(); // the skin's pixel scale depends on the screen's DPI
+        System.ComponentModel.DependencyPropertyDescriptor.FromProperty(ButtonBase.IsPressedProperty, typeof(Button))
+            .AddValueChanged(FrameClose, (_, _) => Frame.ClosePressed = FrameClose.IsPressed);
         BuildColumns();
         TrackList.AddHandler(GridViewColumnHeader.ClickEvent, new RoutedEventHandler(TrackHeader_Click));
         TrackList.PreviewMouseLeftButtonUp += Track_PreviewMouseUp;
@@ -157,38 +165,132 @@ public partial class LibraryWindow : SkinWindow
 
     public const double DefaultWidth = 460, DefaultHeight = 270, MinSkinWidth = 300, MinSkinHeight = 170;
 
-    /// <summary>Size of the library in skin pixels (remembered in the settings); 0 = default.</summary>
+    /// <summary>
+    /// Size of the whole window in Fernplay skin pixels (screen DIPs / <see cref="SkinWindow.Scale"/>; remembered in the
+    /// settings); 0 = default. The window itself is a whole number of DIPs, and on a classic skin a whole number of the
+    /// skin's pixels, so it can end level with the other panels and the frame meets its edges.
+    /// </summary>
     public Size LibrarySize
     {
-        get => new(Root.Width, Root.Height + Root.Margin.Bottom / Scale);
+        get => new(Shell.Width / Scale, Shell.Height / Scale);
         set
         {
-            Root.Width = value.Width > 0 ? Math.Max(value.Width, MinSkinWidth) : DefaultWidth;
+            double w = value.Width > 0 ? Math.Max(value.Width, MinSkinWidth) : DefaultWidth;
             double h = value.Height > 0 ? Math.Max(value.Height, MinSkinHeight) : DefaultHeight;
-            // Layout rounding keeps the panel at whole skin pixels, which are 1.7 screen pixels apart; the screen pixels
-            // left over go below it (in the border colour), so the window can end level with the playlist's bottom.
-            Root.Height = Math.Floor(h);
-            Root.Margin = new Thickness(0, 0, 0, Math.Max(0, Math.Round(h * Scale) - Math.Round(Root.Height * Scale)));
+            SetShell(w * Scale, h * Scale);
         }
     }
 
+    /// <summary>Screen DIPs per classic skin pixel while a classic frame is on; 0 in Fernplay's look.</summary>
+    private double FrameScale => _gen is null ? 0 : ClassicScale(_skinSize);
+
+    private void SetShell(double widthDip, double heightDip)
+    {
+        double step = FrameScale > 0 ? FrameScale : 1;
+        Shell.Width = Math.Max(step, Math.Round(widthDip / step) * step);
+        Shell.Height = Math.Max(step, Math.Round(heightDip / step) * step);
+    }
+
     private Point _gripStart;
-    private Size _gripStartSize;
+    private Size _gripStartSize; // DIPs
+
+    /// <summary>The owner resized the library with its grip: its height no longer follows the player's stack.</summary>
+    public event EventHandler? ResizedByHand;
 
     private void Grip_DragStarted(object sender, DragStartedEventArgs e)
     {
+        ResizedByHand?.Invoke(this, EventArgs.Empty);
         _gripStart = Mouse.GetPosition(this); // window coordinates: the top left stays put
-        _gripStartSize = LibrarySize;
+        _gripStartSize = new Size(Shell.Width, Shell.Height);
     }
 
     private void Grip_DragDelta(object sender, DragDeltaEventArgs e)
     {
         var p = Mouse.GetPosition(this);
         var wa = SystemParameters.WorkArea;
-        double maxW = Math.Max(MinSkinWidth, (wa.Right - Left) / Scale), maxH = Math.Max(MinSkinHeight, (wa.Bottom - Top) / Scale);
-        double w = Math.Clamp(_gripStartSize.Width + (p.X - _gripStart.X) / Scale, MinSkinWidth, maxW);
-        double h = Math.Clamp(_gripStartSize.Height + (p.Y - _gripStart.Y) / Scale, MinSkinHeight, maxH);
-        LibrarySize = new Size(Math.Round(w), Math.Round(h));
+        double minW = MinSkinWidth * Scale, minH = MinSkinHeight * Scale;
+        double w = Math.Clamp(_gripStartSize.Width + p.X - _gripStart.X, minW, Math.Max(minW, wa.Right - Left));
+        double h = Math.Clamp(_gripStartSize.Height + p.Y - _gripStart.Y, minH, Math.Max(minH, wa.Bottom - Top));
+        SetShell(w, h);
+    }
+
+    // ================= Classic skin =================
+
+    private GenSkin? _gen;
+    private int _skinSize = 2;
+    private const string FrameTitleText = "FERNPLAY LIBRARY"; // drawn in the skin's letters
+
+    /// <summary>
+    /// Draws the library from a classic skin (frame from GEN.BMP, colours from GENEX.BMP), or in Fernplay's look (null,
+    /// or a skin without GEN.BMP). Lists, buttons and the rest stay at Fernplay's scale so the text stays readable.
+    /// </summary>
+    public void ApplySkin(ClassicSkin? skin, int size)
+    {
+        _skinSize = Math.Clamp(size, 1, 3);
+        _gen = skin is null ? null : GenSkin.From(skin);
+        bool classic = _gen is not null;
+        var shown = classic ? Visibility.Visible : Visibility.Collapsed;
+        Frame.Gen = _gen;
+        Frame.Title = FrameTitleText;
+        Frame.Visibility = FrameTitle.Visibility = FrameClose.Visibility = FrameGrip.Visibility = shown;
+        TitleBar.Visibility = Grip.Visibility = classic ? Visibility.Collapsed : Visibility.Visible;
+        Root.BorderThickness = new Thickness(classic ? 0 : 0.5);
+        var buttonStyle = (Style)FindResource(classic ? "GenButton" : "SkinButton");
+        foreach (var b in new[] { ClearSearchButton, PlayButton, EnqueueButton, FoldersButton }) b.Style = buttonStyle;
+        ApplyColors(_gen?.Colors);
+        ApplyFrameScale();
+    }
+
+    private void ApplyFrameScale()
+    {
+        double s = FrameScale;
+        if (s <= 0)
+        {
+            Root.Margin = new Thickness(0);
+            SetShell(Shell.Width, Shell.Height);
+            return;
+        }
+        Frame.SkinScale = s;
+        Root.Margin = new Thickness(GenSkin.LeftWidth * s, GenSkin.TitleHeight * s, GenSkin.RightWidth * s, GenSkin.BottomHeight * s);
+        FrameTitle.Height = GenSkin.TitleHeight * s;
+        FrameClose.Width = FrameClose.Height = GenSkin.CloseSize * s;
+        FrameClose.Margin = new Thickness(0, GenSkin.CloseTop * s, (GenSkin.CloseRight - GenSkin.CloseSize) * s, 0);
+        FrameGrip.Width = FrameGrip.Height = GenSkin.BottomHeight * s;
+        SetShell(Shell.Width, Shell.Height);
+    }
+
+    /// <summary>Every "L.*" colour the XAML uses: Fernplay's look (null) or a classic skin's GENEX colours.</summary>
+    private void ApplyColors(GenColors? c)
+    {
+        static Brush Solid(uint argb, double opacity = 1)
+        {
+            var color = Fernplay.App.Classic.SkinBitmaps.ToColor(argb);
+            color.A = (byte)Math.Round(255 * opacity);
+            var b = new SolidColorBrush(color);
+            b.Freeze();
+            return b;
+        }
+        Brush Res(string key) => (Brush)FindResource(key);
+        var set = c is null
+            ? new Dictionary<string, Brush>
+            {
+                ["L.Window"] = Res("PanelBrush"), ["L.ListBg"] = Res("Lcd"), ["L.ListText"] = Res("LcdGreen"), ["L.Divider"] = Res("Shadow"),
+                ["L.SelBg"] = Solid(0xFF1D4A26), ["L.SelText"] = Res("LcdGreen"), ["L.NavSelText"] = Solid(0xFFF2F4F8), ["L.Heading"] = Res("SkinText"),
+                ["L.HeadBg"] = Res("FrameDark"), ["L.HeadText"] = Res("SkinText"), ["L.HeadLine"] = Res("Shadow"), ["L.Label"] = Res("SkinTextDim"),
+                ["L.Status"] = Res("LcdGreen"), ["L.Empty"] = Solid(0xFF2E8A43), ["L.NoCover"] = Solid(0xFF2E5A38), ["L.Focus"] = Solid(0xFF6FAE62),
+                ["L.ScrollBack"] = Solid(0xFF0E1014), ["L.BtnFace"] = Res("ButtonFace"), ["L.BtnLight"] = Solid(0xFF9CA2B5), ["L.BtnShadow"] = Solid(0xFF24262F),
+                ["L.BtnOutline"] = Res("Shadow"), ["L.BtnPressed"] = Res("ButtonFacePressed"), ["L.BtnText"] = Res("SkinText"),
+            }
+            : new Dictionary<string, Brush>
+            {
+                ["L.Window"] = Solid(c.WindowBackground), ["L.ListBg"] = Solid(c.ItemBackground), ["L.ListText"] = Solid(c.ItemText), ["L.Divider"] = Solid(c.Divider),
+                ["L.SelBg"] = Solid(c.SelectionBackground), ["L.SelText"] = Solid(c.WindowText), ["L.NavSelText"] = Solid(c.WindowText), ["L.Heading"] = Solid(c.ItemText),
+                ["L.HeadBg"] = Solid(c.HeaderBackground), ["L.HeadText"] = Solid(c.HeaderText), ["L.HeadLine"] = Solid(c.HeaderDark), ["L.Label"] = Solid(c.WindowText),
+                ["L.Status"] = Solid(c.WindowText), ["L.Empty"] = Solid(c.ItemText, 0.6), ["L.NoCover"] = Solid(c.ItemText, 0.35), ["L.Focus"] = Solid(c.ItemText),
+                ["L.ScrollBack"] = Solid(c.ScrollbarBackground), ["L.BtnFace"] = Solid(c.ButtonFace), ["L.BtnLight"] = Solid(c.ButtonLight), ["L.BtnShadow"] = Solid(c.ButtonShadow),
+                ["L.BtnOutline"] = Solid(c.ButtonOutline), ["L.BtnPressed"] = Solid(c.ButtonPressedFace), ["L.BtnText"] = Solid(c.ButtonText),
+            };
+        foreach (var (key, brush) in set) Resources[key] = brush;
     }
 
     // ================= Navigation =================

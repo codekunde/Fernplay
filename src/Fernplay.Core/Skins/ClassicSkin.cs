@@ -21,7 +21,8 @@ public sealed class ClassicSkin
 
     /// <summary>Sheets Fernplay draws from (file name without ".bmp").</summary>
     public static readonly string[] SheetNames =
-        ["MAIN", "TITLEBAR", "CBUTTONS", "POSBAR", "VOLUME", "BALANCE", "SHUFREP", "NUMBERS", "NUMS_EX", "TEXT", "MONOSTER", "PLAYPAUS", "EQMAIN", "PLEDIT"];
+        ["MAIN", "TITLEBAR", "CBUTTONS", "POSBAR", "VOLUME", "BALANCE", "SHUFREP", "NUMBERS", "NUMS_EX", "TEXT", "MONOSTER", "PLAYPAUS", "EQMAIN", "PLEDIT",
+         "GEN", "GENEX"]; // GEN/GENEX: the library window (see GenSkin)
 
     public string Name { get; }
     public IReadOnlyDictionary<string, SkinImage> Sheets { get; }
