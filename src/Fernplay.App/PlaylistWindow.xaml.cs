@@ -223,6 +223,55 @@ public partial class PlaylistWindow : SkinWindow
 
     private ScrollViewer? FindScroller() => List.Template?.FindName("Scroller", List) as ScrollViewer;
 
+    // ================= Height =================
+
+    private const double ListInset = 1; // the list well's top border (Inset style), skin px
+    private const double FallbackRowHeight = 9; // until a row exists to measure
+    private double _dragStartY, _dragStartHeight;
+
+    /// <summary>
+    /// Height of the list area in skin pixels (remembered in the settings). Set as saved: the value came from a
+    /// drag that already snapped it to real rows, and no row exists yet to measure at start-up.
+    /// </summary>
+    public double ListHeight
+    {
+        get => ListBorder.Height;
+        set => ListBorder.Height = double.IsFinite(value) ? Math.Max(value, PlaylistHeight.MinRows * FallbackRowHeight * 0.8 + ListInset) : PlaylistHeight.Default;
+    }
+
+    private double RowHeight() =>
+        List.ItemContainerGenerator.ContainerFromIndex(0) is ListBoxItem { ActualHeight: > 0 } row ? row.ActualHeight : FallbackRowHeight;
+
+    /// <summary>Tallest list that keeps the panel above the bottom of the screen it is on (no limit before it is shown).</summary>
+    private double MaxListHeight()
+    {
+        if (!IsLoaded) return double.MaxValue;
+        double spareDip = SystemParameters.WorkArea.Bottom - (Top + ActualHeight);
+        return ListBorder.Height + Math.Max(0, spareDip) / SkinWindow.Scale;
+    }
+
+    private void SizeGrip_DragStarted(object sender, DragStartedEventArgs e)
+    {
+        // Window coordinates: the panel's top stays put while its height changes.
+        _dragStartY = Mouse.GetPosition(this).Y;
+        _dragStartHeight = ListBorder.Height;
+    }
+
+    private void SizeGrip_DragDelta(object sender, DragDeltaEventArgs e)
+    {
+        double raw = _dragStartHeight + (Mouse.GetPosition(this).Y - _dragStartY) / SkinWindow.Scale;
+        double snapped = PlaylistHeight.Snap(raw, RowHeight(), ListInset, MaxListHeight());
+        if (Math.Abs(snapped - ListBorder.Height) > 0.01) ListBorder.Height = snapped;
+    }
+
+    private void SizeGrip_DragCompleted(object sender, DragCompletedEventArgs e) =>
+        ScrollIntoViewCurrent();
+
+    private void ScrollIntoViewCurrent()
+    {
+        if (_shownCurrent >= 0 && _shownCurrent < _rows.Count) List.ScrollIntoView(_rows[_shownCurrent]);
+    }
+
     // ================= Playlist files =================
 
     private void List_Click(object sender, RoutedEventArgs e)

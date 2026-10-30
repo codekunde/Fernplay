@@ -16,7 +16,7 @@
                 </Border>
             </Grid>
 
-            <Border Style="{StaticResource Inset}" Margin="6,4,6,0" Height="116">
+            <Border x:Name="ListBorder" Style="{StaticResource Inset}" Margin="6,4,6,0" Height="116">
                 <Grid x:Name="ListHost">
                     <ListBox x:Name="List" Background="Transparent" BorderThickness="0" Padding="0"
                              SelectionMode="Extended" IsTextSearchEnabled="False" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Item"
@@ -92,7 +92,7 @@
                 </Grid>
             </Border>
 
-            <Grid Margin="6,4,6,5" Height="10">
+            <Grid Margin="6,4,6,1" Height="10">
                 <StackPanel Orientation="Horizontal">
                     <Button x:Name="AddButton" Style="{StaticResource SkinButton}" Content="ADD" Width="24" Click="Add_Click"
                             ToolTip="Add files or a folder to the end of the list" AutomationProperties.Name="Add">
@@ -121,6 +121,28 @@
                     <TextBlock x:Name="TotalText" Style="{StaticResource LcdText}" FontSize="6" VerticalAlignment="Center" Text="0 tracks" />
                 </Border>
             </Grid>
+
+            <!-- Bottom edge: drag to make the list taller or shorter (snaps to whole rows). -->
+            <Thumb x:Name="SizeGrip" Height="5" Cursor="SizeNS" Focusable="False"
+                   DragStarted="SizeGrip_DragStarted" DragDelta="SizeGrip_DragDelta" DragCompleted="SizeGrip_DragCompleted"
+                   ToolTip="Drag to make the playlist taller or shorter">
+                <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                        <Grid Background="Transparent">
+                            <!-- Two ribs, one screen pixel each at 1.7x; brighter on hover. -->
+                            <StackPanel x:Name="Ribs" HorizontalAlignment="Center" VerticalAlignment="Center" Width="28" Opacity="0.75">
+                                <Rectangle Height="0.6" Fill="#9CA2B5" Margin="0,0,0,1" />
+                                <Rectangle Height="0.6" Fill="#9CA2B5" />
+                            </StackPanel>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Ribs" Property="Opacity" Value="1" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Thumb.Template>
+            </Thumb>
         </StackPanel>
     </Border>
 </local:SkinWindow>
