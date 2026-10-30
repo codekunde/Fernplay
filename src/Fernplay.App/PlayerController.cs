@@ -33,6 +33,12 @@ public sealed class PlayerController : IDisposable
             if (NowPlaying is { IsStream: true } station) { await ReconnectAsync(station, ex); return; }
             SetStatus(PlaybackErrors.Describe(ex, Engine.CurrentPath ?? ""));
         });
+        Engine.StreamTitleChanged += (_, title) => _ui.BeginInvoke(() =>
+        {
+            if (NowPlaying is not { IsStream: true } || title == StreamTitle) return;
+            StreamTitle = title;
+            NowPlayingChanged?.Invoke(this, EventArgs.Empty);
+        });
     }
 
     /// <summary>The station dropped out: try again a few times, then say so.</summary>
@@ -58,6 +64,8 @@ public sealed class PlayerController : IDisposable
     public PlayerEngine Engine { get; } = PlayerEngine.CreateDefault();
     public Playlist Playlist { get; } = new();
     public Track? NowPlaying { get; private set; }
+    /// <summary>The song the playing station says it is playing ("Artist - Title"), or null.</summary>
+    public string? StreamTitle { get; private set; }
     public string? Status { get; private set; }
 
     public event EventHandler? StateChanged;
@@ -184,7 +192,9 @@ public sealed class PlayerController : IDisposable
             if (request != _request) return;
             Playlist.MoveTo(i);
             var track = entry.IsStream ? entry : Track.FromFile(entry.Path);
-            if (!entry.IsStream) Playlist.Update(i, track);
+            // A station without a playlist name takes the name it sends (icy-name); it is then remembered.
+            if (entry is { IsStream: true, Title: null } && Engine.StationName is { } name) track = Track.Stream(entry.Path, name);
+            if (track != entry) Playlist.Update(i, track);
             SetNowPlaying(track);
             Engine.Play();
             SetStatus(skipped is null ? null : skipped + " Skipped.");
@@ -224,6 +234,7 @@ public sealed class PlayerController : IDisposable
         if (NowPlaying is { IsStream: true })
         {
             Engine.Unload();
+            if (StreamTitle is not null) { StreamTitle = null; NowPlayingChanged?.Invoke(this, EventArgs.Empty); }
             if (Status is { } s && (s.StartsWith("Connecting", StringComparison.Ordinal) || s.StartsWith("Reconnecting", StringComparison.Ordinal))) SetStatus(null);
         }
         else Engine.Stop();
@@ -273,6 +284,7 @@ public sealed class PlayerController : IDisposable
 
     private void SetNowPlaying(Track? t)
     {
+        if (t?.Path != NowPlaying?.Path || !Engine.IsLoaded) StreamTitle = null;
         NowPlaying = t;
         NowPlayingChanged?.Invoke(this, EventArgs.Empty);
     }

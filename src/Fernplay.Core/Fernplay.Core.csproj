@@ -15,6 +15,8 @@
   <ItemGroup>
     <!-- Only the WASAPI/Media Foundation part of NAudio (pulls in NAudio.Core); no MIDI, ASIO or WinForms. -->
     <PackageReference Include="NAudio.Wasapi" Version="3.2.0" />
+    <!-- Windows' ACM MP3 codec for radio stations read by IcyMp3Decoder (song titles). -->
+    <PackageReference Include="NAudio.WinMM" Version="3.2.0" />
   </ItemGroup>
 
   <ItemGroup>

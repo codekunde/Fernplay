@@ -161,7 +161,14 @@ public partial class MainWindow : SkinWindow
     {
         if (_media is null) return;
         var t = _c.NowPlaying;
-        _media.SetTrack(t is null ? null : t.IsStream ? t.DisplayName : t.Title ?? System.IO.Path.GetFileNameWithoutExtension(t.Path), t?.Artist);
+        if (t is { IsStream: true } && _c.StreamTitle is { } song)
+        {
+            // Stations send "Artist - Title"; without the separator the whole text is the title and the station the artist.
+            int dash = song.IndexOf(" - ", StringComparison.Ordinal);
+            if (dash > 0) _media.SetTrack(song[(dash + 3)..].Trim(), song[..dash].Trim());
+            else _media.SetTrack(song, t.DisplayName);
+        }
+        else _media.SetTrack(t is null ? null : t.IsStream ? t.DisplayName : t.Title ?? System.IO.Path.GetFileNameWithoutExtension(t.Path), t?.Artist);
         _media.SetStatus(!_c.Engine.IsLoaded ? MediaSession.Status.Closed : _c.Engine.State switch
         {
             PlayState.Playing => MediaSession.Status.Playing,
@@ -327,18 +334,22 @@ public partial class MainWindow : SkinWindow
         if (_c.Status is { } status)
             TitleMarquee.Text = status;
         else if (t is not null)
-            TitleMarquee.Text = t.DisplayName + (t.Duration is { } d ? $" ({TimeFormat.Clock(d)})" : "");
+            TitleMarquee.Text = NowPlayingText(t) + (t.Duration is { } d ? $" ({TimeFormat.Clock(d)})" : "");
         else
             TitleMarquee.Text = "Fernplay  Open music with the eject button or drop it here";
 
         var f = _c.Engine.IsLoaded ? _c.Engine.Format : null;
-        KbpsText.Text = t?.BitrateKbps is { } kbps && f is not null ? kbps.ToString() : "";
+        KbpsText.Text = (t?.BitrateKbps ?? f?.BitrateKbps) is { } kbps && f is not null ? kbps.ToString() : "";
         KhzText.Text = f is null ? "" : (f.SampleRate / 1000).ToString();
         MonoText.Foreground = f?.Channels == 1 ? LitLabel : DimLabel;
         StereoText.Foreground = f?.Channels >= 2 ? LitLabel : DimLabel;
-        Title = t is null ? "Fernplay" : $"{t.DisplayName} - Fernplay";
+        Title = t is null ? "Fernplay" : $"{NowPlayingText(t)} - Fernplay";
         UpdateState();
     }
+
+    /// <summary>The track's name; for a station that says what it plays: "Artist - Title (Station)".</summary>
+    private string NowPlayingText(Fernplay.Core.Track t) =>
+        t.IsStream && _c.StreamTitle is { } song ? $"{song} ({t.DisplayName})" : t.DisplayName;
 
     private void UpdateState()
     {
