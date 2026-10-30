@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:Fernplay.App">
     <!--
         Fernplay's own skin in the late-90s player style: bevelled charcoal panels, green LCD, fern-green title bars.
         All drawn here and in code; no bitmaps. Sizes are in "skin pixels": every window is scaled 2x.
@@ -35,15 +36,16 @@
         <GradientStop Color="#1E2029" Offset="1" />
     </LinearGradientBrush>
 
-    <!-- Title bar ribbing: fine horizontal fern-green grooves. -->
+    <!-- Title bar ribbing: fine horizontal amber grooves. -->
     <DrawingBrush x:Key="TitleRibs" TileMode="Tile" Viewport="0,0,4,2" ViewportUnits="Absolute">
         <DrawingBrush.Drawing>
             <DrawingGroup>
-                <GeometryDrawing Brush="#3E7038" Geometry="M0,0 H4 V1 H0 Z" />
-                <GeometryDrawing Brush="#1F3A1D" Geometry="M0,1 H4 V2 H0 Z" />
+                <GeometryDrawing Brush="#8A7424" Geometry="M0,0 H4 V1 H0 Z" />
+                <GeometryDrawing Brush="#3B3112" Geometry="M0,1 H4 V2 H0 Z" />
             </DrawingGroup>
         </DrawingBrush.Drawing>
     </DrawingBrush>
+    <SolidColorBrush x:Key="TitleText" Color="#F2E19A" />
 
     <LinearGradientBrush x:Key="ButtonFace" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="#666B7C" Offset="0" />
@@ -62,12 +64,14 @@
 
     <FontFamily x:Key="SkinFont">Tahoma</FontFamily>
 
-    <!-- Keyboard focus: a fern-green dotted ring, visible on every control. -->
+    <!-- Keyboard focus: a fern-green dotted ring on every control, shown only while the keyboard is in use (FocusRing.cs). -->
+    <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
     <Style x:Key="SkinFocus">
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Rectangle Margin="-1" Stroke="#9BE38C" StrokeThickness="0.75" StrokeDashArray="1.5 1" SnapsToDevicePixels="True" />
+                    <Rectangle Margin="-1" Stroke="#9BE38C" StrokeThickness="0.75" StrokeDashArray="1.5 1" SnapsToDevicePixels="True"
+                               Visibility="{Binding Path=(local:FocusRing.Visible), RelativeSource={RelativeSource Self}, Converter={StaticResource BoolToVisibility}}" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -291,6 +295,64 @@
         </Setter>
     </Style>
 
+    <!-- Scroll bar (playlist): narrow well, bevelled thumb. Sits in its own column, never over the text. -->
+    <Style x:Key="SkinScrollThumb" TargetType="Thumb">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border BorderBrush="{StaticResource Shadow}" BorderThickness="0.5" SnapsToDevicePixels="True">
+                        <Border Background="{StaticResource ButtonFace}" BorderThickness="0.5,0.5,0,0" BorderBrush="#9CA2B5" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SkinScrollBar" TargetType="ScrollBar">
+        <Setter Property="Width" Value="6" />
+        <Setter Property="MinWidth" Value="6" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Border Background="#0E1014" BorderBrush="{StaticResource Shadow}" BorderThickness="0.5,0,0,0">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand" Style="{StaticResource TrackBlank}" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand" Style="{StaticResource TrackBlank}" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource SkinScrollThumb}" MinHeight="8" />
+                            </Track.Thumb>
+                        </Track>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SkinScrollViewer" TargetType="ScrollViewer">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollViewer">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" CanContentScroll="{TemplateBinding CanContentScroll}"
+                                                Margin="{TemplateBinding Padding}" />
+                        <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Style="{StaticResource SkinScrollBar}" Margin="1,0,0,0"
+                                   Minimum="0" Maximum="{TemplateBinding ScrollableHeight}" Value="{TemplateBinding VerticalOffset}"
+                                   ViewportSize="{TemplateBinding ViewportHeight}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                   AutomationProperties.Name="Scroll the playlist" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Glyphs for the transport buttons (own drawings). -->
     <Geometry x:Key="GlyphPrev">M0,0 H1.4 V7 H0 Z M8,0 L1.6,3.5 L8,7 Z</Geometry>
     <Geometry x:Key="GlyphPlay">M0,0 L7,3.5 L0,7 Z</Geometry>
@@ -305,12 +367,94 @@
         <Setter Property="SnapsToDevicePixels" Value="False" />
     </Style>
 
-    <!-- Context menus in the same colours. -->
+    <!--
+        Context menus (presets, open, add): own templates so the Fluent theme's icon column and accent colour
+        do not show. Amber LCD text on charcoal; the highlighted item is a solid amber bar with dark text.
+    -->
+    <Color x:Key="AmberColor">#E8C547</Color>
+    <SolidColorBrush x:Key="Amber" Color="{StaticResource AmberColor}" />
+
     <Style TargetType="ContextMenu">
-        <Setter Property="Background" Value="#22252E" />
-        <Setter Property="Foreground" Value="{StaticResource SkinText}" />
-        <Setter Property="BorderBrush" Value="#4A4F62" />
+        <Setter Property="Background" Value="#1A1C23" />
+        <Setter Property="Foreground" Value="{StaticResource Amber}" />
+        <Setter Property="BorderBrush" Value="#5A5F72" />
+        <Setter Property="BorderThickness" Value="1" />
         <Setter Property="FontFamily" Value="{StaticResource SkinFont}" />
         <Setter Property="FontSize" Value="12" />
+        <Setter Property="HasDropShadow" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" Padding="2" SnapsToDevicePixels="True">
+                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="Separator">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator"><Border Height="1" Margin="6,3" Background="#4A4F62" /></ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Check box with an amber LED (settings). -->
+    <Style x:Key="SkinCheck" TargetType="CheckBox">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource SkinFocus}" />
+        <Setter Property="Foreground" Value="{StaticResource SkinText}" />
+        <Setter Property="FontFamily" Value="{StaticResource SkinFont}" />
+        <Setter Property="FontSize" Value="6" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Border Width="6" Height="6" BorderBrush="{StaticResource Shadow}" BorderThickness="0.5" Background="#0E1014" VerticalAlignment="Center">
+                            <Rectangle x:Name="Led" Margin="1" Fill="#3A3214" />
+                        </Border>
+                        <ContentPresenter Margin="4,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="False" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Led" Property="Fill" Value="{StaticResource Amber}" />
+                            <Setter TargetName="Led" Property="Effect">
+                                <Setter.Value><DropShadowEffect Color="{StaticResource AmberColor}" BlurRadius="4" ShadowDepth="0" Opacity="0.9" /></Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="#FFFFFF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{StaticResource Amber}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="Bd" Background="Transparent" Padding="10,3,18,3" MinWidth="110" SnapsToDevicePixels="True">
+                        <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Amber}" />
+                            <Setter Property="Foreground" Value="#1A1C23" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 </ResourceDictionary>

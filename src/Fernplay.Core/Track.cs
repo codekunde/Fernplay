@@ -3,13 +3,30 @@ using System.Runtime.InteropServices;
 namespace Fernplay.Core;
 
 /// <summary>One file in the playlist, with what Windows knows about it.</summary>
-public sealed record Track(string Path, string? Title, string? Artist, string? Album, TimeSpan? Duration, int? BitrateKbps)
+public sealed record Track(string Path, string? Title, string? Artist, string? Album, TimeSpan? Duration, int? BitrateKbps, int? TrackNumber = null)
 {
-    /// <summary>"Artist - Title" like the classic players; the file name when there are no tags.</summary>
-    public string DisplayName =>
+    /// <summary>
+    /// "03 - Title - Artist": track number (when tagged and the title does not already start with a number),
+    /// title, artist. The file name when there is no title.
+    /// </summary>
+    public string DisplayName
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Title)) return System.IO.Path.GetFileNameWithoutExtension(Path);
+            var title = Title!.Trim();
+            var name = TrackNumber is > 0 && !StartsWithNumber(title) ? $"{TrackNumber:00} - {title}" : title;
+            return string.IsNullOrWhiteSpace(Artist) ? name : $"{name} - {Artist!.Trim()}";
+        }
+    }
+
+    /// <summary>"Artist - Title", the form other players expect in an M3U #EXTINF line.</summary>
+    public string ArtistTitle =>
         !string.IsNullOrWhiteSpace(Title)
-            ? (string.IsNullOrWhiteSpace(Artist) ? Title! : $"{Artist} - {Title}")
+            ? (string.IsNullOrWhiteSpace(Artist) ? Title!.Trim() : $"{Artist!.Trim()} - {Title!.Trim()}")
             : System.IO.Path.GetFileNameWithoutExtension(Path);
+
+    private static bool StartsWithNumber(string s) => s.Length > 0 && char.IsAsciiDigit(s[0]);
 
     /// <summary>Reads tags through the Windows property system (the same data Explorer shows). Never throws.</summary>
     public static Track FromFile(string path)

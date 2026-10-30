@@ -1,0 +1,38 @@
+<local:SkinDialog x:Class="Fernplay.App.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Fernplay.App"
+        Title="About Fernplay">
+    <Border Width="190" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
+        <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
+        <StackPanel>
+            <Grid x:Name="TitleBar" Height="10" Margin="2,2,2,0" Background="{StaticResource TitleRibs}">
+                <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Center" Padding="5,0">
+                    <TextBlock Text="ABOUT FERNPLAY" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" VerticalAlignment="Center" />
+                </Border>
+                <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Right" Padding="1,1">
+                    <Button Style="{StaticResource TitleButton}" Content="x" Click="Close_Click" ToolTip="Close" AutomationProperties.Name="Close about" />
+                </Border>
+            </Grid>
+
+            <Grid Margin="8,8,8,7">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Image x:Name="Logo" Width="32" Height="32" VerticalAlignment="Top" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="FERNPLAY" Style="{StaticResource SkinLabel}" FontSize="9" Foreground="{StaticResource TitleText}" />
+                    <TextBlock x:Name="VersionText" Style="{StaticResource LcdText}" FontSize="6" Foreground="{StaticResource Amber}" Margin="0,1,0,0" />
+                    <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" Foreground="{StaticResource SkinText}" Margin="0,5,0,0" TextWrapping="Wrap"
+                               Text="A small music player in the classic style: player, equalizer and playlist." />
+                    <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="Free and open source under the MIT licence. Sound through NAudio (MIT) and the decoders built into Windows." />
+                    <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" Margin="0,4,0,0" Text="© 2026 CodeKunde" />
+                </StackPanel>
+            </Grid>
+            <Button Style="{StaticResource SkinButton}" Content="CLOSE" Height="11" Padding="8,0" Margin="8,0,8,7" HorizontalAlignment="Right"
+                    IsDefault="True" Click="Close_Click" AutomationProperties.Name="Close about" />
+        </StackPanel>
+    </Border>
+</local:SkinDialog>

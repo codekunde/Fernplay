@@ -4,11 +4,11 @@
         xmlns:local="clr-namespace:Fernplay.App"
         Title="Fernplay playlist" ShowInTaskbar="False" AllowDrop="True" DragOver="Window_DragOver" Drop="Window_Drop">
     <Border Width="280" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
-        <Border.LayoutTransform><ScaleTransform ScaleX="2" ScaleY="2" /></Border.LayoutTransform>
+        <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
         <StackPanel>
             <Grid x:Name="TitleBar" Height="10" Margin="2,2,2,0" Background="{StaticResource TitleRibs}">
                 <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Center" Padding="5,0">
-                    <TextBlock Text="FERNPLAY PLAYLIST" Style="{StaticResource SkinLabel}" Foreground="#C9E6BE" VerticalAlignment="Center" />
+                    <TextBlock Text="FERNPLAY PLAYLIST" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" VerticalAlignment="Center" />
                 </Border>
                 <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Right" Padding="1,1">
                     <Button x:Name="CloseButton" Style="{StaticResource TitleButton}" Content="x" Click="Close_Click"
@@ -17,12 +17,24 @@
             </Grid>
 
             <Border Style="{StaticResource Inset}" Margin="6,4,6,0" Height="116">
-                <Grid>
+                <Grid x:Name="ListHost">
                     <ListBox x:Name="List" Background="Transparent" BorderThickness="0" Padding="0"
-                             SelectionMode="Extended" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Item"
+                             SelectionMode="Extended" IsTextSearchEnabled="False" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Item"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              MouseDoubleClick="List_DoubleClick" KeyDown="List_KeyDown"
-                             AutomationProperties.Name="Playlist">
+                             PreviewMouseLeftButtonDown="List_PreviewMouseDown" PreviewMouseMove="List_PreviewMouseMove"
+                             PreviewMouseLeftButtonUp="List_PreviewMouseUp"
+                             DragOver="List_DragOver" DragLeave="List_DragLeave" Drop="List_Drop"
+                             AutomationProperties.Name="Playlist"
+                             AutomationProperties.HelpText="Drag tracks, or press Alt+Up and Alt+Down, to change the order">
+                        <ListBox.Template>
+                            <ControlTemplate TargetType="ListBox">
+                                <ScrollViewer x:Name="Scroller" Style="{StaticResource SkinScrollViewer}" Focusable="False" CanContentScroll="True"
+                                              HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter />
+                                </ScrollViewer>
+                            </ControlTemplate>
+                        </ListBox.Template>
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="FocusVisualStyle" Value="{x:Null}" />
@@ -37,10 +49,14 @@
                                                 <Trigger Property="IsSelected" Value="True">
                                                     <Setter TargetName="Row" Property="Background" Value="#1D4A26" />
                                                 </Trigger>
-                                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                                <MultiTrigger>
+                                                    <MultiTrigger.Conditions>
+                                                        <Condition Property="IsKeyboardFocused" Value="True" />
+                                                        <Condition Property="local:FocusRing.Visible" Value="True" />
+                                                    </MultiTrigger.Conditions>
                                                     <Setter TargetName="Row" Property="BorderBrush" Value="#6FAE62" />
                                                     <Setter TargetName="Row" Property="BorderThickness" Value="0.5" />
-                                                </Trigger>
+                                                </MultiTrigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Setter.Value>
@@ -69,7 +85,10 @@
                     </ListBox>
                     <TextBlock x:Name="EmptyText" Style="{StaticResource LcdText}" Foreground="#2E8A43" TextWrapping="Wrap" TextAlignment="Center"
                                VerticalAlignment="Center" Margin="20,0" IsHitTestVisible="False"
-                               Text="The playlist is empty. Press ADD, or drop music files and folders here." />
+                               Text="The playlist is empty. Press ADD, or drop music files, folders or playlists here." />
+                    <!-- Where dragged tracks will land. -->
+                    <Border x:Name="DropLine" Height="1" Background="{StaticResource Amber}" VerticalAlignment="Top"
+                            Visibility="Collapsed" IsHitTestVisible="False" />
                 </Grid>
             </Border>
 
@@ -88,6 +107,15 @@
                             ToolTip="Remove the selected tracks (Delete)" AutomationProperties.Name="Remove selected" />
                     <Button x:Name="ClearButton" Style="{StaticResource SkinButton}" Content="CLEAR" Width="28" Margin="2,0,0,0" Click="Clear_Click"
                             ToolTip="Empty the playlist" AutomationProperties.Name="Clear the playlist" />
+                    <Button x:Name="ListButton" Style="{StaticResource SkinButton}" Content="LIST" Width="24" Margin="6,0,0,0" Click="List_Click"
+                            ToolTip="Open or save a playlist (.m3u, .m3u8)" AutomationProperties.Name="Playlist file">
+                        <Button.ContextMenu>
+                            <ContextMenu x:Name="ListMenu">
+                                <MenuItem Header="Open playlist…" Click="OpenList_Click" />
+                                <MenuItem Header="Save playlist…" Click="SaveList_Click" />
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
                 </StackPanel>
                 <Border Style="{StaticResource Inset}" HorizontalAlignment="Right" Padding="3,0">
                     <TextBlock x:Name="TotalText" Style="{StaticResource LcdText}" FontSize="6" VerticalAlignment="Center" Text="0 tracks" />

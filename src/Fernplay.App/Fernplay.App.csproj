@@ -15,7 +15,18 @@
     <Copyright>Copyright (c) 2026 CodeKunde</Copyright>
     <!-- Fluent theme (ThemeMode) is marked experimental in WPF; it is what makes the app follow Windows light/dark. -->
     <NoWarn>$(NoWarn);WPF0001</NoWarn>
+    <!-- MediaSession.cs calls Windows' media session through COM function pointers. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Exe, window and taskbar icon. Redraw both icons with tools/Make-FernplayIcons.ps1. -->
+    <ApplicationIcon>Assets\Fernplay.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- App icon inside the app (title-bar menu button, About). -->
+    <Resource Include="Assets\Fernplay.ico" />
+    <!-- File icon for audio files and playlists opened with Fernplay; shipped next to the exe for the file association. -->
+    <None Include="Assets\FernplayFile.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
 
   <!-- One exe that uses the installed .NET 10 Desktop Runtime (x64). -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">

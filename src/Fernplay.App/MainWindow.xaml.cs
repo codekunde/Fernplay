@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Fernplay.Core;
@@ -17,6 +18,7 @@ public partial class MainWindow : SkinWindow
     private bool _updatingSeek; // true while the timer moves the slider, so that is not taken as a seek
     private Window? _eq, _playlist;
     private bool _ready; // false while the constructor sets controls from the saved settings
+    private MediaSession? _media; // Windows media session: background media keys and the overlay
 
     private static readonly Brush LitLabel = new SolidColorBrush(Color.FromRgb(0x4B, 0xE8, 0x68));
     private static readonly Brush DimLabel = new SolidColorBrush(Color.FromRgb(0x4A, 0x4F, 0x5E));
@@ -28,6 +30,7 @@ public partial class MainWindow : SkinWindow
         InitializeComponent();
         CarriesDocked = true;
         AttachDragHandle(TitleBar);
+        AppMenuIcon.Source = AppIcon.Frame(16);
 
         VolumeSlider.Value = Math.Round(settings.Volume * 100);
         _c.Engine.Volume = (float)settings.Volume;
@@ -41,7 +44,8 @@ public partial class MainWindow : SkinWindow
         _c.Playlist.Changed += (_, _) => UpdateState();
         _anim.Tick += (_, _) => Animate();
         _anim.Start();
-        Closed += (_, _) => _anim.Stop();
+        Closed += (_, _) => { _anim.Stop(); _media?.Dispose(); };
+        SourceInitialized += (_, _) => StartMediaSession();
         ShowNowPlaying();
         UpdateState();
         _ready = true;
@@ -60,6 +64,16 @@ public partial class MainWindow : SkinWindow
 
     // ================= Title bar and panels =================
 
+    private void AppMenu_Click(object sender, RoutedEventArgs e)
+    {
+        AppMenu.PlacementTarget = AppMenuButton;
+        AppMenu.Placement = PlacementMode.Bottom;
+        AppMenu.IsOpen = true;
+    }
+
+    private void Settings_Click(object sender, RoutedEventArgs e) => new SettingsWindow(_settings) { Owner = this }.ShowDialog();
+    private void About_Click(object sender, RoutedEventArgs e) => new AboutWindow { Owner = this }.ShowDialog();
+
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
@@ -73,6 +87,95 @@ public partial class MainWindow : SkinWindow
         if (t.IsChecked == true) w.Show(); else w.Hide();
     }
 
+    // ================= Keys =================
+
+    /// <summary>
+    /// The classic single keys, for every panel: Z X C V B = previous, play, pause, stop, next; Space = play/pause
+    /// (unless a button has focus: then Space presses it); media keys. On the player panel also
+    /// Left/Right = seek 5 s and Up/Down = volume. Returns true when the key was used.
+    /// </summary>
+    public bool HandleKey(Key key, ModifierKeys mods, bool onPlayerPanel)
+    {
+        // With the media session on, Windows delivers the media keys through it (also while Fernplay has focus);
+        // handling them here as well would act twice.
+        if (_media is { IsActive: true } && key is Key.MediaPlayPause or Key.MediaStop or Key.MediaNextTrack or Key.MediaPreviousTrack)
+            return false;
+        switch (key)
+        {
+            case Key.MediaPlayPause: _ = PlayPauseAsync(); return true;
+            case Key.MediaStop: _c.Stop(); return true;
+            case Key.MediaNextTrack: _ = _c.NextAsync(); return true;
+            case Key.MediaPreviousTrack: _ = _c.PreviousAsync(); return true;
+        }
+        if (mods != ModifierKeys.None) return false; // Ctrl+O, Alt+Up in the playlist and so on
+
+        switch (key)
+        {
+            case Key.Z: _ = _c.PreviousAsync(); return true;
+            case Key.X: Play_Click(this, new RoutedEventArgs()); return true;
+            case Key.C: _c.TogglePause(); return true;
+            case Key.V: _c.Stop(); return true;
+            case Key.B: _ = _c.NextAsync(); return true;
+            case Key.Space when Keyboard.FocusedElement is not ButtonBase:
+                _ = PlayPauseAsync();
+                return true;
+        }
+        if (!onPlayerPanel) return false;
+        switch (key)
+        {
+            case Key.Left or Key.Right when _c.Engine.IsLoaded:
+                var to = _c.Engine.Position + TimeSpan.FromSeconds(key == Key.Left ? -5 : 5);
+                _c.Engine.Seek(to < TimeSpan.Zero ? TimeSpan.Zero : to > _c.Engine.Duration ? _c.Engine.Duration : to);
+                UpdateClock();
+                return true;
+            case Key.Up or Key.Down:
+                VolumeSlider.Value = Math.Clamp(VolumeSlider.Value + (key == Key.Up ? 5 : -5), 0, 100);
+                return true;
+        }
+        return false;
+    }
+
+    // ================= Windows media session =================
+
+    private void StartMediaSession()
+    {
+        _media = MediaSession.TryCreate(new System.Windows.Interop.WindowInteropHelper(this).Handle);
+        if (_media is null) return;
+        _media.ButtonPressed += button => Dispatcher.BeginInvoke(async () =>
+        {
+            var state = _c.Engine.State;
+            switch (button)
+            {
+                case MediaSession.Button.Play when state == PlayState.Paused: _c.TogglePause(); break;
+                case MediaSession.Button.Play when state == PlayState.Stopped: await _c.PlayAsync(); break;
+                case MediaSession.Button.Pause when state == PlayState.Playing: _c.TogglePause(); break;
+                case MediaSession.Button.Stop: _c.Stop(); break;
+                case MediaSession.Button.Next: await _c.NextAsync(); break;
+                case MediaSession.Button.Previous: await _c.PreviousAsync(); break;
+            }
+        });
+        UpdateMediaSession();
+    }
+
+    private void UpdateMediaSession()
+    {
+        if (_media is null) return;
+        var t = _c.NowPlaying;
+        _media.SetTrack(t is null ? null : t.Title ?? System.IO.Path.GetFileNameWithoutExtension(t.Path), t?.Artist);
+        _media.SetStatus(!_c.Engine.IsLoaded ? MediaSession.Status.Closed : _c.Engine.State switch
+        {
+            PlayState.Playing => MediaSession.Status.Playing,
+            PlayState.Paused => MediaSession.Status.Paused,
+            _ => MediaSession.Status.Stopped,
+        });
+    }
+
+    private async Task PlayPauseAsync()
+    {
+        if (_c.Engine.State == PlayState.Stopped) await _c.PlayAsync();
+        else _c.TogglePause();
+    }
+
     // ================= Opening =================
 
     private void Open_Click(object sender, RoutedEventArgs e)
@@ -81,7 +184,7 @@ public partial class MainWindow : SkinWindow
         {
             Title = "Open music files",
             Multiselect = true,
-            Filter = "Music files|*.mp3;*.flac;*.wav;*.wma;*.m4a;*.aac|All files|*.*",
+            Filter = PlayerController.OpenFilter,
         };
         if (dialog.ShowDialog(this) == true) _ = _c.OpenAsync(dialog.FileNames, replace: true);
     }
@@ -177,6 +280,21 @@ public partial class MainWindow : SkinWindow
         VolumeSlider.ToolTip = $"Volume {e.NewValue:0}%";
     }
 
+    /// <summary>Mouse wheel over the volume bar: 5 % per notch (touchpads send smaller steps, added up).</summary>
+    private void Volume_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        _wheel += e.Delta;
+        int notches = _wheel / Mouse.MouseWheelDeltaForOneLine;
+        if (notches != 0)
+        {
+            _wheel -= notches * Mouse.MouseWheelDeltaForOneLine;
+            VolumeSlider.Value = Math.Clamp(VolumeSlider.Value + notches * 5, 0, 100);
+        }
+        e.Handled = true;
+    }
+
+    private int _wheel;
+
     // ================= Display =================
 
     private void Animate()
@@ -208,7 +326,7 @@ public partial class MainWindow : SkinWindow
         if (_c.Status is { } status)
             TitleMarquee.Text = status;
         else if (t is not null)
-            TitleMarquee.Text = $"{_c.Playlist.CurrentIndex + 1}. {t.DisplayName}" + (t.Duration is { } d ? $" ({TimeFormat.Clock(d)})" : "");
+            TitleMarquee.Text = t.DisplayName + (t.Duration is { } d ? $" ({TimeFormat.Clock(d)})" : "");
         else
             TitleMarquee.Text = "Fernplay  Open music with the eject button or drop it here";
 
@@ -238,5 +356,6 @@ public partial class MainWindow : SkinWindow
         StopButton.IsEnabled = loaded && state != PlayState.Stopped;
         SeekSlider.IsEnabled = loaded;
         UpdateClock();
+        UpdateMediaSession();
     }
 }

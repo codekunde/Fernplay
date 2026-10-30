@@ -45,9 +45,21 @@ public sealed class PlaylistAndFormatTests : IDisposable
     [Fact]
     public void Display_name_uses_tags_then_the_file_name()
     {
-        Assert.Equal("Artist - Song", new Track(@"C:\m\x.mp3", "Song", "Artist", null, null, null).DisplayName);
+        Assert.Equal("Song - Artist", new Track(@"C:\m\x.mp3", "Song", "Artist", null, null, null).DisplayName);
         Assert.Equal("Song", new Track(@"C:\m\x.mp3", "Song", null, null, null, null).DisplayName);
         Assert.Equal("01 - Intro", new Track(@"C:\m\01 - Intro.mp3", " ", "Artist", null, null, null).DisplayName);
+    }
+
+    [Fact]
+    public void Display_name_is_track_number_title_artist()
+    {
+        Assert.Equal("03 - Inverted - Mark Absence", new Track("x.mp3", "Inverted", "Mark Absence", null, null, null, 3).DisplayName);
+        Assert.Equal("12 - Song", new Track("x.mp3", "Song", null, null, null, null, 12).DisplayName);
+        // The number is already in the title (as on the owner's album): not added twice.
+        Assert.Equal("03 - Inverted - Mark Absence", new Track("x.mp3", "03 - Inverted", "Mark Absence", null, null, null, 3).DisplayName);
+        Assert.Equal("03 - Inverted - Mark Absence", new Track("x.mp3", "03 - Inverted", "Mark Absence", null, null, null).DisplayName);
+        // M3U keeps the usual "Artist - Title".
+        Assert.Equal("Mark Absence - Inverted", new Track("x.mp3", "Inverted", "Mark Absence", null, null, null, 3).ArtistTitle);
     }
 
     [Fact]
