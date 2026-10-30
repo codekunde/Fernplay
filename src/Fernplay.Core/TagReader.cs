@@ -18,8 +18,15 @@ internal static class TagReader
     private static readonly PropertyKey Duration = new(Media, 3);        // 100 ns units
     private static readonly PropertyKey EncodingBitrate = new(Media, 4); // bits per second
     private static readonly PropertyKey TrackNumber = new(Music, 7);     // System.Music.TrackNumber
+    private static readonly PropertyKey AlbumArtist = new(Music, 13);    // System.Music.AlbumArtist
+    private static readonly PropertyKey Genre = new(Music, 11);          // System.Music.Genre
+    private static readonly PropertyKey Year = new(Media, 5);            // System.Media.Year
+    private static readonly PropertyKey Rating = new(new Guid("64440492-4C8B-11D1-8B70-080036B11A03"), 9); // System.Rating, 1-99
 
-    public static Track Read(string path)
+    public static Track Read(string path) => ReadTags(path).ToTrack(path);
+
+    /// <summary>Everything Fernplay reads from a file's tags (the library uses the extra fields).</summary>
+    public static TagInfo ReadTags(string path)
     {
         var iid = typeof(IPropertyStore).GUID;
         Marshal.ThrowExceptionForHR(SHGetPropertyStoreFromParsingName(path, IntPtr.Zero, 0, ref iid, out var store));
@@ -28,14 +35,18 @@ internal static class TagReader
             ulong ticks = GetUInt64(store, Duration);
             uint bps = (uint)GetUInt64(store, EncodingBitrate);
             ulong number = GetUInt64(store, TrackNumber);
-            return new Track(
-                path,
+            ulong year = GetUInt64(store, Year);
+            return new TagInfo(
                 GetString(store, Title),
                 GetString(store, Artist),
                 GetString(store, Album),
                 ticks > 0 ? TimeSpan.FromTicks((long)ticks) : null,
                 bps > 0 ? (int)Math.Round(bps / 1000.0) : null,
-                number is > 0 and < 10000 ? (int)number : null);
+                number is > 0 and < 10000 ? (int)number : null,
+                GetString(store, AlbumArtist),
+                GetString(store, Genre),
+                year is > 0 and < 10000 ? (int)year : null,
+                TagInfo.Stars((int)GetUInt64(store, Rating)));
         }
         finally { Marshal.ReleaseComObject(store); }
     }
