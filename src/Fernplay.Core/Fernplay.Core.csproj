@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Windows-only: decoding uses Media Foundation and output uses WASAPI. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Fernplay.Core</RootNamespace>
+    <Company>CodeKunde</Company>
+    <Authors>CodeKunde</Authors>
+    <Copyright>Copyright (c) 2026 CodeKunde</Copyright>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Only the WASAPI/Media Foundation part of NAudio (pulls in NAudio.Core); no MIDI, ASIO or WinForms. -->
+    <PackageReference Include="NAudio.Wasapi" Version="3.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Fernplay.Tests" />
+  </ItemGroup>
+
+</Project>

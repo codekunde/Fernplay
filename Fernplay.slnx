@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Fernplay.Core/Fernplay.Core.csproj" />
+    <Project Path="src/Fernplay.App/Fernplay.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Fernplay.Tests/Fernplay.Tests.csproj" />
+  </Folder>
+</Solution>
