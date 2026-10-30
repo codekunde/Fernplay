@@ -42,6 +42,7 @@ public partial class App : Application
 
         var main = new MainWindow(c, _settings);
         MainWindow = main;
+        ApplySavedSkin(main, c);
         Place(main, _settings.Main, null);
         main.Show();
         if (_settings.Main is null) // first run: centre the stack of three panels
@@ -99,6 +100,23 @@ public partial class App : Application
         if (request.Paths.Count == 0 || request.Add) c.Restore(_settings.Playlist, _settings.CurrentIndex, _settings.StationNames);
         if (request.Paths.Count > 0) Queue(request);
         _instance.Listen(r => Dispatcher.BeginInvoke(() => { Queue(r); BringToFront(main); }));
+    }
+
+    /// <summary>Puts the remembered classic skin on the player; one that is gone or broken is dropped with a notice.</summary>
+    private void ApplySavedSkin(MainWindow main, PlayerController c)
+    {
+        if (_settings.Skin is not { } name) return;
+        try
+        {
+            var skins = Fernplay.App.MainWindow.Skins;
+            var path = skins.Find(name) ?? throw new Fernplay.Core.Skins.SkinLoadException($"{name} is no longer in {skins.Folder}.");
+            main.ApplySkin(Fernplay.Core.Skins.ClassicSkin.Load(path), _settings.SkinSize);
+        }
+        catch (Fernplay.Core.Skins.SkinLoadException ex)
+        {
+            _settings.Skin = null;
+            c.ShowNotice($"Skin not used: {ex.Message}");
+        }
     }
 
     /// <summary>Gathers requests until 350 ms pass without a new one, then opens them as one batch.</summary>

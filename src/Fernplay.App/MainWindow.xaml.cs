@@ -34,6 +34,10 @@ public partial class MainWindow : SkinWindow
 
         VolumeSlider.Value = Math.Round(settings.Volume * 100);
         _c.Engine.Volume = (float)settings.Volume;
+        _c.Engine.Balance = (float)settings.Balance;
+        Activated += (_, _) => ClassicActivation(true);
+        Deactivated += (_, _) => ClassicActivation(false);
+        DpiChanged += (_, _) => ApplyClassicScale();
         _showRemaining = settings.ShowRemaining;
         ShuffleToggle.IsChecked = _c.Playlist.Shuffle;
         ShowRepeat();
@@ -45,7 +49,7 @@ public partial class MainWindow : SkinWindow
         _anim.Tick += (_, _) => Animate();
         _anim.Start();
         Closed += (_, _) => { _anim.Stop(); _media?.Dispose(); };
-        SourceInitialized += (_, _) => StartMediaSession();
+        SourceInitialized += (_, _) => { StartMediaSession(); ApplyClassicScale(); };
         ShowNowPlaying();
         UpdateState();
         _ready = true;
@@ -91,7 +95,7 @@ public partial class MainWindow : SkinWindow
 
     /// <summary>
     /// The classic single keys, for every panel: Z X C V B = previous, play, pause, stop, next; Space = play/pause
-    /// (unless a button has focus: then Space presses it); media keys. On the player panel also
+    /// (always; Enter presses a focused button); media keys. On the player panel also
     /// Left/Right = seek 5 s and Up/Down = volume. Returns true when the key was used.
     /// </summary>
     public bool HandleKey(Key key, ModifierKeys mods, bool onPlayerPanel)
@@ -116,7 +120,9 @@ public partial class MainWindow : SkinWindow
             case Key.C: _c.TogglePause(); return true;
             case Key.V: _c.Stop(); return true;
             case Key.B: _ = _c.NextAsync(); return true;
-            case Key.Space when Keyboard.FocusedElement is not ButtonBase:
+            // Space is always play/pause, also when a button has the focus (a clicked button keeps it, and Space would
+            // press it again: clicking Play, then Space, restarted the track). Enter presses a focused button.
+            case Key.Space:
                 _ = PlayPauseAsync();
                 return true;
         }
@@ -210,7 +216,9 @@ public partial class MainWindow : SkinWindow
 
     private void Window_Drop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] paths) _ = _c.OpenAsync(paths, replace: true);
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] paths) return;
+        if (IsSkinDrop(paths)) ApplySkinFile(paths[0]); // a classic skin (.wsz) dropped on the player puts it on
+        else _ = _c.OpenAsync(paths, replace: true);
     }
 
     // ================= Transport =================
@@ -308,7 +316,9 @@ public partial class MainWindow : SkinWindow
     {
         _frame++;
         TitleMarquee.Step();
-        Spectrum.Push(_c.Engine.GetSpectrum(SpectrumBars.Bands));
+        var levels = _c.Engine.GetSpectrum(SpectrumBars.Bands);
+        Spectrum.Push(levels);
+        ClassicAnimate(levels);
         if (_frame % 3 == 0) UpdateClock();
     }
 
@@ -317,10 +327,13 @@ public partial class MainWindow : SkinWindow
         var duration = _c.Engine.Duration;
         var position = _seekDragging ? TimeSpan.FromSeconds(SeekSlider.Value) : _c.Engine.Position;
         // A live station has no length: the clock always counts up.
-        string text = _showRemaining && _c.Engine.CanSeek ? TimeFormat.Clock(duration - position, remaining: true) : TimeFormat.Clock(position);
+        bool remaining = _showRemaining && _c.Engine.CanSeek;
+        string text = remaining ? TimeFormat.Clock(duration - position, remaining: true) : TimeFormat.Clock(position);
         // The clock blinks while paused, as the old players did.
-        Clock.Visibility = _c.Engine.State == PlayState.Paused && (_frame / 15) % 2 == 1 ? Visibility.Hidden : Visibility.Visible;
+        bool blink = _c.Engine.State == PlayState.Paused && (_frame / 15) % 2 == 1;
+        Clock.Visibility = blink ? Visibility.Hidden : Visibility.Visible;
         if (Clock.Text != text) Clock.Text = text;
+        ClassicUpdateClock(remaining ? -(duration - position) : position, blink);
         if (_seekDragging) return;
         _updatingSeek = true;
         SeekSlider.Maximum = Math.Max(duration.TotalSeconds, 1);
@@ -345,6 +358,7 @@ public partial class MainWindow : SkinWindow
         MonoText.Foreground = f?.Channels == 1 ? LitLabel : DimLabel;
         StereoText.Foreground = f?.Channels >= 2 ? LitLabel : DimLabel;
         Title = t is null ? "Fernplay" : $"{NowPlayingText(t)} - Fernplay";
+        ClassicShowNowPlaying(f);
         UpdateState();
     }
 
@@ -368,6 +382,7 @@ public partial class MainWindow : SkinWindow
         PauseButton.IsEnabled = loaded && state != PlayState.Stopped;
         StopButton.IsEnabled = loaded && state != PlayState.Stopped;
         SeekSlider.IsEnabled = loaded && _c.Engine.CanSeek; // off for a live station
+        ClassicUpdateState(state);
         UpdateClock();
         UpdateMediaSession();
     }

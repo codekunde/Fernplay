@@ -10,8 +10,11 @@
         <CommandBinding Command="ApplicationCommands.Open" Executed="Open_Click" />
     </Window.CommandBindings>
 
+    <Grid>
+    <!-- A classic skin (.wsz) is built in code into ClassicHost; FernplayView is hidden meanwhile. -->
+    <ContentControl x:Name="ClassicHost" Focusable="False" Visibility="Collapsed" />
     <!-- Skin pixels, scaled by SkinWindow.Scale. -->
-    <Border Width="280" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
+    <Border x:Name="FernplayView" Width="280" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
         <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
         <StackPanel>
             <!-- Title bar: drag handle -->
@@ -177,4 +180,5 @@
             </Grid>
         </StackPanel>
     </Border>
+    </Grid>
 </local:SkinWindow>

@@ -35,6 +35,27 @@
                         Margin="10,5,0,0" HorizontalAlignment="Left" Click="Default_Click"
                         ToolTip="Opens Windows' own page: Windows lets only you choose the default app"
                         AutomationProperties.Name="Make Fernplay the default player" />
+
+                <Border Height="0.5" Background="#4A4F62" Margin="0,7,0,6" />
+                <TextBlock Text="SKIN" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" Margin="0,0,0,4" />
+                <TextBlock x:Name="SkinText" Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <Button Style="{StaticResource SkinButton}" Content="CHOOSE SKIN…" Height="11" Padding="6,0" Click="ChooseSkin_Click"
+                            ToolTip="A classic skin file (.wsz); it is copied to Fernplay's skins folder"
+                            AutomationProperties.Name="Choose a classic skin" />
+                    <Button x:Name="FernplayLookButton" Style="{StaticResource SkinButton}" Content="FERNPLAY LOOK" Height="11" Padding="6,0" Margin="4,0,0,0"
+                            Click="FernplayLook_Click" AutomationProperties.Name="Use Fernplay's own look" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <TextBlock Text="SIZE" Style="{StaticResource SkinLabel}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                    <RadioButton x:Name="Size1" GroupName="SkinSize" Style="{StaticResource LedToggle}" Content="1X" Tag="1" Checked="Size_Checked"
+                                 ToolTip="Classic skins at their own pixel size" AutomationProperties.Name="Skin size 1x" />
+                    <RadioButton x:Name="Size2" GroupName="SkinSize" Style="{StaticResource LedToggle}" Content="2X" Tag="2" Margin="2,0,0,0" Checked="Size_Checked"
+                                 ToolTip="Classic skins at twice their pixel size" AutomationProperties.Name="Skin size 2x" />
+                    <RadioButton x:Name="Size3" GroupName="SkinSize" Style="{StaticResource LedToggle}" Content="3X" Tag="3" Margin="2,0,0,0" Checked="Size_Checked"
+                                 ToolTip="Classic skins at three times their pixel size" AutomationProperties.Name="Skin size 3x" />
+                </StackPanel>
+
                 <Button Style="{StaticResource SkinButton}" Content="CLOSE" Height="11" Padding="8,0" Margin="0,7,0,0" HorizontalAlignment="Right"
                         IsDefault="True" Click="Close_Click" AutomationProperties.Name="Close settings" />
             </StackPanel>
