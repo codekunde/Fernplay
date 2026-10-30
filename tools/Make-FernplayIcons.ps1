@@ -28,9 +28,16 @@ function Draw-Mark($g, [float]$x, [float]$y, [float]$s, [bool]$detail) {
     # Rim: light top edge so the tile stays visible on a dark taskbar.
     $g.DrawPath((New-Object System.Drawing.Pen (C 138 144 163 200), ([Math]::Max(1.0, $s * 0.025))), $tile)
 
-    # Play triangle, slightly rounded, left of centre when bars follow it.
-    $cx = if ($detail) { $x + $s * 0.42 } else { $x + $s * 0.53 }
-    $h = if ($detail) { $s * 0.46 } else { $s * 0.56 }; $w = $h * 0.9
+    # Play triangle, slightly rounded. With bars, triangle + gap + bars are centred as one group, measured on
+    # what is visible (the outline pen adds $edge on each side of the triangle).
+    $edge = $s * 0.025
+    $h = if ($detail) { $s * 0.38 } else { $s * 0.56 }; $w = $h * 0.9
+    $bw = $s * 0.065; $bgap = $s * 0.03; $tgap = $s * 0.06
+    if ($detail) {
+        $group = $w + 2 * $edge + $tgap + 3 * $bw + 2 * $bgap
+        $left = $x + ($s - $group) / 2
+        $cx = $left + $edge + $w / 2
+    } else { $cx = $x + $s * 0.53 }
     $tri = New-Object System.Drawing.Drawing2D.GraphicsPath
     $tri.AddPolygon([System.Drawing.PointF[]]@((P ($cx - $w / 2) ($y + $s / 2 - $h / 2)), (P ($cx + $w / 2) ($y + $s / 2)), (P ($cx - $w / 2) ($y + $s / 2 + $h / 2))))
     $g.FillPath((New-Object System.Drawing.Drawing2D.LinearGradientBrush $rect, (C 140 214 120), (C 79 150 66), 90), $tri)
@@ -39,12 +46,13 @@ function Draw-Mark($g, [float]$x, [float]$y, [float]$s, [bool]$detail) {
 
     if ($detail) {
         # Three EQ bars, bottom-aligned, coloured like the skin's band sliders.
-        $bw = $s * 0.075; $gap = $s * 0.035; $bx = $x + $s * 0.67; $base = $y + $s * 0.73
+        # Bottom aligned with the triangle's visible bottom.
+        $bx = $cx + $w / 2 + $edge + $tgap; $base = $y + $s / 2 + $h / 2 + $edge
         $bars = @(@(0.20, (C 95 190 82)), @(0.34, (C 227 207 74)), @(0.26, (C 236 146 52)))
         foreach ($b in $bars) {
             $bh = $s * $b[0]
             $g.FillRectangle((New-Object System.Drawing.SolidBrush $b[1]), $bx, $base - $bh, $bw, $bh)
-            $bx += $bw + $gap
+            $bx += $bw + $bgap
         }
     }
 }

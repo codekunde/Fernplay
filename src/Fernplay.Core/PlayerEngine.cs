@@ -29,9 +29,15 @@ public sealed class PlayerEngine : IDisposable
         _createOutput = createOutput;
     }
 
-    /// <summary>The real thing: Media Foundation in, WASAPI out.</summary>
+    /// <summary>
+    /// The real thing: Media Foundation in (files, and stations without song titles), the own ICY reader for MP3
+    /// stations that send titles, WASAPI out.
+    /// </summary>
     public static PlayerEngine CreateDefault() =>
-        new(path => new MediaFoundationDecoder(path), WasapiAudioOutput.CreateAsync);
+        new(path => Track.IsStreamPath(path)
+            ? (ITrackDecoder?)IcyMp3Decoder.TryOpen(path) ?? new MediaFoundationDecoder(path)
+            : new MediaFoundationDecoder(path),
+            WasapiAudioOutput.CreateAsync);
 
     public PlayState State { get; private set; }
     public string? CurrentPath { get; private set; }
@@ -41,6 +47,10 @@ public sealed class PlayerEngine : IDisposable
     public bool IsLoaded => _decoder is not null;
     /// <summary>False for a live stream (no length, no seeking).</summary>
     public bool CanSeek => Duration > TimeSpan.Zero;
+    /// <summary>A station's own name, when it sends one.</summary>
+    public string? StationName => (_decoder as ILiveStream)?.StationName;
+    /// <summary>The song a station is playing now, when it says.</summary>
+    public string? StreamTitle => (_decoder as ILiveStream)?.Title;
 
     /// <summary>EQ settings; kept across tracks.</summary>
     public Equalizer Equalizer { get; } = new();
@@ -64,6 +74,8 @@ public sealed class PlayerEngine : IDisposable
     /// <summary>The track played to its end (not raised for Stop or a new Load).</summary>
     public event EventHandler? TrackEnded;
     public event EventHandler<Exception>? PlaybackFailed;
+    /// <summary>The station's song changed (null: no song info). May come from the audio thread.</summary>
+    public event EventHandler<string?>? StreamTitleChanged;
 
     /// <summary>
     /// Opens a file or stream, ready to play. Throws when it cannot be decoded; the previous track is unloaded
@@ -85,6 +97,8 @@ public sealed class PlayerEngine : IDisposable
             output.Init(end);
             int generation = ++_generation;
             output.PlaybackStopped += (_, e) => OnStopped(generation, e);
+            if (decoder is ILiveStream live)
+                live.TitleChanged += (_, title) => { if (generation == _generation) StreamTitleChanged?.Invoke(this, title); };
             (_decoder, _output, _gain, _end, _spectrum) = (decoder, output, gain, end, spectrum);
             CurrentPath = path;
         }
