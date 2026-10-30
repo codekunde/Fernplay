@@ -4,9 +4,9 @@ Fernplay is MIT-licensed, Copyright (c) 2026 CodeKunde. It uses the following op
 
 | Library | Used by | Licence |
 |---|---|---|
-| [NAudio](https://github.com/naudio/NAudio) (NAudio.Core, NAudio.Wasapi 3.2.0), © Mark Heath | decoding through Media Foundation, WASAPI output | MIT License |
+| [NAudio](https://github.com/naudio/NAudio) (NAudio.Core, NAudio.Wasapi, NAudio.WinMM 3.2.0), © Mark Heath | decoding through Media Foundation, WASAPI output, MP3 decoding for radio stations through Windows' ACM codec | MIT License |
 
-Audio decoding itself is done by Windows (Media Foundation), which is part of the operating system and not shipped with Fernplay.
+Audio decoding itself is done by Windows (Media Foundation and its MP3 codec), which is part of the operating system and not shipped with Fernplay.
 
 ## NAudio: MIT License
 
