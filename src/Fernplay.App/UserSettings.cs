@@ -14,6 +14,12 @@ public sealed record WindowPlace(double Left, double Top);
 public sealed class UserSettings
 {
     public double Volume { get; set; } = 0.8;
+    /// <summary>-1 (left) to 1 (right); set on a classic skin's balance slider.</summary>
+    public double Balance { get; set; }
+    /// <summary>File name of the classic skin in <see cref="SkinsFolder"/>; null = Fernplay's own look.</summary>
+    public string? Skin { get; set; }
+    /// <summary>Classic skin size: 1x, 2x or 3x the skin's pixels.</summary>
+    public int SkinSize { get; set; } = 2;
     public bool EqEnabled { get; set; } = true;
     public double Preamp { get; set; }
     public double[] Bands { get; set; } = new double[10];
@@ -46,6 +52,9 @@ public sealed class UserSettings
             ? dir
             : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CodeKunde", "Fernplay"),
         "settings.json");
+
+    /// <summary>Classic skins (.wsz) Fernplay can use, next to settings.json.</summary>
+    public static string SkinsFolder => Path.Combine(Path.GetDirectoryName(FilePath)!, "Skins");
 
     private static readonly JsonSerializerOptions Json = new()
     {

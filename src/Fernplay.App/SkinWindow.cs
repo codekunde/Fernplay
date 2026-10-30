@@ -75,6 +75,29 @@ public class SkinWindow : Window
         handle.ReleaseMouseCapture();
     }
 
+    /// <summary>
+    /// Runs a change of look (Fernplay's or a classic skin, another size) and moves the panels docked below this one by
+    /// the change in height, so the stack stays closed.
+    /// </summary>
+    protected void ChangeLook(Action change)
+    {
+        double oldTop = Top, oldBottom = Top + ActualHeight;
+        var below = IsLoaded && IsVisible ? DockedTo(this).Where(w => w != this && w.Top >= oldBottom - 1).ToList() : [];
+        change();
+        if (below.Count == 0) return;
+        UpdateLayout();
+        double dy = Top + ActualHeight - oldBottom;
+        if (Math.Abs(Top - oldTop) < 0.5 && dy != 0)
+            foreach (var w in below) w.Top += dy;
+    }
+
+    /// <summary>Layout scale for a classic skin size: whole screen pixels per skin pixel at this window's DPI.</summary>
+    protected double ClassicScale(int size)
+    {
+        double dpi = PresentationSource.FromVisual(this) is not null ? VisualTreeHelper.GetDpi(this).DpiScaleX : 1;
+        return Fernplay.Core.Skins.ClassicLayout.LayoutScale(size, dpi);
+    }
+
     /// <summary>Every visible panel connected to this one through touching edges.</summary>
     public static List<SkinWindow> DockedTo(SkinWindow start)
     {

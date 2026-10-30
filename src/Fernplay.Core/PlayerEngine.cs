@@ -70,6 +70,18 @@ public sealed class PlayerEngine : IDisposable
         }
     }
 
+    /// <summary>-1 (left) to 1 (right), 0 = centre; kept across tracks.</summary>
+    public float Balance
+    {
+        get => _balance;
+        set
+        {
+            _balance = Math.Clamp(value, -1f, 1f);
+            if (_gain is not null) _gain.Balance = _balance;
+        }
+    }
+    private float _balance;
+
     public event EventHandler? StateChanged;
     /// <summary>The track played to its end (not raised for Stop or a new Load).</summary>
     public event EventHandler? TrackEnded;
@@ -92,7 +104,7 @@ public sealed class PlayerEngine : IDisposable
             var output = await _createOutput();
             // decoder → EQ → spectrum tap → volume → end watch → output
             var spectrum = new SpectrumTap(new EqualizerStage(decoder, Equalizer));
-            var gain = new GainStage(spectrum) { Volume = _volume };
+            var gain = new GainStage(spectrum) { Volume = _volume, Balance = _balance };
             var end = new EndWatchStage(gain);
             output.Init(end);
             int generation = ++_generation;

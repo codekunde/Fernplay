@@ -39,6 +39,9 @@ public partial class EqWindow : SkinWindow
 
         _eq.Changed += (_, _) => Sync();
         Sync();
+        Activated += (_, _) => ClassicActivation(true);
+        Deactivated += (_, _) => ClassicActivation(false);
+        DpiChanged += (_, _) => ApplyClassicScale();
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Hide();
@@ -74,6 +77,7 @@ public partial class EqWindow : SkinWindow
             Paint(_bands[i]);
         }
         Curve.Show(_eq);
+        ClassicSync();
         _syncing = false;
     }
 

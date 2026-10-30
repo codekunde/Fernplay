@@ -36,15 +36,33 @@
         <GradientStop Color="#1E2029" Offset="1" />
     </LinearGradientBrush>
 
-    <!-- Title bar ribbing: fine horizontal amber grooves. -->
-    <DrawingBrush x:Key="TitleRibs" TileMode="Tile" Viewport="0,0,4,2" ViewportUnits="Absolute">
-        <DrawingBrush.Drawing>
-            <DrawingGroup>
-                <GeometryDrawing Brush="#8A7424" Geometry="M0,0 H4 V1 H0 Z" />
-                <GeometryDrawing Brush="#3B3112" Geometry="M0,1 H4 V2 H0 Z" />
-            </DrawingGroup>
-        </DrawingBrush.Drawing>
-    </DrawingBrush>
+    <!--
+        Title bar ribbing: three evenly spaced amber bars with a lighter top edge. Positions are in skin px but chosen so that
+        at the 1.7 scale (bar 2 px below the panel top) each bar is exactly 2 screen px (1 light, 1 amber) with 3 px gaps:
+        crisp at 100 %. A gradient with hard stops, not a tiled DrawingBrush: WPF scales a tile as a bitmap, which blurs the edges.
+    -->
+    <LinearGradientBrush x:Key="TitleRibs" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#3B3112" Offset="0" />
+        <GradientStop Color="#3B3112" Offset="0.1529" />
+        <GradientStop Color="#B39834" Offset="0.1529" />
+        <GradientStop Color="#B39834" Offset="0.2118" />
+        <GradientStop Color="#8A7424" Offset="0.2118" />
+        <GradientStop Color="#8A7424" Offset="0.2706" />
+        <GradientStop Color="#3B3112" Offset="0.2706" />
+        <GradientStop Color="#3B3112" Offset="0.4471" />
+        <GradientStop Color="#B39834" Offset="0.4471" />
+        <GradientStop Color="#B39834" Offset="0.5059" />
+        <GradientStop Color="#8A7424" Offset="0.5059" />
+        <GradientStop Color="#8A7424" Offset="0.5647" />
+        <GradientStop Color="#3B3112" Offset="0.5647" />
+        <GradientStop Color="#3B3112" Offset="0.7412" />
+        <GradientStop Color="#B39834" Offset="0.7412" />
+        <GradientStop Color="#B39834" Offset="0.8" />
+        <GradientStop Color="#8A7424" Offset="0.8" />
+        <GradientStop Color="#8A7424" Offset="0.8588" />
+        <GradientStop Color="#3B3112" Offset="0.8588" />
+        <GradientStop Color="#3B3112" Offset="1" />
+    </LinearGradientBrush>
     <SolidColorBrush x:Key="TitleText" Color="#F2E19A" />
 
     <LinearGradientBrush x:Key="ButtonFace" StartPoint="0,0" EndPoint="0,1">
@@ -230,6 +248,34 @@
         Horizontal slider: groove with a fill up to the thumb. Foreground = fill brush.
         Used for position (seek) and volume.
     -->
+    <!-- Balance: the same well and knob as the volume, no fill, a tick at the centre. -->
+    <Style x:Key="SkinBalanceSlider" TargetType="Slider">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource SkinFocus}" />
+        <Setter Property="IsMoveToPointEnabled" Value="True" />
+        <Setter Property="Height" Value="8" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid>
+                        <Border Style="{StaticResource Inset}" Height="4" Background="#0E1014" BorderThickness="0.5,0.5,0,0" />
+                        <Rectangle Width="0.6" Height="4" Fill="#8A7424" HorizontalAlignment="Center" />
+                        <Track x:Name="PART_Track">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="Slider.DecreaseLarge" Style="{StaticResource TrackBlank}" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="Slider.IncreaseLarge" Style="{StaticResource TrackBlank}" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource SkinThumb}" Width="9" Height="7" />
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="SkinSliderH" TargetType="Slider">
         <Setter Property="FocusVisualStyle" Value="{StaticResource SkinFocus}" />
         <Setter Property="IsMoveToPointEnabled" Value="True" />
