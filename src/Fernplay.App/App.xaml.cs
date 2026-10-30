@@ -52,6 +52,7 @@ public partial class App : Application
         }
 
         var eq = new EqWindow(c.Engine.Equalizer) { Owner = main };
+        eq.ApplySkin(main.Skin, _settings.SkinSize);
         var playlist = new PlaylistWindow(c) { Owner = main };
         playlist.ListHeight = _settings.PlaylistHeight; // snapped to rows once shown and filled (below)
         // Positions saved at another skin scale no longer line up: stack the panels under the player again.

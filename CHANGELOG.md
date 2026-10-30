@@ -2,8 +2,10 @@
 
 ## Unreleased
 
-- Classic skins (in progress: the player panel so far): Fernplay reads classic skin files (`.wsz`, the 2.x format) and draws the player from them, pixel-sharp at 1x, 2x or 3x. Choose a skin in Settings (SKIN: CHOOSE SKIN…, FERNPLAY LOOK, SIZE) or drop a `.wsz` on the player; it is copied to the skins folder next to the settings and remembered. Fernplay ships no skins; its own look stays the default. A file that is not a usable skin says why in the title display.
-- Balance slider on classic skins (snaps to the centre when let go).
+- Classic skins (in progress: the player and equalizer panels so far): Fernplay reads classic skin files (`.wsz`, the 2.x format) and draws the player from them, pixel-sharp at 1x, 2x or 3x. Choose a skin in Settings (SKIN: CHOOSE SKIN…, FERNPLAY LOOK, SIZE) or drop a `.wsz` on the player; it is copied to the skins folder next to the settings and remembered. Fernplay ships no skins; its own look stays the default. A file that is not a usable skin says why in the title display.
+- Skinned equalizer: preamp and 10 band sliders whose colour follows the gain, ON, PRESETS and the curve graph in the skin's colours; AUTO is drawn but not active yet. Panels docked below move when the skin changes the equalizer's height.
+- Balance: a BAL slider on the player in Fernplay's own look and on classic skins, sharing one setting. Within 15 % of the centre it snaps there on a click, a key or when let go; the mouse wheel and arrow keys move it 10 % per notch, and a step away from the centre goes straight to 20 %.
+- Fernplay's own look: title bars show three thin, evenly spaced bars instead of fine grooves, sharp at 100 % scaling.
 - Space is always play/pause, also right after clicking a button (it used to press the clicked button again, so clicking Play and then Space restarted the track). Enter presses the focused button.
 
 ## 0.1.0 (2026-10-30)

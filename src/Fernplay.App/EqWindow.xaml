@@ -3,7 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Fernplay.App"
         Title="Fernplay equalizer" ShowInTaskbar="False">
-    <Border Width="280" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
+    <Grid>
+    <!-- A classic skin (.wsz) is built in code into ClassicHost; FernplayView is hidden meanwhile. -->
+    <ContentControl x:Name="ClassicHost" Focusable="False" Visibility="Collapsed" />
+    <Border x:Name="FernplayView" Width="280" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
         <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
         <StackPanel>
             <Grid x:Name="TitleBar" Height="10" Margin="2,2,2,0" Background="{StaticResource TitleRibs}">
@@ -63,4 +66,5 @@
             </Grid>
         </StackPanel>
     </Border>
+    </Grid>
 </local:SkinWindow>

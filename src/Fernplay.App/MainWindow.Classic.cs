@@ -40,40 +40,34 @@ public partial class MainWindow
     public static SkinLibrary Skins { get; } = new(UserSettings.SkinsFolder);
 
     /// <summary>
-    /// Switches the player to a classic skin, or back to Fernplay's look (null). Panels docked below the player move
-    /// with its new height.
+    /// Switches the player and the equalizer to a classic skin, or back to Fernplay's look (null). Panels docked below
+    /// move with the new heights.
     /// </summary>
     public void ApplySkin(ClassicSkin? skin, int size)
     {
-        double oldTop = Top, oldBottom = Top + ActualHeight;
-        var below = IsLoaded ? DockedTo(this).Where(w => w != this && w.Top >= oldBottom - 1).ToList() : [];
-
         _skinSize = Math.Clamp(size, 1, 3);
         Skin = skin;
-        if (skin is null)
+        ChangeLook(() =>
         {
-            _classic = null;
-            ClassicHost.Content = null;
-            ClassicHost.Visibility = Visibility.Collapsed;
-            FernplayView.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            _classic = BuildClassic(skin);
-            ClassicHost.Content = _classic.Root;
-            ClassicHost.Visibility = Visibility.Visible;
-            FernplayView.Visibility = Visibility.Collapsed;
-            ApplyClassicScale();
-        }
-        ShowNowPlaying();
-        UpdateState();
-        if (IsLoaded)
-        {
-            UpdateLayout();
-            double dy = Top + ActualHeight - oldBottom;
-            if (Math.Abs(Top - oldTop) < 0.5 && dy != 0)
-                foreach (var w in below) w.Top += dy;
-        }
+            if (skin is null)
+            {
+                _classic = null;
+                ClassicHost.Content = null;
+                ClassicHost.Visibility = Visibility.Collapsed;
+                FernplayView.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                _classic = BuildClassic(skin);
+                ClassicHost.Content = _classic.Root;
+                ClassicHost.Visibility = Visibility.Visible;
+                FernplayView.Visibility = Visibility.Collapsed;
+                ApplyClassicScale();
+            }
+            ShowNowPlaying();
+            UpdateState();
+        });
+        (_eq as EqWindow)?.ApplySkin(skin, _skinSize);
     }
 
     /// <summary>Applies a skin file: checks it, copies it into the skins folder, switches to it, remembers it.</summary>
@@ -109,8 +103,7 @@ public partial class MainWindow
     private void ApplyClassicScale()
     {
         if (_classic is null) return;
-        double dpi = PresentationSource.FromVisual(this) is not null ? VisualTreeHelper.GetDpi(this).DpiScaleX : 1;
-        double s = L.LayoutScale(_skinSize, dpi);
+        double s = ClassicScale(_skinSize);
         _classic.Root.LayoutTransform = new ScaleTransform(s, s);
     }
 
@@ -201,25 +194,20 @@ public partial class MainWindow
         volume.PreviewMouseWheel += Volume_MouseWheel;
         volume.RefreshBackground();
 
-        // Balance: classic skins only; snaps to the centre.
+        // Balance: the same value as Fernplay's balance slider, whose handlers snap it and set the sound.
         var balance = Place(new SpriteSlider
         {
             Width = 38, Height = 13, Minimum = -100, Maximum = 100, SmallChange = 10, LargeChange = 20, ThumbWidth = 14, ThumbHeight = 11, ThumbTop = 1,
             ThumbImage = bm["Balance.Thumb"], ThumbPressedImage = bm["Balance.Thumb.Pressed"],
             Backgrounds = v => bm.Get(SpriteMap.BalanceBackground(L.BalanceStep(v / 100))),
-            Value = Math.Round(_settings.Balance * 100),
         }, L.Balance);
         AutomationProperties.SetName(balance, "Balance");
-        balance.ValueChanged += Balance_ValueChanged;
-        // Snap to the centre when the knob is let go, not during the drag (snapping each small move held it in the centre).
-        balance.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler((_, _) => _balanceDragging = true));
-        balance.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler((_, _) =>
-        {
-            _balanceDragging = false;
-            balance.Value = L.SnapBalance(balance.Value / 100) * 100;
-        }));
+        balance.SetBinding(RangeBase.ValueProperty, new Binding(nameof(Slider.Value)) { Source = BalanceSlider, Mode = BindingMode.TwoWay });
+        balance.SetBinding(FrameworkElement.ToolTipProperty, new Binding(nameof(ToolTip)) { Source = BalanceSlider });
+        balance.PreviewMouseWheel += Balance_MouseWheel;
+        balance.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler(Balance_DragStarted));
+        balance.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(Balance_DragCompleted));
         balance.RefreshBackground();
-        balance.ToolTip = BalanceText(balance.Value);
 
         Tog("EqSwitch", L.EqSwitch, "Equalizer panel", "Show or hide the equalizer", EqToggle);
         Tog("PlSwitch", L.PlSwitch, "Playlist panel", "Show or hide the playlist", PlaylistToggle);
@@ -267,16 +255,46 @@ public partial class MainWindow
 
     private bool _balanceDragging;
 
+    // Balance lives on Fernplay's BalanceSlider; the classic skin's slider is bound to it and shares these handlers.
     private void Balance_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        var slider = (SpriteSlider)sender;
+        if (!_ready) return; // the constructor setting the saved value
+        // A click, key or wheel step settles at once (snaps, or steps out of the centre zone); while dragging the knob
+        // follows the mouse and only the sound snaps.
+        if (!_balanceDragging)
+        {
+            double settled = L.SettleBalance(e.OldValue / 100, e.NewValue / 100) * 100;
+            if (settled != e.NewValue) { BalanceSlider.Value = settled; return; } // comes back here with the settled value
+        }
         double snapped = L.SnapBalance(e.NewValue / 100) * 100;
-        // A click or a key snaps at once; while dragging the knob follows the mouse and only the sound snaps.
-        if (!_balanceDragging && snapped != e.NewValue) { slider.Value = snapped; return; } // comes back here with the snapped value
         _c.Engine.Balance = (float)(snapped / 100);
         _settings.Balance = snapped / 100;
-        slider.ToolTip = BalanceText(snapped);
+        BalanceSlider.ToolTip = BalanceText(snapped);
     }
+
+    // Snap to the centre when the knob is let go, not during the drag (snapping each small move held it in the centre).
+    private void Balance_DragStarted(object sender, DragStartedEventArgs e) => _balanceDragging = true;
+
+    private void Balance_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        _balanceDragging = false;
+        BalanceSlider.Value = L.SnapBalance(BalanceSlider.Value / 100) * 100;
+    }
+
+    /// <summary>Wheel over the balance: 10 % per notch (touchpad deltas summed), right = up; snaps through the centre.</summary>
+    private void Balance_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        _balanceWheel += e.Delta;
+        int notches = _balanceWheel / Mouse.MouseWheelDeltaForOneLine;
+        if (notches != 0)
+        {
+            _balanceWheel -= notches * Mouse.MouseWheelDeltaForOneLine;
+            BalanceSlider.Value = Math.Clamp(BalanceSlider.Value + notches * 10, -100, 100);
+        }
+        e.Handled = true;
+    }
+
+    private int _balanceWheel;
 
     private static string BalanceText(double v) =>
         v == 0 ? "Balance: centre" : $"Balance: {Math.Abs(v):0}% {(v < 0 ? "left" : "right")}";

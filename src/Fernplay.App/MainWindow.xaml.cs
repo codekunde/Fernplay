@@ -35,6 +35,8 @@ public partial class MainWindow : SkinWindow
         VolumeSlider.Value = Math.Round(settings.Volume * 100);
         _c.Engine.Volume = (float)settings.Volume;
         _c.Engine.Balance = (float)settings.Balance;
+        BalanceSlider.Value = Math.Round(settings.Balance * 100);
+        BalanceSlider.ToolTip = BalanceText(BalanceSlider.Value);
         Activated += (_, _) => ClassicActivation(true);
         Deactivated += (_, _) => ClassicActivation(false);
         DpiChanged += (_, _) => ApplyClassicScale();

@@ -20,6 +20,37 @@ public sealed class ClassicLayoutTests
     }
 
     [Fact]
+    public void Eq_slider_step_runs_from_green_at_the_bottom_to_red_at_the_top()
+    {
+        Assert.Equal(0, ClassicLayout.EqSliderStep(-12));
+        Assert.Equal(14, ClassicLayout.EqSliderStep(0)); // 13.5 rounds to the even 14
+        Assert.Equal(27, ClassicLayout.EqSliderStep(12));
+        Assert.Equal(27, ClassicLayout.EqSliderStep(40)); // clamped
+        Assert.Equal(0, ClassicLayout.EqSliderStep(-40));
+    }
+
+    [Fact]
+    public void Eq_graph_rows_and_curve()
+    {
+        Assert.Equal(0, ClassicLayout.EqGraphY(12));
+        Assert.Equal(9, ClassicLayout.EqGraphY(0));
+        Assert.Equal(18, ClassicLayout.EqGraphY(-12));
+
+        var flat = ClassicLayout.EqCurve(new double[10]);
+        Assert.Equal(ClassicLayout.EqGraphWidth, flat.Length);
+        Assert.All(flat, y => Assert.Equal(9, y));
+
+        // The curve passes through each band (columns are whole pixels, so within a row) and stays inside the graph.
+        double[] bands = [12, -12, 6, 0, -6, 12, 12, -12, 3, -3];
+        var curve = ClassicLayout.EqCurve(bands);
+        Assert.Equal(ClassicLayout.EqGraphY(12), curve[0]);
+        Assert.Equal(ClassicLayout.EqGraphY(-3), curve[112]);
+        for (int i = 0; i < 10; i++)
+            Assert.InRange(curve[(int)Math.Round(i * 112 / 9.0)] - ClassicLayout.EqGraphY(bands[i]), -1, 1);
+        Assert.All(curve, y => Assert.InRange(y, 0, ClassicLayout.EqGraphHeight - 1));
+    }
+
+    [Fact]
     public void Slider_steps_cover_the_28_backgrounds()
     {
         Assert.Equal(0, ClassicLayout.VolumeStep(0));
@@ -38,6 +69,20 @@ public sealed class ClassicLayoutTests
         Assert.Equal(0, ClassicLayout.SnapBalance(-0.07));
         Assert.Equal(-0.4, ClassicLayout.SnapBalance(-0.4));
         Assert.Equal(1, ClassicLayout.SnapBalance(3));
+        Assert.Equal(0, ClassicLayout.SnapBalance(0.14)); // zone wide enough to hit with a drag
+        Assert.Equal(0.15, ClassicLayout.SnapBalance(0.15));
+    }
+
+    [Fact]
+    public void Balance_steps_snap_to_the_centre_but_never_stick_there()
+    {
+        Assert.Equal(0, ClassicLayout.SettleBalance(0.2, 0.1));     // a step down from 20 % lands in the centre
+        Assert.Equal(0.2, ClassicLayout.SettleBalance(0, 0.1));     // a step up from the centre leaves the zone
+        Assert.Equal(-0.2, ClassicLayout.SettleBalance(0, -0.1));
+        Assert.Equal(0, ClassicLayout.SettleBalance(0.5, 0.12));    // a click near the centre snaps
+        Assert.Equal(0, ClassicLayout.SettleBalance(0, 0.07));      // ... also when already centred
+        Assert.Equal(-0.6, ClassicLayout.SettleBalance(0, -0.6));   // outside the zone: as asked
+        Assert.Equal(1, ClassicLayout.SettleBalance(0.9, 1.3));
     }
 
     [Theory]

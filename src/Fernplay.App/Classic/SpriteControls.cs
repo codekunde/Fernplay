@@ -214,6 +214,52 @@ public sealed class SpriteClock : FrameworkElement
 }
 
 /// <summary>
+/// The classic EQ graph (113x19): the skin's graph background, the preamp line, and the curve through the 10 bands with
+/// each pixel in the colour of its row (EQMAIN's 1x19 colour strip). Columns are joined so steep curves stay unbroken.
+/// </summary>
+public sealed class SpriteEqGraph : FrameworkElement
+{
+    private readonly SkinBitmaps _skin;
+    private readonly Brush[] _rows = new Brush[ClassicLayout.EqGraphHeight];
+    private int[] _curve = ClassicLayout.EqCurve(new double[10]);
+    private int _preamp = ClassicLayout.EqGraphY(0);
+
+    public SpriteEqGraph(SkinBitmaps skin)
+    {
+        _skin = skin;
+        Width = ClassicLayout.EqGraphWidth; Height = ClassicLayout.EqGraphHeight;
+        IsHitTestVisible = false;
+        var strip = skin.Skin.GetSprite("Eq.Graph.Colors");
+        for (int y = 0; y < _rows.Length; y++)
+        {
+            // A skin without the strip: fall back to the base skin's red-to-green idea.
+            var c = strip is not null ? SkinBitmaps.ToColor(strip[0, y]) : Color.FromRgb((byte)(0xD3 - y * 9), (byte)(0x22 + y * 8), 0x20);
+            var b = new SolidColorBrush(c); b.Freeze(); _rows[y] = b;
+        }
+    }
+
+    public void Show(IReadOnlyList<double> bands, double preamp)
+    {
+        _curve = ClassicLayout.EqCurve(bands);
+        _preamp = ClassicLayout.EqGraphY(preamp);
+        InvalidateVisual();
+    }
+
+    protected override void OnRender(DrawingContext dc)
+    {
+        if (_skin["Eq.Graph.Background"] is { } bg) dc.DrawImage(bg, new Rect(0, 0, Width, Height));
+        if (_skin["Eq.Graph.Preamp"] is { } line) dc.DrawImage(line, new Rect(0, _preamp, Width, 1));
+        for (int x = 0; x < _curve.Length; x++)
+        {
+            int y = _curve[x], prev = x > 0 ? _curve[x - 1] : y;
+            // From one row short of the previous column's to this one's: a steep step stays a joined line.
+            int from = y == prev ? y : Math.Min(y, prev + Math.Sign(y - prev)), to = y == prev ? y : Math.Max(y, prev + Math.Sign(y - prev));
+            for (int r = from; r <= to; r++) dc.DrawRectangle(_rows[r], null, new Rect(x, r, 1, 1));
+        }
+    }
+}
+
+/// <summary>
 /// The classic spectrum: 19 bars of 3 px with a 1 px gap in 76x16, coloured per row from VISCOLOR.TXT (2 = top, 17 = bottom),
 /// peak caps in colour 23, drawn over the player background.
 /// </summary>

@@ -40,9 +40,23 @@ public static class ClassicLayout
     public static int BalanceStep(double balance) => (int)Math.Round(Math.Min(Math.Abs(balance), 1) * (SpriteMap.VolumeSteps - 1));
 
     /// <summary>The balance snaps to the centre within this distance, so it is easy to set back.</summary>
-    public const double BalanceSnap = 0.08;
+    public const double BalanceSnap = 0.15;
+
+    /// <summary>Where a step away from the centre lands (just outside the snap zone), so keys and the wheel never stick at 0.</summary>
+    public const double BalanceStepOut = 0.2;
 
     public static double SnapBalance(double balance) => Math.Abs(balance) < BalanceSnap ? 0 : Math.Clamp(balance, -1, 1);
+
+    /// <summary>
+    /// The balance after a click, key or wheel step from <paramref name="from"/> to <paramref name="to"/>: inside the
+    /// centre zone it snaps to 0, except that a key or wheel step (<paramref name="step"/>) from the centre itself moves
+    /// out to <see cref="BalanceStepOut"/>.
+    /// </summary>
+    public static double SettleBalance(double from, double to, double step = 0.1)
+    {
+        if (to == 0 || Math.Abs(to) >= BalanceSnap) return Math.Clamp(to, -1, 1);
+        return from == 0 && Math.Abs(Math.Abs(to) - step) < 1e-9 ? Math.Sign(to) * BalanceStepOut : 0;
+    }
 
     /// <summary>
     /// Layout scale for a size setting (1x, 2x, 3x) on a screen with the given DPI scale, chosen so one skin pixel is a
@@ -54,6 +68,44 @@ public static class ClassicLayout
         dpiScale = dpiScale > 0 ? dpiScale : 1;
         double device = Math.Max(1, Math.Round(size * dpiScale, MidpointRounding.AwayFromZero));
         return device / dpiScale;
+    }
+
+    // ===== Equalizer window (275x116, EQMAIN.BMP) =====
+
+    public static readonly (int X, int Y) EqClose = (264, 3), EqOn = (14, 18), EqAuto = (40, 18), EqGraph = (86, 17),
+        EqPresets = (217, 18), EqPreamp = (21, 38);
+
+    /// <summary>X of the 10 band sliders (60 Hz to 16 kHz), all at <see cref="EqSliderY"/>.</summary>
+    public static readonly int[] EqBandX = [78, 96, 114, 132, 150, 168, 186, 204, 222, 240];
+    public const int EqSliderY = 38, EqSliderWidth = 14, EqSliderHeight = 63, EqGraphWidth = 113, EqGraphHeight = 19;
+
+    /// <summary>Background step (0 = green at -12 dB, 27 = red at +12 dB) of an EQ slider.</summary>
+    public static int EqSliderStep(double db, double maxDb = 12) =>
+        (int)Math.Round((Math.Clamp(db, -maxDb, maxDb) + maxDb) / (2 * maxDb) * (SpriteMap.EqSliderSteps - 1));
+
+    /// <summary>Row of the EQ graph (0 = top, +12 dB; 18 = bottom, -12 dB) for a gain.</summary>
+    public static int EqGraphY(double db, double maxDb = 12) =>
+        (int)Math.Round((maxDb - Math.Clamp(db, -maxDb, maxDb)) / (2 * maxDb) * (EqGraphHeight - 1));
+
+    /// <summary>
+    /// The EQ curve: one row per graph column (113), a Catmull-Rom curve through the 10 bands spaced evenly across the
+    /// graph, clamped to the graph.
+    /// </summary>
+    public static int[] EqCurve(IReadOnlyList<double> bands, double maxDb = 12)
+    {
+        var rows = new int[EqGraphWidth];
+        int n = bands.Count;
+        double span = (EqGraphWidth - 1.0) / (n - 1);
+        for (int x = 0; x < EqGraphWidth; x++)
+        {
+            double pos = x / span;
+            int i = Math.Min((int)pos, n - 2);
+            double t = pos - i;
+            double p0 = bands[Math.Max(i - 1, 0)], p1 = bands[i], p2 = bands[i + 1], p3 = bands[Math.Min(i + 2, n - 1)];
+            double db = 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
+            rows[x] = EqGraphY(db, maxDb);
+        }
+        return rows;
     }
 
     /// <summary>Text for the classic number boxes, right-aligned to the box width ("128", " 44"); too long keeps the right end.</summary>
