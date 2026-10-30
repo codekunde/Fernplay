@@ -130,6 +130,29 @@ public sealed class LibraryIndex
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>Takes these plays out of the history (play counts stay: they say how often, the history says when).</summary>
+    public void RemoveHistory(IEnumerable<HistoryEntry> entries)
+    {
+        var gone = entries.ToHashSet();
+        if (History.RemoveAll(gone.Contains) > 0) Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void ClearHistory()
+    {
+        if (History.Count == 0) return;
+        History.Clear();
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Sets the rating of several tracks with one change notice.</summary>
+    public void SetRating(IEnumerable<string> paths, int stars)
+    {
+        bool any = false;
+        foreach (var p in paths)
+            if (_byPath.TryGetValue(p, out var t)) { t.Rating = Math.Clamp(stars, 0, 5); any = true; }
+        if (any) Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     public void SetRating(string path, int stars)
     {
         if (!_byPath.TryGetValue(path, out var t)) return;

@@ -51,6 +51,8 @@
             </Setter>
         </Style>
         <Style x:Key="LibList" TargetType="ListView">
+            <!-- The rows show their own focus ring; the list's own box would frame the whole pane. -->
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="ItemContainerStyle" Value="{StaticResource LibRow}" />
@@ -76,6 +78,7 @@
         <Style x:Key="NavItem" TargetType="ListBoxItem">
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="AutomationProperties.Name" Value="{Binding Text}" />
+            <Setter Property="ToolTip" Value="{Binding ToolTip}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -152,7 +155,7 @@
                 </Grid.ColumnDefinitions>
 
                 <Border Style="{StaticResource Inset}">
-                    <ListBox x:Name="Nav" Background="Transparent" BorderThickness="0" ItemContainerStyle="{StaticResource NavItem}"
+                    <ListBox x:Name="Nav" Background="Transparent" BorderThickness="0" ItemContainerStyle="{StaticResource NavItem}" FocusVisualStyle="{x:Null}"
                              SelectionChanged="Nav_SelectionChanged" AutomationProperties.Name="Library views">
                         <ListBox.Template>
                             <ControlTemplate TargetType="ListBox">
@@ -190,8 +193,19 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="2*" />
                             <ColumnDefinition Width="3" />
-                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="5*" />
+                            <ColumnDefinition Width="3" />
+                            <ColumnDefinition Width="68" />
                         </Grid.ColumnDefinitions>
+                        <!-- Cover of the chosen album (or of the selected track): art in the file, else folder.jpg and the like. -->
+                        <Border Grid.Column="4" Style="{StaticResource Inset}">
+                            <Grid>
+                                <TextBlock x:Name="NoCover" Text="NO COVER" Style="{StaticResource SkinLabel}" Foreground="#2E5A38"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Image x:Name="Cover" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                                       AutomationProperties.Name="Album cover" />
+                            </Grid>
+                        </Border>
                         <Border Style="{StaticResource Inset}">
                             <ListView x:Name="ArtistList" Style="{StaticResource LibList}" SelectionMode="Single" SelectionChanged="Artist_SelectionChanged"
                                       MouseDoubleClick="Artist_DoubleClick" AutomationProperties.Name="Artists">
@@ -225,7 +239,7 @@
                                       MouseDoubleClick="Track_DoubleClick" KeyDown="Track_KeyDown"
                                       PreviewMouseLeftButtonDown="Track_PreviewMouseDown" PreviewMouseMove="Track_PreviewMouseMove"
                                       AutomationProperties.Name="Tracks"
-                                      AutomationProperties.HelpText="Enter or double-click plays; drag tracks to the playlist to add them">
+                                      AutomationProperties.HelpText="Enter or double-click plays, Shift+Enter enqueues; 0 to 5 rates; drag tracks to the playlist to add them">
                                 <ListView.View>
                                     <GridView x:Name="TrackColumns" />
                                 </ListView.View>

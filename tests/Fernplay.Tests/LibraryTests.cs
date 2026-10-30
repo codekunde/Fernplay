@@ -259,6 +259,68 @@ public sealed class LibraryTests : IDisposable
     }
 
     [Fact]
+    public void History_entries_can_be_removed_or_cleared_and_play_counts_stay()
+    {
+        var (index, scanner) = NewLibrary(_dir.FullName);
+        var a = File("Ash - Album - 01 - One.mp3");
+        Rescan(index, scanner);
+        var t0 = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
+        index.RecordPlay(a, t0);
+        index.RecordPlay(a, t0.AddHours(1));
+        index.RecordPlay(a, t0.AddHours(2));
+        int changes = 0;
+        index.Changed += (_, _) => changes++;
+
+        index.RemoveHistory([index.History[1]]);
+        Assert.Equal([t0.AddHours(2), t0], index.History.Select(h => h.PlayedAt));
+        Assert.Equal(3, index.Find(a)!.PlayCount);
+        index.ClearHistory();
+        Assert.Empty(index.History);
+        index.ClearHistory(); // nothing left: no change notice
+        Assert.Equal(2, changes);
+    }
+
+    [Fact]
+    public void Ratings_of_several_tracks_are_set_at_once_and_clamped()
+    {
+        var (index, scanner) = NewLibrary(_dir.FullName);
+        var a = File("Ash - Album - 01 - One.mp3");
+        var b = File("Ash - Album - 02 - Two.mp3");
+        Rescan(index, scanner);
+        int changes = 0;
+        index.Changed += (_, _) => changes++;
+        index.SetRating([a, b, Path.Combine(_dir.FullName, "not in the library.mp3")], 9);
+        Assert.Equal([5, 5], new[] { index.Find(a)!.Rating, index.Find(b)!.Rating });
+        Assert.Equal(1, changes);
+        index.SetRating([Path.Combine(_dir.FullName, "nope.mp3")], 2);
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
+    public void Cover_pictures_are_found_by_the_usual_names_in_order()
+    {
+        var album = Directory.CreateDirectory(Path.Combine(_dir.FullName, "Album")).FullName;
+        Assert.Null(CoverFiles.Find(album));
+        File(@"Album\notes.txt");
+        File(@"Album\AlbumArtSmall.jpg");
+        Assert.EndsWith("AlbumArtSmall.jpg", CoverFiles.Find(album));
+        File(@"Album\AlbumArt_{ABC}_Large.jpg");
+        Assert.EndsWith("AlbumArt_{ABC}_Large.jpg", CoverFiles.Find(album));
+        File(@"Album\Front.PNG");
+        Assert.EndsWith("Front.PNG", CoverFiles.Find(album));
+        File(@"Album\FOLDER.jpg");
+        Assert.EndsWith("FOLDER.jpg", CoverFiles.Find(album));
+        Assert.Null(CoverFiles.Find(Path.Combine(_dir.FullName, "missing")));
+    }
+
+    [Fact]
+    public void Playlist_labels_add_the_folder_only_when_names_repeat()
+    {
+        var labels = LibraryQuery.PlaylistLabels([@"C:\M\Rock\Favourites.m3u", @"C:\M\Jazz\favourites.m3u8", @"C:\M\Party.pls"]);
+        Assert.Equal(["Favourites (Rock)", "favourites (Jazz)", "Party"], labels.Select(l => l.Label));
+    }
+
+    [Fact]
     public void The_sample_rate_is_never_read_as_the_year()
     {
         // System.Audio.SampleRate shares its id (5) with System.Media.Year in another property set: an untagged

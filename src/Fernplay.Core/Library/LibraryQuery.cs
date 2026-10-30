@@ -89,6 +89,23 @@ public static class LibraryQuery
         })
         .OrderBy(a => a.Artist, StringComparer.CurrentCultureIgnoreCase).ThenBy(a => a.Year ?? int.MaxValue).ThenBy(a => a.Album, StringComparer.CurrentCultureIgnoreCase)];
 
+    /// <summary>
+    /// Names for the playlist files in the tree: the file name, and its folder after it when two files share a name
+    /// ("Favourites (Rock)", "Favourites (Jazz)").
+    /// </summary>
+    public static List<(string Path, string Label)> PlaylistLabels(IEnumerable<string> paths)
+    {
+        var list = paths.ToList();
+        var counts = list.GroupBy(p => System.IO.Path.GetFileNameWithoutExtension(p), StringComparer.CurrentCultureIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.CurrentCultureIgnoreCase);
+        return [.. list.Select(p =>
+        {
+            string name = System.IO.Path.GetFileNameWithoutExtension(p);
+            string folder = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(p) ?? "");
+            return (p, counts[name] > 1 && folder.Length > 0 ? $"{name} ({folder})" : name);
+        })];
+    }
+
     /// <summary>The status line: "40 items [2:40:25] [220.90 MB] in 0.001 sec".</summary>
     public static string Status(IReadOnlyCollection<LibraryTrack> tracks, TimeSpan queryTime)
     {

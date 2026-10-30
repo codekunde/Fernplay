@@ -21,6 +21,7 @@ public sealed class NavEntry
     public Kinds Kind { get; init; }
     public LibraryView View { get; init; }
     public string? PlaylistPath { get; init; }
+    public string? ToolTip { get; init; }
     public bool IsHeading => Kind == Kinds.Heading;
     public Thickness Indent => Kind is Kinds.View or Kinds.Playlist ? new Thickness(6, 0, 0, 0) : new Thickness(0);
     /// <summary>Same entry across rebuilds of the list (to keep the selection).</summary>
@@ -34,29 +35,38 @@ public sealed record ArtistEntry(string Name, int Albums, string? Key)
 }
 
 /// <summary>A row of the album pane; Key null = the "All" row.</summary>
-public sealed record AlbumEntry(string Album, string Artist, int Tracks, int? Year, string? Genre, string? Key)
+public sealed record AlbumEntry(string Album, string Artist, int Tracks, int? Year, string? Genre, string? Key, string? CoverPath = null)
 {
     public string AccessibleName => Key is null ? Album : $"{Album} by {Artist}, {Tracks} track{(Tracks == 1 ? "" : "s")}{(Year is { } y ? $", {y}" : "")}";
 }
 
-/// <summary>A row of the track list. In History one track can appear several times (once per play).</summary>
-public sealed class LibraryRow(LibraryTrack track, DateTime? playedAt = null)
+/// <summary>
+/// A row of the track list. In History one track can appear several times (once per play, <see cref="Entry"/>);
+/// a playlist can hold files outside the library and radio stations (tracks made up for the row, not in the index).
+/// </summary>
+public sealed class LibraryRow(LibraryTrack track, HistoryEntry? entry = null, bool inLibrary = true)
 {
     public LibraryTrack Track { get; } = track;
+    public HistoryEntry? Entry { get; } = entry;
+    /// <summary>False for a file outside the library folders or a station: it cannot be rated.</summary>
+    public bool InLibrary { get; } = inLibrary;
+    public bool IsStream => Fernplay.Core.Track.IsStreamPath(Track.Path);
     public string Path => Track.Path;
     public string Artist => Track.ArtistName;
     public string Album => Track.AlbumName;
     public string Number => Track.TrackNumber?.ToString() ?? "";
     public string Title => Track.TitleText;
-    public string Length => Track.Duration is { } d ? TimeFormat.Clock(d) : "";
+    public string Length => IsStream ? "LIVE" : Track.Duration is { } d ? TimeFormat.Clock(d) : "";
     public string Genre => Track.Genre ?? "";
     public string Year => Track.Year?.ToString() ?? "";
-    public string Rating => new('★', Math.Clamp(Track.Rating, 0, 5));
+    public int Stars => Track.Rating;
+    public Visibility StarsVisible => InLibrary ? Visibility.Visible : Visibility.Hidden;
     public string Plays => Track.PlayCount > 0 ? Track.PlayCount.ToString() : "";
     /// <summary>History: when this play happened; elsewhere the track's last play.</summary>
-    public DateTime? Played => playedAt ?? Track.LastPlayed;
+    public DateTime? Played => Entry?.PlayedAt ?? Track.LastPlayed;
     public string LastPlayed => Played is { } p ? p.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "";
-    public string AccessibleName => $"{Title} by {Artist}, {Album}{(Length == "" ? "" : ", " + Length)}";
+    public string AccessibleName => IsStream ? $"{Title}, radio station"
+        : $"{Title} by {Artist}, {Album}{(Length == "" ? "" : ", " + Length)}{(Stars > 0 ? $", {Stars} of 5 stars" : "")}";
 }
 
 /// <summary>
@@ -97,6 +107,10 @@ public partial class LibraryWindow : SkinWindow
     private string? _status; // last query status line
     private bool _filling; // true while panes are refilled, so their selection events are not the user's
     private bool _dirty = true; // the index changed while the window was hidden
+    private int _missing; // entries of the chosen playlist file that were not found
+    private const string StationArtist = "Radio station";
+    private readonly CoverCache _covers = new();
+    private int _coverRequest; // newest cover asked for; older answers are dropped
 
     // Sorting of the track list: column key and direction; null = the view's own order.
     private string? _sortKey;
@@ -113,6 +127,11 @@ public partial class LibraryWindow : SkinWindow
         BuildColumns();
         TrackList.AddHandler(GridViewColumnHeader.ClickEvent, new RoutedEventHandler(TrackHeader_Click));
         TrackList.PreviewMouseLeftButtonUp += Track_PreviewMouseUp;
+        TrackList.AddHandler(StarRating.PickedEvent, new RoutedEventHandler(Stars_Picked));
+        TrackList.SelectionChanged += (_, _) => ShowCover();
+        TrackList.ContextMenu = new ContextMenu();
+        TrackList.ContextMenuOpening += TrackMenu_Opening;
+        Closed += (_, _) => _covers.Dispose();
 
         _searchDelay.Tick += (_, _) => { _searchDelay.Stop(); Requery(); };
         _refreshDelay.Tick += (_, _) => { _refreshDelay.Stop(); Refresh(); };
@@ -188,11 +207,11 @@ public partial class LibraryWindow : SkinWindow
             new() { Text = "Top Rated", Kind = NavEntry.Kinds.View, View = LibraryView.TopRated },
             new() { Text = "PLAYLISTS", Kind = NavEntry.Kinds.Heading },
         };
-        items.AddRange(_lib.Index.Playlists.Select(p => new NavEntry
+        items.AddRange(LibraryQuery.PlaylistLabels(_lib.Index.Playlists).Select(p => new NavEntry
         {
-            Text = Path.GetFileNameWithoutExtension(p), Kind = NavEntry.Kinds.Playlist, PlaylistPath = p,
+            Text = p.Label, Kind = NavEntry.Kinds.Playlist, PlaylistPath = p.Path, ToolTip = p.Path,
         }));
-        items.Add(new NavEntry { Text = "HISTORY", Kind = NavEntry.Kinds.History });
+        items.Add(new NavEntry { Text = "HISTORY", Kind = NavEntry.Kinds.History, ToolTip = "The last plays, newest first" });
 
         _filling = true;
         Nav.ItemsSource = items;
@@ -224,17 +243,26 @@ public partial class LibraryWindow : SkinWindow
     private List<LibraryRow> ViewRows()
     {
         var index = _lib.Index;
+        _missing = 0;
         switch (_nav?.Kind)
         {
             case NavEntry.Kinds.History:
-                return [.. index.History.Select(h => index.Find(h.Path) is { } t ? new LibraryRow(t, h.PlayedAt) : null).OfType<LibraryRow>()];
+                // Plays of files that left the library (folder removed) still show, by file name, while the file exists.
+                return [.. index.History.Select(h => index.Find(h.Path) is { } t ? new LibraryRow(t, h)
+                    : File.Exists(h.Path) ? new LibraryRow(new LibraryTrack { Path = h.Path }, h, inLibrary: false) : null).OfType<LibraryRow>()];
             case NavEntry.Kinds.Playlist when _nav.PlaylistPath is { } file:
                 try
                 {
-                    // Entries in the library show its facts; others (outside the folders) only their file name.
-                    return [.. Playlist.ReadPlaylistFile(file).Where(e => !e.IsStream)
-                        .Select(e => index.Find(e.Path) ?? (File.Exists(e.Path) ? new LibraryTrack { Path = e.Path, Title = e.Title } : null))
-                        .OfType<LibraryTrack>().Select(t => new LibraryRow(t))];
+                    // Entries in the library show its facts; files outside the folders their file name; stations their name.
+                    var rows = new List<LibraryRow>();
+                    foreach (var e in Playlist.ReadPlaylistFile(file))
+                    {
+                        if (e.IsStream) rows.Add(new LibraryRow(new LibraryTrack { Path = e.Path, Title = e.Title ?? e.Path, Artist = StationArtist, Album = "Radio stations" }, inLibrary: false));
+                        else if (index.Find(e.Path) is { } t) rows.Add(new LibraryRow(t));
+                        else if (File.Exists(e.Path)) rows.Add(new LibraryRow(new LibraryTrack { Path = e.Path, Title = e.Title }, inLibrary: false));
+                        else _missing++;
+                    }
+                    return rows;
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return []; }
             default:
@@ -291,7 +319,7 @@ public partial class LibraryWindow : SkinWindow
     {
         var albums = LibraryQuery.Albums(SearchedTracks, _artistKey);
         var items = new List<AlbumEntry> { new($"All ({albums.Count} album{(albums.Count == 1 ? "" : "s")})", "", albums.Sum(a => a.Tracks), null, null, null) };
-        items.AddRange(albums.Select(a => new AlbumEntry(a.Album, a.Artist, a.Tracks, a.Year, a.Genre, a.Album)));
+        items.AddRange(albums.Select(a => new AlbumEntry(a.Album, a.Artist, a.Tracks, a.Year, a.Genre, a.Album, a.FirstTrackPath)));
         if (_albumKey is not null && !albums.Any(a => Same(a.Album, _albumKey))) _albumKey = null;
         _filling = true;
         AlbumList.ItemsSource = items;
@@ -307,10 +335,39 @@ public partial class LibraryWindow : SkinWindow
         if (_albumKey is { } album) rows = rows.Where(r => Same(r.Album, album));
         _shown = Sort([.. rows]);
         TrackList.ItemsSource = _shown;
-        _status = LibraryQuery.Status(_shown.Select(r => r.Track).ToList(), clock.Elapsed);
+        _status = LibraryQuery.Status(_shown.Select(r => r.Track).ToList(), clock.Elapsed)
+            + (_missing > 0 ? $"  ({_missing} not found)" : "");
         EmptyText.Text = _shown.Count > 0 ? "" : EmptyMessage();
         EmptyText.Visibility = _shown.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
         ShowStatus();
+        ShowCover();
+    }
+
+    // ================= Cover =================
+
+    /// <summary>
+    /// The chosen album's cover; with "All" chosen, the cover of the selected track, or of the only album shown.
+    /// </summary>
+    private async void ShowCover()
+    {
+        string? path = AlbumList.SelectedItem is AlbumEntry { Key: not null } album
+            ? (album.Album == "Radio stations" && _shown.All(r => r.IsStream) ? null : album.CoverPath)
+            : TrackList.SelectedItem is LibraryRow { IsStream: false } row ? row.Path
+            : _shown.Where(r => !r.IsStream).Select(r => r.Album).Distinct(StringComparer.CurrentCultureIgnoreCase).Count() == 1 ? _shown.First(r => !r.IsStream).Path
+            : null;
+        int request = ++_coverRequest;
+        if (path is null) { SetCover(null, null); return; }
+        var image = await _covers.GetAsync(path);
+        if (request == _coverRequest) SetCover(image, path);
+    }
+
+    private void SetCover(ImageSource? image, string? path)
+    {
+        Cover.Source = image;
+        NoCover.Visibility = image is null && path is not null ? Visibility.Visible : Visibility.Collapsed;
+        var row = path is null ? null : _shown.FirstOrDefault(r => string.Equals(r.Path, path, StringComparison.OrdinalIgnoreCase));
+        System.Windows.Automation.AutomationProperties.SetName(Cover, image is null ? "No album cover" : $"Cover of {row?.Album ?? "the album"}");
+        Cover.ToolTip = image is null || row is null ? null : $"{row.Album} - {row.Artist}";
     }
 
     private string EmptyMessage()
@@ -415,17 +472,48 @@ public partial class LibraryWindow : SkinWindow
         (string Key, string Header, double Width)[] columns =
         [
             ("Artist", "ARTIST", 50), ("Album", "ALBUM", 50), ("Number", "#", 12), ("Title", "TITLE", 60), ("Length", "TIME", 22),
-            ("Genre", "GENRE", 32), ("Year", "YEAR", 22), ("Rating", "RATING", 28), ("Plays", "PLAYS", 24), ("LastPlayed", "LAST PLAYED", 52),
+            ("Genre", "GENRE", 32), ("Year", "YEAR", 22), ("Rating", "RATING", 34), ("Plays", "PLAYS", 24), ("LastPlayed", "LAST PLAYED", 52),
         ];
         foreach (var (key, header, width) in columns)
         {
-            var column = new GridViewColumn { Header = header, Width = width, DisplayMemberBinding = new Binding(key) };
+            var column = new GridViewColumn { Header = header, Width = width };
+            if (key == "Rating") column.CellTemplate = StarsTemplate();
+            else column.DisplayMemberBinding = new Binding(key);
             _columns[column] = (key, header);
             TrackColumns.Columns.Add(column);
         }
         StretchColumn(TrackList, TrackColumns.Columns[3]);
         StretchColumn(ArtistList, ((GridView)ArtistList.View).Columns[0]);
         StretchColumn(AlbumList, ((GridView)AlbumList.View).Columns[0]);
+    }
+
+    /// <summary>The rating cell: five clickable stars (hidden for files outside the library and stations).</summary>
+    private static DataTemplate StarsTemplate()
+    {
+        var stars = new FrameworkElementFactory(typeof(StarRating));
+        stars.SetBinding(StarRating.ValueProperty, new Binding(nameof(LibraryRow.Stars)) { Mode = BindingMode.OneWay });
+        stars.SetBinding(VisibilityProperty, new Binding(nameof(LibraryRow.StarsVisible)));
+        stars.SetValue(HeightProperty, 7.0);
+        var template = new DataTemplate { VisualTree = stars };
+        template.Seal();
+        return template;
+    }
+
+    private void Stars_Picked(object sender, RoutedEventArgs e)
+    {
+        if (e.OriginalSource is not StarRating { DataContext: LibraryRow row } stars) return;
+        e.Handled = true;
+        _lib.Index.SetRating(row.Path, stars.Value);
+    }
+
+    /// <summary>0 to 5 on the track list rates the selected tracks.</summary>
+    private void RateSelected(int stars)
+    {
+        var paths = TrackList.SelectedItems.Cast<LibraryRow>().Where(r => r.InLibrary).Select(r => r.Path).ToList();
+        if (paths.Count == 0) return;
+        _lib.Index.SetRating(paths, stars);
+        _c.ShowNotice(stars == 0 ? $"Rating cleared for {paths.Count} track{(paths.Count == 1 ? "" : "s")}."
+            : $"Rated {paths.Count} track{(paths.Count == 1 ? "" : "s")} {stars} of 5.");
     }
 
     /// <summary>One column (title, artist, album) takes the width the others leave, as the window is resized.</summary>
@@ -458,8 +546,12 @@ public partial class LibraryWindow : SkinWindow
 
     private void ShowSortMarks()
     {
-        foreach (var (column, (key, header)) in _columns)
+        bool history = _nav?.Kind == NavEntry.Kinds.History;
+        foreach (var (column, (key, fixedHeader)) in _columns)
+        {
+            string header = key == "LastPlayed" && history ? "PLAYED" : fixedHeader; // History: when each play happened
             column.Header = key == _sortKey ? header + (_sortDescending ? " ▼" : " ▲") : header;
+        }
     }
 
     private List<LibraryRow> Sort(List<LibraryRow> rows)
@@ -511,6 +603,14 @@ public partial class LibraryWindow : SkinWindow
     private void PlayRows(IReadOnlyList<LibraryRow> rows, bool replace)
     {
         if (rows.Count == 0) return;
+        // A whole playlist file (nothing picked out of it): open the file itself, so stations keep their names.
+        if (_nav is { Kind: NavEntry.Kinds.Playlist, PlaylistPath: { } file } && ReferenceEquals(rows, _shown) && _shown.Count == _searched.Count && _sortKey is null
+            && File.Exists(file))
+        {
+            _ = _c.OpenAsync([file], replace);
+            if (!replace) _c.ShowNotice($"Added {Path.GetFileName(file)} to the playlist.");
+            return;
+        }
         var paths = rows.Select(r => r.Path).ToList();
         _ = _c.OpenAsync(paths, replace);
         if (!replace) _c.ShowNotice($"Added {paths.Count:N0} track{(paths.Count == 1 ? "" : "s")} to the playlist.");
@@ -532,6 +632,73 @@ public partial class LibraryWindow : SkinWindow
             e.Handled = true;
             PlayRows(SelectedOrAll(), replace: Keyboard.Modifiers != ModifierKeys.Shift); // Shift+Enter enqueues
         }
+        else if (Keyboard.Modifiers == ModifierKeys.None && e.Key is >= Key.D0 and <= Key.D5 or >= Key.NumPad0 and <= Key.NumPad5)
+        {
+            e.Handled = true;
+            RateSelected(e.Key >= Key.NumPad0 ? e.Key - Key.NumPad0 : e.Key - Key.D0);
+        }
+        else if (e.Key == Key.Delete && _nav?.Kind == NavEntry.Kinds.History)
+        {
+            e.Handled = true;
+            RemoveFromHistory();
+        }
+    }
+
+    // ================= Right-click menu =================
+
+    private void TrackMenu_Opening(object sender, ContextMenuEventArgs e)
+    {
+        var menu = TrackList.ContextMenu;
+        menu.Items.Clear();
+        var rows = TrackList.SelectedItems.Cast<LibraryRow>().ToList();
+        if (rows.Count == 0 && _nav?.Kind != NavEntry.Kinds.History) { e.Handled = true; return; } // nothing to act on
+        void Add(string header, Action act, bool enabled = true)
+        {
+            var item = new MenuItem { Header = header, IsEnabled = enabled };
+            item.Click += (_, _) => act();
+            menu.Items.Add(item);
+        }
+        if (rows.Count > 0)
+        {
+            Add("Play", () => PlayRows(SelectedOrAll(), replace: true));
+            Add("Enqueue", () => PlayRows(SelectedOrAll(), replace: false));
+            if (rows.Count == 1 && !rows[0].IsStream) Add("Show in Explorer", () => ShowInExplorer(rows[0].Path));
+            if (rows.Any(r => r.InLibrary))
+            {
+                menu.Items.Add(new Separator());
+                // Flat (Fernplay's menus have no submenus): one line per rating, keys 0 to 5 do the same.
+                for (int n = 5; n >= 0; n--)
+                {
+                    int stars = n;
+                    Add(n == 0 ? "Clear rating   0" : $"{new string('★', n)}{new string('☆', 5 - n)}   {n}", () => RateSelected(stars));
+                }
+            }
+        }
+        if (_nav?.Kind == NavEntry.Kinds.History)
+        {
+            menu.Items.Add(new Separator());
+            Add("Remove from history   Del", RemoveFromHistory, rows.Count > 0);
+            Add("Clear history…", ClearHistory, _lib.Index.History.Count > 0);
+        }
+    }
+
+    private static void ShowInExplorer(string path)
+    {
+        try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = false }); }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException) { }
+    }
+
+    private void RemoveFromHistory()
+    {
+        var entries = TrackList.SelectedItems.Cast<LibraryRow>().Select(r => r.Entry).OfType<HistoryEntry>().ToList();
+        if (entries.Count > 0) _lib.Index.RemoveHistory(entries);
+    }
+
+    private void ClearHistory()
+    {
+        var answer = MessageBox.Show(this, $"Clear all {_lib.Index.History.Count:N0} plays from the history?\n\nPlay counts and ratings stay.",
+            "Fernplay library", MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel);
+        if (answer == MessageBoxResult.OK) _lib.Index.ClearHistory();
     }
 
     // Dragging tracks out (to the playlist or the player) as files, as Explorer does.
@@ -541,6 +708,7 @@ public partial class LibraryWindow : SkinWindow
 
     private void Track_PreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
+        if (e.OriginalSource is StarRating) { _pressAt = null; _deferSelect = false; return; } // a rating click, not a drag
         var item = ItemAt(TrackList, e.OriginalSource);
         _pressRow = item?.DataContext as LibraryRow;
         _pressAt = item is null ? null : e.GetPosition(TrackList);
@@ -562,7 +730,8 @@ public partial class LibraryWindow : SkinWindow
         if (Math.Abs(d.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(d.Y) < SystemParameters.MinimumVerticalDragDistance) return;
         _pressAt = null;
         _deferSelect = false;
-        var paths = TrackList.SelectedItems.Cast<LibraryRow>().Select(r => r.Path).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        // Files only: a station's address is not a file Explorer or the playlist could take as one.
+        var paths = TrackList.SelectedItems.Cast<LibraryRow>().Where(r => !r.IsStream).Select(r => r.Path).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (paths.Length == 0) return;
         // Keep the shown order, not the order the rows were clicked in.
         var order = _shown.Select((r, i) => (r.Path, i)).GroupBy(x => x.Path, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First().i, StringComparer.OrdinalIgnoreCase);
