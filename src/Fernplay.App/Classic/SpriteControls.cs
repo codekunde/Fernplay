@@ -261,22 +261,32 @@ public sealed class SpriteEqGraph : FrameworkElement
 
 /// <summary>
 /// The classic spectrum: 19 bars of 3 px with a 1 px gap in 76x16, coloured per row from VISCOLOR.TXT (2 = top, 17 = bottom),
-/// peak caps in colour 23, drawn over the player background.
+/// peak caps in colour 23, drawn over the player background. <see cref="Small"/>: the windowshade strip's 38x5, bars of
+/// 1 px, the 16 colours spread over 5 rows, no peak caps.
 /// </summary>
 public sealed class SpriteSpectrum : FrameworkElement
 {
     private readonly float[] _levels = new float[ClassicLayout.SpectrumBars];
     private readonly float[] _peaks = new float[ClassicLayout.SpectrumBars];
-    private readonly Brush[] _rows = new Brush[16];
+    private readonly Brush[] _rows;
     private readonly Brush _peak;
+    private readonly int _height, _barWidth;
+    private readonly bool _small;
 
-    public SpriteSpectrum(ClassicSkin skin)
+    public SpriteSpectrum(ClassicSkin skin, bool small = false)
     {
-        Width = ClassicLayout.SpectrumWidth; Height = ClassicLayout.SpectrumHeight;
-        for (int y = 0; y < 16; y++) _rows[y] = Frozen(SkinBitmaps.ToColor(skin.VisColors[2 + y]));
+        _small = small;
+        _height = small ? ClassicLayout.ShadeSpectrumHeight : ClassicLayout.SpectrumHeight;
+        _barWidth = small ? 1 : 3;
+        Width = small ? ClassicLayout.ShadeSpectrumWidth : ClassicLayout.SpectrumWidth; Height = _height;
+        _rows = new Brush[_height];
+        for (int y = 0; y < _height; y++)
+            _rows[y] = Frozen(SkinBitmaps.ToColor(skin.VisColors[2 + (int)Math.Round(y * 15.0 / (_height - 1))]));
         _peak = Frozen(SkinBitmaps.ToColor(skin.VisColors[23]));
         IsHitTestVisible = false;
     }
+
+    public static SpriteSpectrum Small(ClassicSkin skin) => new(skin, small: true);
 
     public void Push(float[] levels)
     {
@@ -290,12 +300,14 @@ public sealed class SpriteSpectrum : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
+        int step = _barWidth + 1, hMax = _height;
         for (int i = 0; i < _levels.Length; i++)
         {
-            int x = i * 4, h = (int)Math.Round(_levels[i] * 16);
-            for (int y = 16 - h; y < 16; y++) dc.DrawRectangle(_rows[y], null, new Rect(x, y, 3, 1));
-            int p = (int)Math.Round(_peaks[i] * 16);
-            if (p > 0) dc.DrawRectangle(_peak, null, new Rect(x, Math.Max(0, 16 - p - 1), 3, 1));
+            int x = i * step, h = (int)Math.Round(_levels[i] * hMax);
+            for (int y = hMax - h; y < hMax; y++) dc.DrawRectangle(_rows[y], null, new Rect(x, y, _barWidth, 1));
+            if (_small) continue;
+            int p = (int)Math.Round(_peaks[i] * hMax);
+            if (p > 0) dc.DrawRectangle(_peak, null, new Rect(x, Math.Max(0, hMax - p - 1), _barWidth, 1));
         }
     }
 

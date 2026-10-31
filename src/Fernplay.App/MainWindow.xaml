@@ -18,7 +18,7 @@
         <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
         <StackPanel>
             <!-- Title bar: drag handle -->
-            <Grid x:Name="TitleBar" Height="10" Margin="2,2,2,0" Background="{StaticResource TitleRibs}">
+            <Grid x:Name="TitleBar" Height="10" Margin="2,2,2,0" Style="{StaticResource TitleBar}">
                 <!-- App menu: settings and about (click or right-click). -->
                 <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Left" Padding="1,1">
                     <Button x:Name="AppMenuButton" Width="8" Height="8" Click="AppMenu_Click" Cursor="Hand"
@@ -42,12 +42,16 @@
                     </Button>
                 </Border>
                 <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Center" Padding="5,0">
-                    <TextBlock Text="FERNPLAY" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" VerticalAlignment="Center" />
+                    <TextBlock Text="FERNPLAY" Style="{StaticResource TitleLabel}" VerticalAlignment="Center" />
                 </Border>
                 <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Right" Padding="1,1">
                     <StackPanel Orientation="Horizontal">
                         <Button x:Name="MinimizeButton" Style="{StaticResource TitleButton}" Content="_" Click="Minimize_Click"
                                 ToolTip="Minimise" AutomationProperties.Name="Minimise" />
+                        <Button x:Name="ShadeButton" Style="{StaticResource TitleButton}" Click="Shade_Click"
+                                ToolTip="Roll up the player (Ctrl+W, or double-click the title bar)" AutomationProperties.Name="Windowshade" AutomationProperties.AcceleratorKey="Ctrl+W">
+                            <Path Style="{StaticResource MiniGlyph}" Data="{StaticResource GlyphShade}" />
+                        </Button>
                         <Button x:Name="CloseButton" Style="{StaticResource TitleButton}" Content="x" Click="Close_Click"
                                 ToolTip="Close Fernplay" AutomationProperties.Name="Close Fernplay" />
                     </StackPanel>
@@ -187,6 +191,103 @@
                 </Viewbox>
             </Grid>
         </StackPanel>
+    </Border>
+
+    <!--
+        Windowshade in Fernplay's look: the player rolled up to its title bar (ribs lit while active). Dark plates on
+        the ribs hold the menu, the song title and time, the mini transport, a small position bar and the window
+        buttons; the ribs between them drag the player, a double-click there rolls it down.
+    -->
+    <Border x:Name="FernplayShade" Width="280" Visibility="Collapsed" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
+        <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
+        <Grid x:Name="ShadeBar" Height="10" Margin="2" Style="{StaticResource TitleBar}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="3" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="3" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="3" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="3" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Background="{StaticResource FrameDark}" Padding="1,1">
+                <Button x:Name="ShadeMenuButton" Width="8" Height="8" Click="AppMenu_Click" Cursor="Hand"
+                        FocusVisualStyle="{StaticResource SkinFocus}" ToolTip="Settings and about" AutomationProperties.Name="Fernplay menu">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button"><Border Background="Transparent"><ContentPresenter /></Border></ControlTemplate>
+                    </Button.Template>
+                    <Image x:Name="ShadeMenuIcon" Width="8" Height="8" RenderOptions.BitmapScalingMode="HighQuality" />
+                </Button>
+            </Border>
+            <Border Grid.Column="2" Background="{StaticResource FrameDark}" Padding="1">
+                <Border Style="{StaticResource Inset}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="7" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path x:Name="ShadeStateGlyph" Fill="{StaticResource LcdGreen}" Stretch="Uniform" Width="4" Height="4" Margin="1.5,0,0,0"
+                              HorizontalAlignment="Left" VerticalAlignment="Center" Data="{StaticResource GlyphStop}" />
+                        <local:Marquee x:Name="ShadeMarquee" Grid.Column="1" TextSize="6" />
+                        <Button x:Name="ShadeClockButton" Grid.Column="2" Click="Clock_Click" Cursor="Hand" Margin="3,0,1.5,0"
+                                FocusVisualStyle="{StaticResource SkinFocus}" ToolTip="Switch between time played and time left"
+                                AutomationProperties.Name="Time: switch between played and left">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button"><Border Background="Transparent"><ContentPresenter /></Border></ControlTemplate>
+                            </Button.Template>
+                            <TextBlock x:Name="ShadeClock" Style="{StaticResource LcdText}" FontSize="6" VerticalAlignment="Center" Text="0:00" />
+                        </Button>
+                    </Grid>
+                </Border>
+            </Border>
+            <Border Grid.Column="4" Background="{StaticResource FrameDark}" Padding="0,1,1,1">
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource TitleButton}" Width="9" Click="Prev_Click" IsEnabled="{Binding IsEnabled, ElementName=PrevButton}"
+                            ToolTip="Previous track (Z)" AutomationProperties.Name="Previous track" AutomationProperties.AcceleratorKey="Z">
+                        <Path Style="{StaticResource MiniGlyph}" Data="{StaticResource GlyphPrev}" />
+                    </Button>
+                    <Button Style="{StaticResource TitleButton}" Width="9" Click="Play_Click"
+                            ToolTip="Play (X; Space plays or pauses)" AutomationProperties.Name="Play" AutomationProperties.AcceleratorKey="X">
+                        <Path Style="{StaticResource MiniGlyph}" Data="{StaticResource GlyphPlay}" />
+                    </Button>
+                    <Button Style="{StaticResource TitleButton}" Width="9" Click="Pause_Click" IsEnabled="{Binding IsEnabled, ElementName=PauseButton}"
+                            ToolTip="Pause, again to resume (C)" AutomationProperties.Name="Pause" AutomationProperties.AcceleratorKey="C">
+                        <Path Style="{StaticResource MiniGlyph}" Data="{StaticResource GlyphPause}" />
+                    </Button>
+                    <Button Style="{StaticResource TitleButton}" Width="9" Click="Stop_Click" IsEnabled="{Binding IsEnabled, ElementName=StopButton}"
+                            ToolTip="Stop (V)" AutomationProperties.Name="Stop" AutomationProperties.AcceleratorKey="V">
+                        <Path Style="{StaticResource MiniGlyph}" Data="{StaticResource GlyphStop}" />
+                    </Button>
+                    <Button Style="{StaticResource TitleButton}" Width="9" Click="Next_Click" IsEnabled="{Binding IsEnabled, ElementName=NextButton}"
+                            ToolTip="Next track (B)" AutomationProperties.Name="Next track" AutomationProperties.AcceleratorKey="B">
+                        <Path Style="{StaticResource MiniGlyph}" Data="{StaticResource GlyphNext}" />
+                    </Button>
+                    <Button Style="{StaticResource TitleButton}" Width="9" Margin="3,0,0,0" Click="Open_Click"
+                            ToolTip="Open music files (Ctrl+O)" AutomationProperties.Name="Open music files">
+                        <Path Style="{StaticResource MiniGlyph}" Data="{StaticResource GlyphOpen}" />
+                    </Button>
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="6" Background="{StaticResource FrameDark}" Padding="2,1">
+                <Slider x:Name="ShadeSeek" Style="{StaticResource SkinSliderH}" Width="34" Minimum="0" SmallChange="5" LargeChange="30"
+                        Maximum="{Binding Maximum, ElementName=SeekSlider}" Value="{Binding Value, ElementName=SeekSlider, Mode=TwoWay}"
+                        IsEnabled="{Binding IsEnabled, ElementName=SeekSlider}" AutomationProperties.Name="Position in the track"
+                        Thumb.DragStarted="Seek_DragStarted" Thumb.DragCompleted="Seek_DragCompleted" />
+            </Border>
+            <Border Grid.Column="8" Background="{StaticResource FrameDark}" Padding="0,1,1,1">
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource TitleButton}" Content="_" Click="Minimize_Click" ToolTip="Minimise" AutomationProperties.Name="Minimise" />
+                    <Button x:Name="UnshadeButton" Style="{StaticResource TitleButton}" Click="Unshade_Click"
+                            ToolTip="Roll down the player (Ctrl+W, or double-click the bar)" AutomationProperties.Name="Windowshade off" AutomationProperties.AcceleratorKey="Ctrl+W">
+                        <Path Style="{StaticResource MiniGlyph}" Data="{StaticResource GlyphUnshade}" />
+                    </Button>
+                    <Button Style="{StaticResource TitleButton}" Content="x" Click="Close_Click" ToolTip="Close Fernplay" AutomationProperties.Name="Close Fernplay" />
+                </StackPanel>
+            </Border>
+        </Grid>
     </Border>
     </Grid>
 </local:SkinWindow>

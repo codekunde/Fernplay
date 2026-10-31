@@ -66,6 +66,14 @@ public static class SpriteMap
         Add("Title.Clutter", "TITLEBAR", 304, 0, 8, 43);
         Add("Title.Clutter.Disabled", "TITLEBAR", 312, 0, 8, 43);
 
+        // Windowshade (the player rolled up): the button that rolls it down again, and the mini position bar whose knob
+        // looks different in the left, middle and right third.
+        Pair("Title.Unshade", "TITLEBAR", 0, 27, 9, 9, 9, 27);
+        Add("Shade.Position.Background", "TITLEBAR", 0, 36, 17, 7);
+        Add("Shade.Position.Thumb.Left", "TITLEBAR", 17, 36, 3, 7);
+        Add("Shade.Position.Thumb", "TITLEBAR", 20, 36, 3, 7);
+        Add("Shade.Position.Thumb.Right", "TITLEBAR", 23, 36, 3, 7);
+
         // Transport and eject.
         Pair("Buttons.Previous", "CBUTTONS", 0, 0, 23, 18, 0, 18);
         Pair("Buttons.Play", "CBUTTONS", 23, 0, 23, 18, 23, 18);

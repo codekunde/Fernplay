@@ -116,6 +116,48 @@
         <Setter Property="Foreground" Value="{StaticResource SkinTextDim}" />
     </Style>
 
+    <!-- Title bars: lit while their panel is the active window (keys go there), dull otherwise, as on the classic
+         players. The dull title text keeps 5.6:1 on FrameDark. -->
+    <SolidColorBrush x:Key="TitleTextInactive" Color="#9A9480" />
+    <LinearGradientBrush x:Key="TitleRibsInactive" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#2A2820" Offset="0" />
+        <GradientStop Color="#2A2820" Offset="0.1529" />
+        <GradientStop Color="#6E6754" Offset="0.1529" />
+        <GradientStop Color="#6E6754" Offset="0.2118" />
+        <GradientStop Color="#57513F" Offset="0.2118" />
+        <GradientStop Color="#57513F" Offset="0.2706" />
+        <GradientStop Color="#2A2820" Offset="0.2706" />
+        <GradientStop Color="#2A2820" Offset="0.4471" />
+        <GradientStop Color="#6E6754" Offset="0.4471" />
+        <GradientStop Color="#6E6754" Offset="0.5059" />
+        <GradientStop Color="#57513F" Offset="0.5059" />
+        <GradientStop Color="#57513F" Offset="0.5647" />
+        <GradientStop Color="#2A2820" Offset="0.5647" />
+        <GradientStop Color="#2A2820" Offset="0.7412" />
+        <GradientStop Color="#6E6754" Offset="0.7412" />
+        <GradientStop Color="#6E6754" Offset="0.8" />
+        <GradientStop Color="#57513F" Offset="0.8" />
+        <GradientStop Color="#57513F" Offset="0.8588" />
+        <GradientStop Color="#2A2820" Offset="0.8588" />
+        <GradientStop Color="#2A2820" Offset="1" />
+    </LinearGradientBrush>
+    <Style x:Key="TitleBar" TargetType="Grid">
+        <Setter Property="Background" Value="{StaticResource TitleRibs}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsActive, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
+                <Setter Property="Background" Value="{StaticResource TitleRibsInactive}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="TitleLabel" TargetType="TextBlock" BasedOn="{StaticResource SkinLabel}">
+        <Setter Property="Foreground" Value="{StaticResource TitleText}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsActive, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
+                <Setter Property="Foreground" Value="{StaticResource TitleTextInactive}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- Bevelled push button. Content is a glyph path or short caps text. -->
     <Style x:Key="SkinButton" TargetType="ButtonBase">
         <Setter Property="FocusVisualStyle" Value="{StaticResource SkinFocus}" />
@@ -412,6 +454,16 @@
         <Setter Property="Stretch" Value="None" />
         <Setter Property="SnapsToDevicePixels" Value="False" />
     </Style>
+
+    <!-- The transport glyphs shrunk for the 8 px buttons of the rolled-up strip and the title bar. -->
+    <Style x:Key="MiniGlyph" TargetType="Path" BasedOn="{StaticResource Glyph}">
+        <Setter Property="Stretch" Value="Uniform" />
+        <Setter Property="Width" Value="4.5" />
+        <Setter Property="Height" Value="4.5" />
+    </Style>
+    <!-- Windowshade: roll up (an arrow up to a bar) and roll down (an arrow down to a bar). -->
+    <Geometry x:Key="GlyphShade">M0,0 H7 V1.4 H0 Z M3.5,2.4 L7,7 L0,7 Z</Geometry>
+    <Geometry x:Key="GlyphUnshade">M0,0 L7,0 L3.5,4.6 Z M0,5.6 H7 V7 H0 Z</Geometry>
 
     <!--
         Context menus (presets, open, add): own templates so the Fluent theme's icon column and accent colour

@@ -29,10 +29,62 @@ public partial class MainWindow
         public required SpriteSpectrum Spectrum;
         public required SpriteText Title, Kbps, Khz;
         public required SpriteSlider Balance;
+        public required SpriteButton ShadeButton;
+        public required ShadeView Shade;
+    }
+
+    /// <summary>The player rolled up to its 14 px strip (windowshade).</summary>
+    private sealed class ShadeView
+    {
+        public required Canvas Root;
+        public required Image Bar;
+        public required SpriteText Sign, Minutes, Seconds;
+        public required SpriteSpectrum Spectrum;
+        public required SpriteButton Unshade;
     }
 
     private ClassicView? _classic;
     private int _skinSize = 2;
+    private bool _shaded; // remembered across starts and changes of look
+
+    /// <summary>True while the player is rolled up to its strip (windowshade), in either look.</summary>
+    public bool IsShaded => _shaded;
+
+    /// <summary>Just before the player rolls up or down, while every panel is still where it was.</summary>
+    public event Action? ShadeChanging;
+
+    /// <summary>After the player rolled up or down (panels docked below have moved with it).</summary>
+    public event Action? ShadeChanged;
+
+    /// <summary>Rolls the player up to its strip or down again: the classic skin's strip, or Fernplay's own.</summary>
+    public void SetShaded(bool shaded)
+    {
+        if (shaded == _shaded) return;
+        UIElement rollUp = _classic is { } v ? v.ShadeButton : ShadeButton, rollDown = _classic is { } w ? w.Shade.Unshade : UnshadeButton;
+        bool hadFocus = rollUp.IsKeyboardFocused || rollDown.IsKeyboardFocused;
+        ShadeChanging?.Invoke();
+        _shaded = shaded;
+        _settings.PlayerShaded = shaded;
+        ChangeLook(ShowShadeState);
+        UpdateClock();
+        ShadeChanged?.Invoke();
+        // Keyboard users keep their place: the focus moves to the button that rolls it back.
+        if (hadFocus)
+        {
+            var target = shaded ? rollDown : rollUp;
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, () => target.Focus());
+        }
+    }
+
+    /// <summary>Shows the view for the current look (classic or Fernplay's) and windowshade state.</summary>
+    private void ShowShadeState()
+    {
+        bool classic = _classic is not null;
+        ClassicHost.Visibility = classic ? Visibility.Visible : Visibility.Collapsed;
+        if (_classic is { } v) ClassicHost.Content = _shaded ? v.Shade.Root : v.Root;
+        FernplayView.Visibility = !classic && !_shaded ? Visibility.Visible : Visibility.Collapsed;
+        FernplayShade.Visibility = !classic && _shaded ? Visibility.Visible : Visibility.Collapsed;
+    }
 
     /// <summary>The classic skin in use, or null for Fernplay's own look.</summary>
     public ClassicSkin? Skin { get; private set; }
@@ -54,15 +106,12 @@ public partial class MainWindow
             {
                 _classic = null;
                 ClassicHost.Content = null;
-                ClassicHost.Visibility = Visibility.Collapsed;
-                FernplayView.Visibility = Visibility.Visible;
+                ShowShadeState();
             }
             else
             {
                 _classic = BuildClassic(skin);
-                ClassicHost.Content = _classic.Root;
-                ClassicHost.Visibility = Visibility.Visible;
-                FernplayView.Visibility = Visibility.Collapsed;
+                ShowShadeState();
                 ApplyClassicScale();
             }
             ShowNowPlaying();
@@ -114,6 +163,7 @@ public partial class MainWindow
         if (_classic is null) return;
         double s = ClassicScale(_skinSize);
         _classic.Root.LayoutTransform = new ScaleTransform(s, s);
+        _classic.Shade.Root.LayoutTransform = new ScaleTransform(s, s);
     }
 
     private ClassicView BuildClassic(ClassicSkin skin)
@@ -163,16 +213,15 @@ public partial class MainWindow
         titleBar.Children.Add(titleImg);
         Place(titleBar, L.TitleBar);
         AttachDragHandle(titleBar);
-        Btn("Title.Options", L.Options, "Fernplay menu", "Settings and about", (_, _) =>
+        titleBar.PreviewMouseLeftButtonDown += (_, e) =>
         {
-            AppMenu.PlacementTarget = root;
-            AppMenu.Placement = PlacementMode.Relative;
-            AppMenu.HorizontalOffset = L.Options.X;
-            AppMenu.VerticalOffset = L.Options.Y + 9;
-            AppMenu.IsOpen = true;
-        });
+            if (e.ClickCount != 2) return;
+            SetShaded(true); // double-click on the title bar rolls the player up, as on the classic player
+            e.Handled = true;
+        };
+        Btn("Title.Options", L.Options, "Fernplay menu", "Settings and about", (_, _) => OpenClassicMenu(root));
         Btn("Title.Minimize", L.Minimize, "Minimise", "Minimise", Minimize_Click);
-        Img("Title.Shade", L.Shade, "Windowshade: not in Fernplay yet");
+        var shadeButton = Btn("Title.Shade", L.Shade, "Windowshade", "Roll up the player (Ctrl+W, or double-click the title bar)", (_, _) => SetShaded(true), "Ctrl+W");
         Btn("Title.Close", L.Close, "Close Fernplay", "Close Fernplay", Close_Click);
         Img("Title.Clutter", L.Clutter, "Not in Fernplay yet");
 
@@ -259,7 +308,107 @@ public partial class MainWindow
         {
             Bitmaps = bm, Root = root, TitleBar = titleImg, State = state, Light = light, Mono = mono, Stereo = stereo,
             Clock = clock, Spectrum = spectrum, Title = title, Kbps = kbps, Khz = khz, Balance = balance,
+            ShadeButton = shadeButton, Shade = BuildShade(skin, bm),
         };
+    }
+
+    private void OpenClassicMenu(UIElement root)
+    {
+        AppMenu.PlacementTarget = root;
+        AppMenu.Placement = PlacementMode.Relative;
+        AppMenu.HorizontalOffset = L.Options.X;
+        AppMenu.VerticalOffset = L.Options.Y + 9;
+        AppMenu.IsOpen = true;
+    }
+
+    /// <summary>
+    /// The windowshade strip (275x14): the skin's shade bar with the window buttons, mini spectrum, time, mini transport
+    /// over the buttons drawn in the bar, and the mini position bar. The whole strip drags the player; a double-click on it
+    /// rolls the player down again.
+    /// </summary>
+    private ShadeView BuildShade(ClassicSkin skin, SkinBitmaps bm)
+    {
+        var root = new Canvas { Width = L.Width, Height = L.ShadeHeight, ClipToBounds = true, Background = Brushes.Black, SnapsToDevicePixels = true };
+        RenderOptions.SetBitmapScalingMode(root, BitmapScalingMode.NearestNeighbor);
+        RenderOptions.SetEdgeMode(root, EdgeMode.Aliased);
+
+        T Place<T>(T e, (int X, int Y) at) where T : UIElement
+        {
+            Canvas.SetLeft(e, at.X); Canvas.SetTop(e, at.Y);
+            root.Children.Add(e);
+            return e;
+        }
+        SpriteButton Btn(string? sprite, (int X, int Y) at, (int W, int H) size, string name, string tip, RoutedEventHandler click, string? key = null)
+        {
+            var b = new SpriteButton { Width = size.W, Height = size.H, ToolTip = tip };
+            if (sprite is not null) { b.Normal = bm[sprite]; b.Pressed = bm[sprite + ".Pressed"]; } // else invisible, over art in the bar
+            AutomationProperties.SetName(b, name);
+            if (key is not null) AutomationProperties.SetAcceleratorKey(b, key);
+            b.Click += click;
+            return Place(b, at);
+        }
+
+        var bar = new Grid { Width = L.Width, Height = L.ShadeHeight, Background = Brushes.Transparent };
+        var barImg = new Image { Source = bm["Title.Shade.Active"], Width = L.Width, Height = L.ShadeHeight };
+        bar.Children.Add(barImg);
+        Place(bar, (0, 0));
+        AttachDragHandle(bar);
+        bar.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ClickCount != 2) return;
+            SetShaded(false);
+            e.Handled = true;
+        };
+
+        Btn("Title.Options", L.Options, (9, 9), "Fernplay menu", "Settings and about", (_, _) => OpenClassicMenu(root));
+        Btn("Title.Minimize", L.Minimize, (9, 9), "Minimise", "Minimise", Minimize_Click);
+        var unshade = Btn("Title.Unshade", L.Shade, (9, 9), "Windowshade off", "Roll down the player (Ctrl+W, or double-click the bar)", (_, _) => SetShaded(false), "Ctrl+W");
+        Btn("Title.Close", L.Close, (9, 9), "Close Fernplay", "Close Fernplay", Close_Click);
+
+        var spectrum = Place(SpriteSpectrum.Small(skin), L.ShadeSpectrum);
+        var sign = Place(new SpriteText(bm) { Width = SkinFont.CharWidth, Height = SkinFont.CharHeight, IsHitTestVisible = false }, L.ShadeSign);
+        var minutes = Place(new SpriteText(bm) { Width = 2 * SkinFont.CharWidth, Height = SkinFont.CharHeight, IsHitTestVisible = false }, L.ShadeMinutes);
+        var seconds = Place(new SpriteText(bm) { Width = 2 * SkinFont.CharWidth, Height = SkinFont.CharHeight, IsHitTestVisible = false }, L.ShadeSeconds);
+        Btn(null, L.ShadeSign, (L.ShadeSeconds.X + 2 * SkinFont.CharWidth - L.ShadeSign.X, SkinFont.CharHeight),
+            "Time: switch between played and left", "Switch between time played and time left", Clock_Click);
+
+        (string Name, string Tip, RoutedEventHandler Click, string? Key)[] transport =
+        [
+            ("Previous track", "Previous track (Z)", Prev_Click, "Z"),
+            ("Play", "Play (X; Space plays or pauses)", Play_Click, "X"),
+            ("Pause", "Pause, again to resume (C)", Pause_Click, "C"),
+            ("Stop", "Stop (V)", Stop_Click, "V"),
+            ("Next track", "Next track (B)", Next_Click, "B"),
+            ("Open music files", "Open music files (Ctrl+O)", Open_Click, null),
+        ];
+        for (int i = 0; i < transport.Length; i++)
+        {
+            var (x, w) = L.ShadeButtons[i];
+            var t = transport[i];
+            Btn(null, (x, L.ShadeButtonY), (w, L.ShadeButtonHeight), t.Name, t.Tip, t.Click, t.Key);
+        }
+
+        // Mini position bar: the same value, length and on/off as Fernplay's seek bar, so its handlers seek.
+        var position = Place(new SpriteSlider
+        {
+            Width = L.ShadePositionWidth, Height = L.ShadePositionHeight, Minimum = 0, SmallChange = 5, LargeChange = 30,
+            ThumbWidth = L.ShadeThumbWidth, ThumbHeight = L.ShadePositionHeight,
+            BackgroundImage = bm["Shade.Position.Background"], ThumbImage = bm["Shade.Position.Thumb.Left"], ThumbPressedImage = bm["Shade.Position.Thumb.Left"],
+        }, L.ShadePosition);
+        AutomationProperties.SetName(position, "Position in the track");
+        position.SetBinding(RangeBase.MaximumProperty, new Binding(nameof(Slider.Maximum)) { Source = SeekSlider });
+        position.SetBinding(RangeBase.ValueProperty, new Binding(nameof(Slider.Value)) { Source = SeekSlider, Mode = BindingMode.TwoWay });
+        position.SetBinding(IsEnabledProperty, new Binding(nameof(IsEnabled)) { Source = SeekSlider });
+        position.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler(Seek_DragStarted));
+        position.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(Seek_DragCompleted));
+        position.ValueChanged += (_, _) =>
+        {
+            var knob = bm[L.ShadeThumb(position.Maximum > 0 ? position.Value / position.Maximum : 0)];
+            position.ThumbImage = knob;
+            position.ThumbPressedImage = knob;
+        };
+
+        return new ShadeView { Root = root, Bar = barImg, Sign = sign, Minutes = minutes, Seconds = seconds, Spectrum = spectrum, Unshade = unshade };
     }
 
     private bool _balanceDragging;
@@ -332,12 +481,16 @@ public partial class MainWindow
     private void ClassicUpdateClock(TimeSpan shown, bool blink)
     {
         if (_classic is not { } v) return;
-        v.Clock.Show(shown, blank: !_c.Engine.IsLoaded || blink);
+        bool blank = !_c.Engine.IsLoaded || blink;
+        v.Clock.Show(shown, blank);
+        var (sign, minutes, seconds) = blank ? ("", "", "") : L.ShadeTime(shown);
+        v.Shade.Sign.Text = sign; v.Shade.Minutes.Text = minutes; v.Shade.Seconds.Text = seconds;
     }
 
     private void ClassicAnimate(float[] levels)
     {
         if (_classic is not { } v) return;
+        if (_shaded) { v.Shade.Spectrum.Push(levels); return; }
         v.Title.Step();
         v.Spectrum.Push(levels);
     }
@@ -346,6 +499,7 @@ public partial class MainWindow
     {
         if (_classic is not { } v) return;
         v.TitleBar.Source = v.Bitmaps[active ? "Title.Active" : "Title.Inactive"];
+        v.Shade.Bar.Source = v.Bitmaps[active ? "Title.Shade.Active" : "Title.Shade.Inactive"];
     }
 
     private bool IsSkinDrop(string[] paths) => paths.Length == 1 && SkinLibrary.IsSkinFile(paths[0]) && System.IO.File.Exists(paths[0]);

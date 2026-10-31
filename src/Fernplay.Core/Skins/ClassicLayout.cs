@@ -70,6 +70,34 @@ public static class ClassicLayout
         return device / dpiScale;
     }
 
+    // ===== Windowshade: the player rolled up to a 275x14 strip (TITLEBAR.BMP "Title.Shade.*") =====
+
+    public const int ShadeHeight = 14;
+
+    /// <summary>
+    /// Mini spectrum, the time (sign, minutes, seconds; the colon at x 144 is drawn in the skin, so the text sits either
+    /// side of it, y 4 like the font's own colon) and the mini position bar.
+    /// </summary>
+    public static readonly (int X, int Y) ShadeSpectrum = (79, 5), ShadeSign = (128, 4), ShadeMinutes = (133, 4), ShadeSeconds = (148, 4),
+        ShadePosition = (226, 4);
+
+    public const int ShadeSpectrumWidth = 38, ShadeSpectrumHeight = 5, ShadePositionWidth = 17, ShadePositionHeight = 7, ShadeThumbWidth = 3;
+
+    /// <summary>Mini transport hit areas over the buttons drawn in the strip: previous, play, pause, stop, next, eject.</summary>
+    public static readonly (int X, int W)[] ShadeButtons = [(168, 9), (177, 10), (187, 10), (197, 9), (206, 9), (216, 9)];
+    public const int ShadeButtonY = 2, ShadeButtonHeight = 10;
+
+    /// <summary>The mini position knob's sprite for a position 0..1: its left, middle or right look by third.</summary>
+    public static string ShadeThumb(double fraction) =>
+        fraction < 1 / 3.0 ? "Shade.Position.Thumb.Left" : fraction < 2 / 3.0 ? "Shade.Position.Thumb" : "Shade.Position.Thumb.Right";
+
+    /// <summary>The time in the strip: sign ("-" for time left), minutes right-aligned in two characters (wrapping past 99), seconds.</summary>
+    public static (string Sign, string Minutes, string Seconds) ShadeTime(TimeSpan t)
+    {
+        var (m, s) = ClassicPlaylist.MiniClock(t);
+        return (t < TimeSpan.Zero ? "-" : " ", m, s);
+    }
+
     // ===== Equalizer window (275x116, EQMAIN.BMP) =====
 
     public static readonly (int X, int Y) EqClose = (264, 3), EqOn = (14, 18), EqAuto = (40, 18), EqGraph = (86, 17),
