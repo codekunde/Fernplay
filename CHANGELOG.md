@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 (2026-10-31)
+
+Same requirements as 0.1.0: Windows 10 (1607 or later) and 11, x64, with the .NET 10 Desktop Runtime.
 
 - Windowshade: the shade button on the title bar, a double-click on the title bar or Ctrl+W rolls the player up to a strip as tall as its title bar. In Fernplay's look the strip shows the scrolling song title with the play state, the time (click to switch between played and left), mini transport and eject, and a small position bar that seeks; with a classic skin it is the skin's own strip with its mini spectrum, time, transport and position bar. The same again, or a double-click on the strip, rolls it down. Panels docked below move with it, the library beside it keeps level, and Fernplay remembers it for the next start.
 - Fernplay's own look shows which panel has the keyboard: its title bar is lit, the other panels' title bars are dimmed (classic skins already did this with the skin's own title pictures).
