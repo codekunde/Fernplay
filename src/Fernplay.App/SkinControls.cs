@@ -127,6 +127,9 @@ public sealed class Marquee : FrameworkElement
 
     public string Text { get => (string)GetValue(TextProperty); set => SetValue(TextProperty, value); }
 
+    /// <summary>Text size in skin pixels (7 in the display, 6 in the rolled-up strip).</summary>
+    public double TextSize { get; set; } = 7;
+
     private double _offset;
     private static readonly Brush Green = Frozen(Color.FromRgb(0x4B, 0xE8, 0x68));
     private const string Separator = "   ***   ";
@@ -159,7 +162,7 @@ public sealed class Marquee : FrameworkElement
     }
 
     private FormattedText Format(string s) => new(s, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
-        new Typeface(new FontFamily("Tahoma"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), 7, Green,
+        new Typeface(new FontFamily("Tahoma"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), TextSize, Green,
         VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
     private static Brush Frozen(Color c) { var b = new SolidColorBrush(c); b.Freeze(); return b; }

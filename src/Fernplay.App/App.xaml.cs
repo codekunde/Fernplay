@@ -85,25 +85,33 @@ public partial class App : Application
             libraryWindow.LibrarySize = new Size(libraryWindow.LibrarySize.Width, stack / SkinWindow.Scale);
         }
 
-        // A new skin or size changes the player's width and the stack's height: the library stays beside the player.
+        // A new skin or size, or rolling the player up or down (windowshade), changes the player's size and the stack's
+        // height: the library stays beside the player.
         int librarySide = 0; // 1 = docked right of the player, -1 = left, 0 = elsewhere
-        main.SkinApplying += () =>
+        void NoteLibrarySide()
         {
             bool level = libraryWindow.IsVisible && Math.Abs(libraryWindow.Top - main.Top) < 1;
             librarySide = !level ? 0
                 : Math.Abs(libraryWindow.Left - (main.Left + main.ActualWidth)) < 1 ? 1
                 : Math.Abs(libraryWindow.Left + libraryWindow.ActualWidth - main.Left) < 1 ? -1 : 0;
-        };
-        main.SkinApplied += (skin, size) =>
+        }
+        void KeepLibraryBeside()
         {
-            libraryWindow.ApplySkin(skin, size);
             if (librarySide == 0) return;
             main.UpdateLayout();
             FitLibraryToStack();
             libraryWindow.UpdateLayout();
             libraryWindow.Left = librarySide > 0 ? main.Left + main.ActualWidth : main.Left - libraryWindow.ActualWidth;
             libraryWindow.Top = main.Top;
+        }
+        main.SkinApplying += NoteLibrarySide;
+        main.SkinApplied += (skin, size) =>
+        {
+            libraryWindow.ApplySkin(skin, size);
+            KeepLibraryBeside();
         };
+        main.ShadeChanging += NoteLibrarySide;
+        main.ShadeChanged += KeepLibraryBeside;
 
         void ShowLibrary(bool show)
         {

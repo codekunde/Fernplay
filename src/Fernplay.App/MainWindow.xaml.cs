@@ -30,7 +30,11 @@ public partial class MainWindow : SkinWindow
         InitializeComponent();
         CarriesDocked = true;
         AttachDragHandle(TitleBar);
-        AppMenuIcon.Source = AppIcon.Frame(16);
+        AttachDragHandle(ShadeBar);
+        // A double-click on the title bar rolls the player up; on the rolled-up strip, down again (not on its buttons).
+        TitleBar.PreviewMouseLeftButtonDown += (_, e) => ShadeOnDoubleClick(e, TitleBar, true);
+        ShadeBar.PreviewMouseLeftButtonDown += (_, e) => ShadeOnDoubleClick(e, ShadeBar, false);
+        AppMenuIcon.Source = ShadeMenuIcon.Source = AppIcon.Frame(16);
 
         VolumeSlider.Value = Math.Round(settings.Volume * 100);
         _c.Engine.Volume = (float)settings.Volume;
@@ -41,6 +45,8 @@ public partial class MainWindow : SkinWindow
         Deactivated += (_, _) => ClassicActivation(false);
         DpiChanged += (_, _) => ApplyClassicScale();
         _showRemaining = settings.ShowRemaining;
+        _shaded = settings.PlayerShaded;
+        ShowShadeState();
         ShuffleToggle.IsChecked = _c.Playlist.Shuffle;
         ShowRepeat();
 
@@ -72,9 +78,26 @@ public partial class MainWindow : SkinWindow
 
     private void AppMenu_Click(object sender, RoutedEventArgs e)
     {
-        AppMenu.PlacementTarget = AppMenuButton;
+        AppMenu.PlacementTarget = sender as UIElement ?? AppMenuButton; // the title bar's or the rolled-up strip's menu button
         AppMenu.Placement = PlacementMode.Bottom;
         AppMenu.IsOpen = true;
+    }
+
+    private void Shade_Click(object sender, RoutedEventArgs e) => SetShaded(true);
+    private void Unshade_Click(object sender, RoutedEventArgs e) => SetShaded(false);
+
+    private void ShadeOnDoubleClick(MouseButtonEventArgs e, FrameworkElement bar, bool shade)
+    {
+        if (e.ClickCount != 2 || e.OriginalSource is not DependencyObject d || IsInsideButton(d, bar) || IsInside<System.Windows.Controls.Slider>(d, bar)) return;
+        SetShaded(shade);
+        e.Handled = true;
+    }
+
+    private static bool IsInside<T>(DependencyObject d, DependencyObject stopAt) where T : DependencyObject
+    {
+        for (var x = d; x is not null && x != stopAt; x = x is Visual ? VisualTreeHelper.GetParent(x) : LogicalTreeHelper.GetParent(x))
+            if (x is T) return true;
+        return false;
     }
 
     /// <summary>Shows or hides the library window (set by App).</summary>
@@ -123,6 +146,11 @@ public partial class MainWindow : SkinWindow
         if (key == Key.L && mods == ModifierKeys.Alt && ShowLibrary is not null)
         {
             ShowLibrary(LibraryShown?.Invoke() != true); // Alt+L shows or hides the library
+            return true;
+        }
+        if (key == Key.W && mods == ModifierKeys.Control)
+        {
+            SetShaded(!_shaded); // Ctrl+W rolls the player up or down, as on the classic player
             return true;
         }
         if (mods != ModifierKeys.None) return false; // Ctrl+O, Alt+Up in the playlist and so on
@@ -332,7 +360,7 @@ public partial class MainWindow : SkinWindow
     private void Animate()
     {
         _frame++;
-        TitleMarquee.Step();
+        if (_shaded) ShadeMarquee.Step(); else TitleMarquee.Step();
         var levels = _c.Engine.GetSpectrum(SpectrumBars.Bands);
         Spectrum.Push(levels);
         ClassicAnimate(levels);
@@ -348,8 +376,9 @@ public partial class MainWindow : SkinWindow
         string text = remaining ? TimeFormat.Clock(duration - position, remaining: true) : TimeFormat.Clock(position);
         // The clock blinks while paused, as the old players did.
         bool blink = _c.Engine.State == PlayState.Paused && (_frame / 15) % 2 == 1;
-        Clock.Visibility = blink ? Visibility.Hidden : Visibility.Visible;
+        Clock.Visibility = ShadeClock.Visibility = blink ? Visibility.Hidden : Visibility.Visible;
         if (Clock.Text != text) Clock.Text = text;
+        if (ShadeClock.Text != text) ShadeClock.Text = text;
         ClassicUpdateClock(remaining ? -(duration - position) : position, blink);
         if (_seekDragging) return;
         _updatingSeek = true;
@@ -368,6 +397,7 @@ public partial class MainWindow : SkinWindow
             TitleMarquee.Text = NowPlayingText(t) + (t.Duration is { } d ? $" ({TimeFormat.Clock(d)})" : "");
         else
             TitleMarquee.Text = "Fernplay  Open music with the eject button or drop it here";
+        ShadeMarquee.Text = TitleMarquee.Text;
 
         var f = _c.Engine.IsLoaded ? _c.Engine.Format : null;
         KbpsText.Text = (t?.BitrateKbps ?? f?.BitrateKbps) is { } kbps && f is not null ? kbps.ToString() : "";
@@ -386,7 +416,7 @@ public partial class MainWindow : SkinWindow
     private void UpdateState()
     {
         var state = _c.Engine.State;
-        StateGlyph.Data = (Geometry)FindResource(state switch
+        StateGlyph.Data = ShadeStateGlyph.Data = (Geometry)FindResource(state switch
         {
             PlayState.Playing => "GlyphPlay",
             PlayState.Paused => "GlyphPause",

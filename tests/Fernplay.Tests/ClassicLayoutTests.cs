@@ -149,6 +149,35 @@ public sealed class ClassicLayoutTests
     }
 
     [Fact]
+    public void Windowshade_time_sits_either_side_of_the_skin_colon_and_wraps_minutes()
+    {
+        Assert.Equal((" ", " 0", "04"), ClassicLayout.ShadeTime(TimeSpan.FromSeconds(4.9)));
+        Assert.Equal(("-", " 3", "15"), ClassicLayout.ShadeTime(TimeSpan.FromSeconds(-195)));
+        Assert.Equal((" ", " 0", "00"), ClassicLayout.ShadeTime(TimeSpan.FromMinutes(100)));
+        // Minutes end one column before the colon at x 144 (the font leaves its 5th column empty); seconds start after it.
+        Assert.Equal(143, ClassicLayout.ShadeMinutes.X + 2 * SkinFont.CharWidth);
+        Assert.Equal(ClassicLayout.ShadeMinutes.X - SkinFont.CharWidth, ClassicLayout.ShadeSign.X);
+        Assert.Equal(148, ClassicLayout.ShadeSeconds.X);
+    }
+
+    [Fact]
+    public void Windowshade_knob_changes_look_by_third_and_the_parts_fit_the_strip()
+    {
+        Assert.Equal("Shade.Position.Thumb.Left", ClassicLayout.ShadeThumb(0));
+        Assert.Equal("Shade.Position.Thumb.Left", ClassicLayout.ShadeThumb(0.33));
+        Assert.Equal("Shade.Position.Thumb", ClassicLayout.ShadeThumb(0.5));
+        Assert.Equal("Shade.Position.Thumb.Right", ClassicLayout.ShadeThumb(1));
+        foreach (var name in new[] { "Title.Unshade", "Title.Unshade.Pressed", "Shade.Position.Background", "Shade.Position.Thumb.Left", "Shade.Position.Thumb", "Shade.Position.Thumb.Right" })
+            Assert.Equal("TITLEBAR", SpriteMap.Get(name).Sheet);
+        Assert.Equal(ClassicLayout.ShadePositionWidth, SpriteMap.Get("Shade.Position.Background").W);
+        // Mini transport hit areas run left to right without overlapping, inside the strip.
+        var b = ClassicLayout.ShadeButtons;
+        for (int i = 1; i < b.Length; i++) Assert.True(b[i].X >= b[i - 1].X + b[i - 1].W);
+        Assert.True(b[^1].X + b[^1].W <= ClassicLayout.ShadePosition.X);
+        Assert.True(ClassicLayout.ShadeButtonY + ClassicLayout.ShadeButtonHeight <= ClassicLayout.ShadeHeight);
+    }
+
+    [Fact]
     public void Balance_turns_down_the_far_side_only()
     {
         Assert.Equal((1f, 1f), GainStage.BalanceGains(0));

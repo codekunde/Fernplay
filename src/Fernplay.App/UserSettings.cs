@@ -20,6 +20,8 @@ public sealed class UserSettings
     public string? Skin { get; set; }
     /// <summary>Classic skin size: 1x, 2x or 3x the skin's pixels.</summary>
     public int SkinSize { get; set; } = 2;
+    /// <summary>The player rolled up to its strip (windowshade), in Fernplay's look or a classic skin's.</summary>
+    public bool PlayerShaded { get; set; }
     public bool EqEnabled { get; set; } = true;
     public double Preamp { get; set; }
     public double[] Bands { get; set; } = new double[10];

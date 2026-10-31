@@ -12,7 +12,9 @@ Windows 10 (1607 or later) and 11, x64.
 - **Equalizer:** ON switch, curve preview, preamp and 10 bands (60 Hz to 16 kHz, ±12 dB; bars turn from green to orange as they boost), PRESETS (Flat, Rock, Pop, Classical, Dance, Bass boost, Treble boost, Vocal). Changes apply live.
 - **Playlist:** tracks as "03 - Artist - Title" (or "Artist - Title" without a track number) with their length, the playing one highlighted; double-click or Enter plays, Delete or REM removes, ADD adds files or a folder, CLEAR empties it, LIST opens or saves a playlist file; total length in the corner. Drag tracks to reorder them (several at once), or use Alt+Up / Alt+Down. Drag the panel's bottom edge to show more or fewer rows.
 
-Drag a panel by its title bar: it snaps to the other panels and to the screen edges. Dragging the player panel moves every panel docked to it; dragging the EQ or playlist alone pulls it loose.
+Drag a panel by its title bar: it snaps to the other panels and to the screen edges. Dragging the player panel moves every panel docked to it; dragging the EQ or playlist alone pulls it loose. The panel that has the keyboard shows a lit title bar; the others are dimmed.
+
+**Windowshade.** The shade button on the player's title bar, a double-click on the title bar or Ctrl+W rolls the player up to a strip as tall as its title bar: the scrolling song title, the time (click it to switch between played and left), a small transport and a position bar. The same again, or a double-click on the strip, rolls it down; panels docked below move with it, and Fernplay remembers it for the next start.
 
 ## Opening music
 
@@ -71,7 +73,8 @@ The library docks beside the player, as tall as the panels together, and keeps t
 | Delete | Remove the selected tracks (playlist) |
 | Alt+Up / Alt+Down | Move the selected tracks (playlist) |
 | Alt+L | Show or hide the media library |
-| Ctrl+F | Search the library; Esc clears the search |
+| Ctrl+W | Windowshade: roll the player up to a thin strip, or down again |
+| Ctrl+F | Search the library; Esc clears the search, Esc again hands the keys back to the player |
 | Shift+Enter | Add the selected tracks to the playlist (library) |
 | 0 to 5 | Rate the selected tracks (library) |
 | Delete | Remove the selected plays (library, History) |
@@ -101,12 +104,12 @@ Fernplay can wear classic player skins: the `.wsz` files made for the 2.x genera
 
 With a skin, all three panels and the library are drawn from the skin's pictures, pixel-sharp at 1x, 2x or 3x:
 
-- **Player:** everything as above, plus the skin's balance slider.
+- **Player:** everything as above, plus the skin's balance slider; rolled up (windowshade), it is the skin's own strip with a mini spectrum, time, transport and position bar.
 - **Equalizer:** preamp and bands whose colour follows the gain, ON, PRESETS and the curve in the skin's colours.
 - **Playlist:** the skin's frame, colours and font, scroll knob, selected/total running time, a small transport and clock, and the classic button menus: ADD (folder, files), REM (all, crop, selected, missing files), SEL (invert, none, all), LIST (new, save, open). Drag the bottom-right corner to make it taller (29 px steps) or wider (25 px steps).
 - **Library:** the skin's frame and title letters (GEN.BMP) and its library colours for lists, selection, headers, buttons and scroll bars (GENEX.BMP). The text keeps Fernplay's size. A skin without these pictures leaves the library in Fernplay's look.
 
-Not there yet: EQ AUTO, the MISC menu (sort, file info, options), adding a stream address from ADD, windowshade mode, window outlines and cursors from the skin. These are drawn but do nothing. A file that is not a usable skin is refused with the reason in the title display, and the current look stays.
+Not there yet: EQ AUTO, the MISC menu (sort, file info, options), adding a stream address from ADD, windowshade for the equalizer and playlist, window outlines and cursors from the skin. These are drawn but do nothing. A file that is not a usable skin is refused with the reason in the title display, and the current look stays.
 
 ## Build
 

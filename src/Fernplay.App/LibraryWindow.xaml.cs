@@ -528,6 +528,16 @@ public partial class LibraryWindow : SkinWindow
             e.Handled = true;
             ClearSearch_Click(this, e);
         }
+        else if (e.Key == Key.Escape && SearchBox.IsKeyboardFocused)
+        {
+            // Esc in an empty search box hands the keyboard back to the track list, so the player keys (Z X C V B,
+            // Space) work again without a click.
+            e.Handled = true;
+            if (TrackList.SelectedIndex >= 0 && TrackList.ItemContainerGenerator.ContainerFromIndex(TrackList.SelectedIndex) is ListViewItem item)
+                item.Focus();
+            else
+                TrackList.Focus();
+        }
         else if (e.Key == Key.Down && SearchBox.IsKeyboardFocused && _shown.Count > 0)
         {
             // From the search box down into the results.
