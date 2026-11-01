@@ -32,6 +32,51 @@ public class SkinWindow : Window
         Background = Brushes.Black;
         Panels.Add(this);
         Closed += (_, _) => Panels.Remove(this);
+        StateChanged += (_, _) => { if (WindowState != WindowState.Minimized) RefitAllSoon(); };
+        HookSystemEvents();
+    }
+
+    private static bool _systemHooked;
+
+    // After Windows is locked while the player is minimised, the main panel came back 160x28 larger than its content
+    // (160x28 is Windows' minimised-window size): content centred in black, shifted off the docked panels. Rolling
+    // into the windowshade fixed it because a content size change makes SizeToContent fit again; this refits on
+    // restore, unlock, resume and display changes.
+    private static void HookSystemEvents()
+    {
+        if (_systemHooked) return;
+        _systemHooked = true;
+        Microsoft.Win32.SystemEvents.SessionSwitch += (_, e) =>
+        {
+            if (e.Reason is Microsoft.Win32.SessionSwitchReason.SessionUnlock or Microsoft.Win32.SessionSwitchReason.ConsoleConnect or Microsoft.Win32.SessionSwitchReason.RemoteConnect)
+                RefitAllSoon();
+        };
+        Microsoft.Win32.SystemEvents.PowerModeChanged += (_, e) => { if (e.Mode == Microsoft.Win32.PowerModes.Resume) RefitAllSoon(); };
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += (_, _) => RefitAllSoon();
+    }
+
+    /// <summary>Refits every panel now and once more shortly after (Windows may still be settling the desktop).</summary>
+    private static void RefitAllSoon()
+    {
+        var ui = Application.Current?.Dispatcher;
+        if (ui is null) return;
+        ui.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, RefitAll);
+        var again = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background, ui) { Interval = TimeSpan.FromMilliseconds(600) };
+        again.Tick += (_, _) => { again.Stop(); RefitAll(); };
+        again.Start();
+    }
+
+    /// <summary>Makes each visible panel's window exactly fit its content again (toggling SizeToContent re-runs the fit).</summary>
+    internal static void RefitAll()
+    {
+        foreach (var w in Panels.ToList())
+        {
+            if (!w.IsVisible || w.WindowState == WindowState.Minimized || w.SizeToContent != SizeToContent.WidthAndHeight) continue;
+            w.SizeToContent = SizeToContent.Manual;
+            w.SizeToContent = SizeToContent.WidthAndHeight;
+            w.UpdateLayout();
+            w.InvalidateVisual();
+        }
     }
 
     /// <summary>The main panel moves its docked panels along; the others move alone (and so come loose).</summary>
