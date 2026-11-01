@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: after Windows was locked while Fernplay was minimised, the player came back larger than its picture, with black areas and shifted away from the equalizer and playlist (seen on Windows 10 and 11). The panels now fit their content again on restore, unlock, wake from sleep and display changes.
+
 ## 0.4.0 (2026-10-31)
 
 Same requirements as 0.1.0: Windows 10 (1607 or later) and 11, x64, with the .NET 10 Desktop Runtime.
