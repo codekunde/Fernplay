@@ -4,6 +4,17 @@ A small music player for Windows in the style of the late-90s desktop players: a
 
 Windows 10 (1607 or later) and 11, x64.
 
+## Download
+
+From [Releases](https://github.com/codekunde/Fernplay/releases), pick one zip:
+
+- **`Fernplay-<version>-win-x64.zip`** (about 2 MB) needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (x64). If it is missing, Fernplay says so at start with a link to it.
+- **`Fernplay-<version>-win-x64-standalone.zip`** (about 57 MB) has .NET inside: nothing else to install.
+
+Unzip it anywhere and run `Fernplay.exe`. There is no installer; settings live in `%APPDATA%\CodeKunde\Fernplay`. To remove Fernplay, first untick "Open music and playlists from Explorer" in Settings if you ticked it, then delete the folder.
+
+Fernplay is not code-signed yet, so Windows may show "Windows protected your PC" the first time: choose **More info**, then **Run anyway**.
+
 ![Fernplay: player, equalizer and playlist docked together, playing a track](docs/screenshots/fernplay.png)
 
 ## The three panels
@@ -121,7 +132,11 @@ dotnet test Fernplay.slnx
 dotnet publish src/Fernplay.App -c Release -o publish   # publish\Fernplay.exe
 ```
 
-The published exe (about 2 MB) is framework-dependent: it needs the .NET 10 Desktop Runtime on the PC.
+The published exe (about 2 MB) is framework-dependent: it needs the .NET 10 Desktop Runtime on the PC. The standalone exe carries .NET inside (about 65 MB):
+
+```
+dotnet publish src/Fernplay.App -c Release -o publish-standalone -p:SelfContained=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
+```
 
 App and file icons are drawn by `tools/Make-FernplayIcons.ps1`.
 
