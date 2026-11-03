@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 (2026-11-03)
+
+Same requirements as 0.1.0: Windows 10 (1607 or later) and 11, x64, with the .NET 10 Desktop Runtime.
+
+- File info: Alt+3 (as on the classic player) edits a track's tags: title, artist, album, album artist, track number, year, genre, composer and comment. From the playlist and the library (selected track, also on the right-click menu and a classic skin's MISC button) or the player (the playing track). Only changed fields are written, through Windows' own tag support (MP3, M4A, WMA; other formats where Windows can write them). The playlist, the player and the library show the new tags at once. The playing track keeps playing from the same place. WAV, read-only files and files open in another program are explained, not changed.
+- Playlist: the playing track's length is white like its title (it stayed green in Fernplay's own look).
+- Playlist: Delete no longer jumps the list to the top or to the playing track. The view stays where it was, and the selection and keyboard focus move to the next track, so Delete or the arrow keys go on from there.
+
 ## 0.4.1 (2026-11-01)
 
 Same requirements as 0.1.0: Windows 10 (1607 or later) and 11, x64, with the .NET 10 Desktop Runtime.

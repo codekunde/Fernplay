@@ -37,6 +37,23 @@ public sealed class PlayerEngineTests : IDisposable
     }
 
     [Fact]
+    public async Task A_reloaded_track_can_show_paused_and_continues_from_its_place()
+    {
+        // File info saved while paused: the file is let go of, loaded again, set back to its place and shown paused.
+        _engine.ShowPaused(); // nothing loaded: no change
+        Assert.Equal(PlayState.Stopped, _engine.State);
+        await _engine.LoadAsync(_audio.Tone("a.wav", 3.0));
+        _engine.Seek(TimeSpan.FromSeconds(1.5));
+        _engine.ShowPaused();
+        Assert.Equal(PlayState.Paused, _engine.State);
+        Assert.False(Output.Playing); // no sound while paused
+        _engine.Play();
+        Assert.True(Output.Playing);
+        Output.Pump(0.5);
+        Assert.Equal(2.0, _engine.Position.TotalSeconds, 1);
+    }
+
+    [Fact]
     public async Task Play_pause_stop_change_state_and_stop_rewinds()
     {
         await _engine.LoadAsync(_audio.Tone("a.wav", 3.0));

@@ -121,6 +121,19 @@ public sealed class LibraryIndex
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// Fresh tags for one file already in the library (its tags were edited in Fernplay), filled from the folder names
+    /// as a scan would. Play statistics and rating stay. Returns false when the file is not in the library.
+    /// </summary>
+    public bool Refresh(ScannedFile file)
+    {
+        if (!_byPath.TryGetValue(file.Path, out var t)) return false;
+        var folder = Folders.FirstOrDefault(f => IsUnder(file.Path, f));
+        t.SetTags(folder is null ? file.Tags : PathTags.Fill(file.Tags, file.Path, folder), file.Size, file.Modified);
+        Changed?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
     /// <summary>A play that counted (see <see cref="PlayRules"/>): play count, last played, history.</summary>
     public void RecordPlay(string path, DateTime at)
     {

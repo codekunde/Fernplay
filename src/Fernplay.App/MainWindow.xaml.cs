@@ -148,6 +148,13 @@ public partial class MainWindow : SkinWindow
             ShowLibrary(LibraryShown?.Invoke() != true); // Alt+L shows or hides the library
             return true;
         }
+        if (key == Key.D3 && mods == ModifierKeys.Alt && onPlayerPanel)
+        {
+            // Alt+3 on the player: file info of the playing track (the playlist and library use their selection).
+            if (_c.NowPlaying is { } now) TagEditorWindow.Open(this, _c, now);
+            else _c.ShowNotice("Nothing is playing. Select a track in the playlist and press Alt+3 for its file info.");
+            return true;
+        }
         if (key == Key.W && mods == ModifierKeys.Control)
         {
             SetShaded(!_shaded); // Ctrl+W rolls the player up or down, as on the classic player

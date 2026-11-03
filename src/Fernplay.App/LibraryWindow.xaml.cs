@@ -754,6 +754,21 @@ public partial class LibraryWindow : SkinWindow
             e.Handled = true;
             RemoveFromHistory();
         }
+        else if (e.Key == Key.System && e.SystemKey == Key.D3 && Keyboard.Modifiers == ModifierKeys.Alt)
+        {
+            e.Handled = true; // Alt+3: file info, as on the classic player
+            ShowFileInfo();
+        }
+    }
+
+    /// <summary>File info for the row the keyboard is on, or the first selected one.</summary>
+    private void ShowFileInfo()
+    {
+        var row = Keyboard.FocusedElement is ListViewItem { IsSelected: true, DataContext: LibraryRow focused }
+            ? focused
+            : TrackList.SelectedItems.Cast<LibraryRow>().FirstOrDefault();
+        if (row is null) { _c.ShowNotice("Select a track first, then press Alt+3 for its file info."); return; }
+        TagEditorWindow.Open(this, _c, row.InLibrary ? row.Track.ToTrack() : new Fernplay.Core.Track(row.Path, null, null, null, null, null));
     }
 
     // ================= Right-click menu =================
@@ -774,7 +789,11 @@ public partial class LibraryWindow : SkinWindow
         {
             Add("Play", () => PlayRows(SelectedOrAll(), replace: true));
             Add("Enqueue", () => PlayRows(SelectedOrAll(), replace: false));
-            if (rows.Count == 1 && !rows[0].IsStream) Add("Show in Explorer", () => ShowInExplorer(rows[0].Path));
+            if (rows.Count == 1 && !rows[0].IsStream)
+            {
+                Add("File info…   Alt+3", ShowFileInfo);
+                Add("Show in Explorer", () => ShowInExplorer(rows[0].Path));
+            }
             if (rows.Any(r => r.InLibrary))
             {
                 menu.Items.Add(new Separator());

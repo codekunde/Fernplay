@@ -40,6 +40,19 @@ public sealed class LibraryService
         _save.Tick += (_, _) => { _save.Stop(); SaveNow(); };
         _listen.Tick += (_, _) => Listen();
         _listen.Start();
+        _c.TagsSaved += (_, path) => _ = RefreshFileAsync(path);
+    }
+
+    /// <summary>A file's tags were edited: read it again now rather than at the next scan.</summary>
+    private async Task RefreshFileAsync(string path)
+    {
+        if (Index.Find(path) is null) return;
+        var file = await Task.Run(() =>
+        {
+            var info = new FileInfo(path);
+            return new ScannedFile(path, TagInfo.FromFile(path), info.Length, info.LastWriteTimeUtc);
+        });
+        Index.Refresh(file);
     }
 
     public void SaveNow()

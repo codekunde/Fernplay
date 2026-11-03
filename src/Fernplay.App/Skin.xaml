@@ -103,6 +103,36 @@
         <Setter Property="SnapsToDevicePixels" Value="True" />
     </Style>
 
+    <!-- A text field in an inset well (file info): light text on the LCD black, amber edge while it has the caret. -->
+    <Style x:Key="SkinTextBox" TargetType="TextBox">
+        <Setter Property="Foreground" Value="{StaticResource SkinText}" />
+        <Setter Property="CaretBrush" Value="{StaticResource TitleText}" />
+        <Setter Property="SelectionBrush" Value="{StaticResource Fern}" />
+        <Setter Property="SelectionTextBrush" Value="#FFFFFF" />
+        <Setter Property="FontFamily" Value="{StaticResource SkinFont}" />
+        <Setter Property="FontSize" Value="7" />
+        <Setter Property="MinHeight" Value="11" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Well" Background="{StaticResource Lcd}" BorderBrush="{StaticResource Shadow}" BorderThickness="0.5" Padding="2,0.5"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" Focusable="False" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Well" Property="BorderBrush" Value="{StaticResource TitleText}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Well" Property="Background" Value="#0A0F0B" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="LcdText" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource SkinFont}" />
         <Setter Property="FontSize" Value="7" />

@@ -71,6 +71,12 @@ Open it from the app menu (Media library…) or with Alt+L. It is optional: noth
 
 The library docks beside the player, as tall as the panels together, and keeps that height when the skin or its size changes, until you drag its bottom-right corner. It is kept in `library.json` next to the settings.
 
+## File info (editing tags)
+
+Alt+3, as on the classic player, opens a track's file info: title, artist, album, album artist, track number, year, genre, composer and comment. In the playlist and the library it is the selected track (also on the right-click menu, and on a classic skin's MISC button); on the player it is the track that is playing. SAVE writes only the fields you changed into the file; an emptied field is removed. Several artists go in one field with a semicolon (`A; B`).
+
+Tags are written by Windows itself, the same way Explorer's Details pane edits them: MP3, M4A and WMA. Other formats (FLAC) work where Windows can write their tags; where it cannot (WAV), Fernplay says so and changes nothing. A file that is read-only or open in another program says so and is left as it was. Editing the playing track is fine: Fernplay lets go of the file for a moment and plays on from the same place. Ratings are not written to files; they stay in the library.
+
 ## Keys
 
 | Key | Does |
@@ -83,6 +89,7 @@ The library docks beside the player, as tall as the panels together, and keeps t
 | Ctrl+O | Open files |
 | Delete | Remove the selected tracks (playlist) |
 | Alt+Up / Alt+Down | Move the selected tracks (playlist) |
+| Alt+3 | File info: edit the tags of the selected track (playlist, library) or the playing one (player) |
 | Alt+L | Show or hide the media library |
 | Ctrl+W | Windowshade: roll the player up to a thin strip, or down again |
 | Ctrl+F | Search the library; Esc clears the search, Esc again hands the keys back to the player |

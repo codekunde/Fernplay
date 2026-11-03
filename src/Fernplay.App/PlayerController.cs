@@ -263,6 +263,58 @@ public sealed class PlayerController : IDisposable
         await PlayIndexAsync(i, forward: false);
     }
 
+    // ================= Tags =================
+
+    /// <summary>A file's tags were saved (the path); the library refreshes its entry.</summary>
+    public event EventHandler<string>? TagsSaved;
+
+    /// <summary>
+    /// Writes edited tags, then shows them everywhere the file appears. The playing file is let go first (Windows
+    /// would otherwise rewrite it under the decoder) and picked up again at the same place and state.
+    /// Returns an error to show, or null.
+    /// </summary>
+    public async Task<string?> SaveTagsAsync(string path, TagFields before, TagFields after)
+    {
+        if (TagEditor.Changed(before, after).Count == 0) return null;
+        bool playing = Engine.IsLoaded && string.Equals(Engine.CurrentPath, path, StringComparison.OrdinalIgnoreCase);
+        string? error = null;
+        if (!playing)
+        {
+            try { await Task.Run(() => TagEditor.Write(path, before, after)); }
+            catch (TagEditException ex) { return ex.Message; }
+        }
+        else
+        {
+            var state = Engine.State;
+            var at = Engine.Position;
+            int request = ++_request; // a play request meanwhile wins
+            Engine.Unload();
+            try { await Task.Run(() => TagEditor.Write(path, before, after)); }
+            catch (TagEditException ex) { error = ex.Message; }
+            if (request == _request)
+            {
+                try
+                {
+                    await Engine.LoadAsync(path);
+                    if (request == _request)
+                    {
+                        Engine.Seek(at);
+                        if (state == PlayState.Playing) Engine.Play();
+                        else if (state == PlayState.Paused) Engine.ShowPaused();
+                    }
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex) { SetStatus(PlaybackErrors.Describe(ex, path)); }
+            }
+            if (error is not null) return error;
+        }
+        var track = await Task.Run(() => Track.FromFile(path));
+        Playlist.Refresh(track);
+        if (NowPlaying is { } now && string.Equals(now.Path, path, StringComparison.OrdinalIgnoreCase)) SetNowPlaying(track with { Path = now.Path });
+        TagsSaved?.Invoke(this, path);
+        return null;
+    }
+
     /// <summary>File dialog filter for opening or adding music and playlists.</summary>
     public const string OpenFilter =
         "Music files and playlists|*.mp3;*.flac;*.wav;*.wma;*.m4a;*.aac;*.m3u;*.m3u8;*.pls|Playlists|*.m3u;*.m3u8;*.pls|All files|*.*";

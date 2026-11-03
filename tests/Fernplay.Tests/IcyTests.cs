@@ -63,6 +63,7 @@ public sealed class IcyStreamTests
     }
 }
 
+[Collection(WindowsEncoder.Name)]
 public sealed class IcyMp3DecoderTests : IDisposable
 {
     private readonly TestAudio _audio = new();

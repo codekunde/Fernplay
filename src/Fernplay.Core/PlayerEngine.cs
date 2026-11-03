@@ -137,6 +137,12 @@ public sealed class PlayerEngine : IDisposable
         SetState(PlayState.Paused);
     }
 
+    /// <summary>A track just loaded shows as paused at its position (no sound): Play continues from there.</summary>
+    public void ShowPaused()
+    {
+        if (_output is not null && State == PlayState.Stopped) SetState(PlayState.Paused);
+    }
+
     public void Stop()
     {
         if (_output is null) return;

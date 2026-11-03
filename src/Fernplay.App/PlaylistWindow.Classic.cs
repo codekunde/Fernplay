@@ -369,7 +369,7 @@ public partial class PlaylistWindow
     private MenuEntry[] MiscItems() =>
     [
         new("Pl.Misc.Sort", "Sort (not in Fernplay yet)", () => _c.ShowNotice("Sorting the list: not in Fernplay yet.")),
-        new("Pl.Misc.Info", "File info (not in Fernplay yet)", () => _c.ShowNotice("File info: not in Fernplay yet.")),
+        new("Pl.Misc.Info", "File info: edit the selected track's tags (Alt+3)", ShowFileInfo),
         new("Pl.Misc.Options", "Playlist options (not in Fernplay yet)", () => _c.ShowNotice("Playlist options: not in Fernplay yet.")),
     ];
 

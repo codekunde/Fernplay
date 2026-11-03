@@ -12,16 +12,16 @@ internal static class TagReader
     private static readonly Guid Music = new("56A3372E-CE9C-11D2-9F0E-006097C686F6");
     private static readonly Guid Media = new("64440490-4C8B-11D1-8B70-080036B11A03");
 
-    private static readonly PropertyKey Title = new(SummaryInfo, 2);
-    private static readonly PropertyKey Artist = new(Music, 2);
-    private static readonly PropertyKey Album = new(Music, 4);
-    private static readonly PropertyKey Duration = new(Media, 3);        // 100 ns units
-    private static readonly PropertyKey EncodingBitrate = new(Media, 4); // bits per second
-    private static readonly PropertyKey TrackNumber = new(Music, 7);     // System.Music.TrackNumber
-    private static readonly PropertyKey AlbumArtist = new(Music, 13);    // System.Music.AlbumArtist
-    private static readonly PropertyKey Genre = new(Music, 11);          // System.Music.Genre
-    private static readonly PropertyKey Year = new(Music, 5);            // System.Media.Year (Media, 5 is System.Audio.SampleRate)
-    private static readonly PropertyKey Rating = new(new Guid("64440492-4C8B-11D1-8B70-080036B11A03"), 9); // System.Rating, 1-99
+    internal static readonly PropertyKey Title = new(SummaryInfo, 2);
+    internal static readonly PropertyKey Artist = new(Music, 2);
+    internal static readonly PropertyKey Album = new(Music, 4);
+    internal static readonly PropertyKey Duration = new(Media, 3);        // 100 ns units
+    internal static readonly PropertyKey EncodingBitrate = new(Media, 4); // bits per second
+    internal static readonly PropertyKey TrackNumber = new(Music, 7);     // System.Music.TrackNumber
+    internal static readonly PropertyKey AlbumArtist = new(Music, 13);    // System.Music.AlbumArtist
+    internal static readonly PropertyKey Genre = new(Music, 11);          // System.Music.Genre
+    internal static readonly PropertyKey Year = new(Music, 5);            // System.Media.Year (Media, 5 is System.Audio.SampleRate)
+    internal static readonly PropertyKey Rating = new(new Guid("64440492-4C8B-11D1-8B70-080036B11A03"), 9); // System.Rating, 1-99
 
     public static Track Read(string path) => ReadTags(path).ToTrack(path);
 
@@ -51,7 +51,7 @@ internal static class TagReader
         finally { Marshal.ReleaseComObject(store); }
     }
 
-    private static string? GetString(IPropertyStore store, PropertyKey key)
+    internal static string? GetString(IPropertyStore store, PropertyKey key)
     {
         var k = key;
         if (store.GetValue(ref k, out var pv) != 0) return null;
@@ -75,7 +75,7 @@ internal static class TagReader
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private readonly struct PropertyKey(Guid fmtid, uint pid)
+    internal readonly struct PropertyKey(Guid fmtid, uint pid)
     {
         public readonly Guid FormatId = fmtid;
         public readonly uint PropertyId = pid;
@@ -83,15 +83,18 @@ internal static class TagReader
 
     // PROPVARIANT: 16 bytes on x86, 24 on x64; only vt is read directly.
     [StructLayout(LayoutKind.Sequential)]
-    private struct PropVariant
+    internal struct PropVariant
     {
         public ushort vt;
         private ushort r1, r2, r3;
         private IntPtr p1, p2;
+
+        /// <summary>A VT_LPWSTR holding a CoTaskMem copy of text; PropVariantClear frees it.</summary>
+        public static PropVariant FromString(string text) => new() { vt = 31, p1 = Marshal.StringToCoTaskMemUni(text) };
     }
 
     [ComImport, Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IPropertyStore
+    internal interface IPropertyStore
     {
         [PreserveSig] int GetCount(out uint count);
         [PreserveSig] int GetAt(uint index, out PropertyKey key);
@@ -101,14 +104,14 @@ internal static class TagReader
     }
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-    private static extern int SHGetPropertyStoreFromParsingName(string path, IntPtr bindContext, int flags, ref Guid iid, out IPropertyStore store);
+    internal static extern int SHGetPropertyStoreFromParsingName(string path, IntPtr bindContext, int flags, ref Guid iid, out IPropertyStore store);
 
     [DllImport("propsys.dll")]
-    private static extern int PropVariantToStringAlloc(ref PropVariant pv, out IntPtr text);
+    internal static extern int PropVariantToStringAlloc(ref PropVariant pv, out IntPtr text);
 
     [DllImport("propsys.dll")]
-    private static extern int PropVariantToUInt64(ref PropVariant pv, out ulong value);
+    internal static extern int PropVariantToUInt64(ref PropVariant pv, out ulong value);
 
     [DllImport("ole32.dll")]
-    private static extern int PropVariantClear(ref PropVariant pv);
+    internal static extern int PropVariantClear(ref PropVariant pv);
 }

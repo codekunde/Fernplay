@@ -75,7 +75,13 @@
                              PreviewMouseLeftButtonUp="List_PreviewMouseUp"
                              DragOver="List_DragOver" DragLeave="List_DragLeave" Drop="List_Drop"
                              AutomationProperties.Name="Playlist"
-                             AutomationProperties.HelpText="Drag tracks, or press Alt+Up and Alt+Down, to change the order">
+                             AutomationProperties.HelpText="Drag tracks, or press Alt+Up and Alt+Down, to change the order. Alt+3 edits the tags.">
+                        <ListBox.ContextMenu>
+                            <ContextMenu x:Name="RowMenu" Opened="RowMenu_Opened">
+                                <MenuItem x:Name="RowMenuInfo" Header="File info…   Alt+3" Click="FileInfo_Click" />
+                                <MenuItem x:Name="RowMenuRemove" Header="Remove   Del" Click="Remove_Click" />
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
                         <ListBox.Template>
                             <ControlTemplate TargetType="ListBox">
                                 <ScrollViewer x:Name="Scroller" Style="{StaticResource SkinScrollViewer}" Focusable="False" CanContentScroll="True"
@@ -114,20 +120,20 @@
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type local:PlaylistRow}">
+                                <DataTemplate.Resources>
+                                    <!-- Green; the playing row white, its length included. -->
+                                    <Style x:Key="RowText" TargetType="TextBlock" BasedOn="{StaticResource LcdText}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                <Setter Property="Foreground" Value="#F2F4F8" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataTemplate.Resources>
                                 <DockPanel>
-                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Length}" Style="{StaticResource LcdText}" Margin="6,0,0,0"
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Length}" Style="{StaticResource RowText}" Margin="6,0,0,0"
                                                Typography.NumeralAlignment="Tabular" />
-                                    <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock" BasedOn="{StaticResource LcdText}">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                        <Setter Property="Foreground" Value="#F2F4F8" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                    <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis" Style="{StaticResource RowText}" />
                                 </DockPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>

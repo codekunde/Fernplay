@@ -72,6 +72,17 @@ public sealed class Playlist
         ItemUpdated?.Invoke(this, index);
     }
 
+    /// <summary>New details for a file (its tags were edited): every entry of that file takes them, nothing moves.</summary>
+    public void Refresh(Track track)
+    {
+        for (int i = 0; i < _tracks.Count; i++)
+        {
+            if (!string.Equals(_tracks[i].Path, track.Path, StringComparison.OrdinalIgnoreCase)) continue;
+            _tracks[i] = track with { Path = _tracks[i].Path };
+            ItemUpdated?.Invoke(this, i);
+        }
+    }
+
     /// <summary>
     /// Moves tracks (kept in their order) so they sit before the track that was at <paramref name="insertAt"/>
     /// (Count = the end). The playing track and the shuffle order follow. Returns the moved tracks' new indexes.

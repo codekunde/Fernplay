@@ -51,7 +51,7 @@ public partial class PlaylistWindow : SkinWindow
         List.ItemsSource = _rows;
         _c.Playlist.Changed += (_, _) => Rebuild();
         _c.Playlist.ItemUpdated += (_, i) => { if (i < _rows.Count) _rows[i].Refresh(_c.Playlist.Tracks[i]); UpdateTotal(); };
-        _c.Playlist.CurrentChanged += (_, _) => MarkCurrent();
+        _c.Playlist.CurrentChanged += (_, _) => MarkCurrent(scroll: true);
         Rebuild();
         // Classic skin: title bar state, sharp pixels, running time, mini clock, scroll knob.
         Activated += (_, _) => ClassicActivation(true);
@@ -73,19 +73,21 @@ public partial class PlaylistWindow : SkinWindow
         _rows.Clear();
         for (int i = 0; i < _c.Playlist.Tracks.Count; i++) _rows.Add(new PlaylistRow(i + 1, _c.Playlist.Tracks[i]));
         _shownCurrent = -1;
-        MarkCurrent();
+        // No scrolling here: removing or moving rows must leave the view where it is (it jumped to the playing track).
+        // A new current track scrolls through CurrentChanged.
+        MarkCurrent(scroll: false);
         UpdateTotal();
         EmptyText.Visibility = _rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private void MarkCurrent()
+    private void MarkCurrent(bool scroll)
     {
         if (_shownCurrent >= 0 && _shownCurrent < _rows.Count) _rows[_shownCurrent].IsCurrent = false;
         _shownCurrent = _c.Playlist.CurrentIndex;
         if (_shownCurrent >= 0 && _shownCurrent < _rows.Count)
         {
             _rows[_shownCurrent].IsCurrent = true;
-            List.ScrollIntoView(_rows[_shownCurrent]);
+            if (scroll) List.ScrollIntoView(_rows[_shownCurrent]);
         }
     }
 
@@ -111,6 +113,37 @@ public partial class PlaylistWindow : SkinWindow
             e.Handled = true;
             MoveSelectedBy(e.SystemKey == Key.Up ? -1 : 1);
         }
+        else if (e.Key == Key.System && Keyboard.Modifiers == ModifierKeys.Alt && e.SystemKey == Key.D3)
+        {
+            e.Handled = true; // Alt+3: file info, as on the classic player
+            ShowFileInfo();
+        }
+    }
+
+    // ================= File info =================
+
+    /// <summary>The row the keyboard is on (or the first selected one): the file Alt+3 and the menu act on.</summary>
+    private Track? InfoTrack()
+    {
+        var row = Keyboard.FocusedElement is ListBoxItem { IsSelected: true, DataContext: PlaylistRow focused }
+            ? focused
+            : List.SelectedItems.Cast<PlaylistRow>().OrderBy(r => r.Number).FirstOrDefault();
+        return row is null || row.Number - 1 >= _c.Playlist.Tracks.Count ? null : _c.Playlist.Tracks[row.Number - 1];
+    }
+
+    internal void ShowFileInfo()
+    {
+        if (InfoTrack() is { } track) TagEditorWindow.Open(this, _c, track);
+        else _c.ShowNotice("Select a track first, then press Alt+3 for its file info.");
+    }
+
+    private void FileInfo_Click(object sender, RoutedEventArgs e) => ShowFileInfo();
+
+    private void RowMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        bool any = List.SelectedItems.Count > 0;
+        RowMenuInfo.IsEnabled = InfoTrack() is { IsStream: false };
+        RowMenuRemove.IsEnabled = any;
     }
 
     // ================= Reordering =================
@@ -346,10 +379,16 @@ public partial class PlaylistWindow : SkinWindow
     private void RemoveSelected()
     {
         var indexes = List.SelectedItems.Cast<PlaylistRow>().Select(r => r.Number - 1).ToList();
-        int first = indexes.Count > 0 ? indexes.Min() : -1;
+        if (indexes.Count == 0) return;
+        int first = indexes.Min();
+        // The rows are rebuilt after a removal: keep the scroll position, and put the selection and keyboard focus on
+        // the row that took the removed one's place, so Delete can be pressed again and arrows go on from there.
+        var sv = FindScroller();
+        double offset = sv?.VerticalOffset ?? 0;
         _c.Playlist.RemoveAt(indexes);
-        // Keep the selection where it was, so Delete can be pressed again.
-        if (first >= 0 && _rows.Count > 0) List.SelectedIndex = Math.Min(first, _rows.Count - 1);
+        if (_rows.Count == 0) return;
+        sv?.ScrollToVerticalOffset(Math.Min(offset, Math.Max(0, _rows.Count - 1)));
+        Reselect([Math.Min(first, _rows.Count - 1)], scroll: false);
     }
 
     private void Clear_Click(object sender, RoutedEventArgs e) => _c.ClearList();
