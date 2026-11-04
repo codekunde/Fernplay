@@ -25,10 +25,13 @@ public partial class EqWindow : SkinWindow
             var s = new Slider { Style = (Style)FindResource("EqSlider"), HorizontalAlignment = HorizontalAlignment.Center };
             System.Windows.Automation.AutomationProperties.SetName(s, hz >= 1000 ? $"{hz / 1000:0} kHz band" : $"{hz:0} Hz band");
             s.ValueChanged += (_, e) => { if (!_syncing) _eq.SetBand(band, e.NewValue); };
+            SliderReset.OnDoubleClick(s, 0);
             _bands[i] = s;
             BandSliders.Children.Add(s);
             BandLabels.Children.Add(new TextBlock { Text = label, Style = (Style)FindResource("SkinLabel"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom });
         }
+
+        SliderReset.OnDoubleClick(PreampSlider, 0);
 
         foreach (var preset in EqPreset.BuiltIn)
         {

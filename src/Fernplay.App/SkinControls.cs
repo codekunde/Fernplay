@@ -219,3 +219,18 @@ internal sealed class TextPeer(FrameworkElement owner, Func<string> text) : Fram
     protected override string GetClassNameCore() => Owner.GetType().Name;
     protected override bool IsControlElementCore() => true;
 }
+
+/// <summary>A double-click anywhere on a slider sets it back to its resting value (EQ bands and preamp 0 dB, balance centre).</summary>
+public static class SliderReset
+{
+    public static void OnDoubleClick(System.Windows.Controls.Slider slider, double value)
+    {
+        // Preview and handled: the second press must not also start a knob drag or a page step, which would move it off again.
+        slider.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ClickCount != 2 || !slider.IsEnabled) return;
+            slider.Value = value;
+            e.Handled = true;
+        };
+    }
+}

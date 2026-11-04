@@ -103,6 +103,7 @@ public partial class EqWindow
             s.SetBinding(RangeBase.ValueProperty, new Binding(nameof(Slider.Value)) { Source = mirror, Mode = BindingMode.TwoWay });
             s.SetBinding(FrameworkElement.ToolTipProperty, new Binding(nameof(ToolTip)) { Source = mirror });
             s.RefreshBackground();
+            SliderReset.OnDoubleClick(s, 0); // sets the bound Fernplay slider too
             return s;
         }
 

@@ -21,15 +21,21 @@ public sealed class PlayerController : IDisposable
     {
         _ui = ui;
         // Engine events can come from the audio thread.
-        Engine.StateChanged += (_, _) => _ui.BeginInvoke(() => StateChanged?.Invoke(this, EventArgs.Empty));
+        Engine.StateChanged += (_, _) =>
+        {
+            DiagnosticLog.Write($"state {Engine.State} {System.IO.Path.GetFileName(Engine.CurrentPath)}");
+            _ui.BeginInvoke(() => StateChanged?.Invoke(this, EventArgs.Empty));
+        };
         Engine.TrackEnded += (_, _) => _ui.BeginInvoke(async () =>
         {
+            DiagnosticLog.Write($"track ended, repeat {Playlist.Repeat}, shuffle {Playlist.Shuffle}, index {Playlist.CurrentIndex} of {Playlist.Tracks.Count}");
             // A radio stream never ends by itself: the station dropped the connection.
             if (NowPlaying is { IsStream: true } station) { await ReconnectAsync(station, null); return; }
             if (Playlist.NextIndex(trackEnded: true) is { } next) await PlayIndexAsync(next, forward: true);
         });
         Engine.PlaybackFailed += (_, ex) => _ui.BeginInvoke(async () =>
         {
+            DiagnosticLog.Write($"playback failed: {PlaybackErrors.Detail(ex)}");
             if (NowPlaying is { IsStream: true } station) { await ReconnectAsync(station, ex); return; }
             SetStatus(PlaybackErrors.Describe(ex, Engine.CurrentPath ?? ""));
         });
@@ -180,6 +186,7 @@ public sealed class PlayerController : IDisposable
             catch (OperationCanceledException) { return; } // a newer request is loading
             catch (Exception ex)
             {
+                DiagnosticLog.Write($"could not open {(entry.IsStream ? entry.Path : System.IO.Path.GetFileName(entry.Path))}: {PlaybackErrors.Detail(ex)}");
                 if (request != _request) return;
                 if (entry.IsStream)
                 {
@@ -223,6 +230,7 @@ public sealed class PlayerController : IDisposable
 
     public void TogglePause()
     {
+        DiagnosticLog.Write($"pause/resume asked while {Engine.State} at {Engine.Position:m\\:ss} by {DiagnosticLog.Callers()}");
         if (Engine.State == PlayState.Playing) Engine.Pause();
         else if (Engine.State == PlayState.Paused) Engine.Play();
     }

@@ -266,6 +266,7 @@ public partial class MainWindow
         balance.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler(Balance_DragStarted));
         balance.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(Balance_DragCompleted));
         balance.RefreshBackground();
+        SliderReset.OnDoubleClick(balance, 0);
 
         Tog("EqSwitch", L.EqSwitch, "Equalizer panel", "Show or hide the equalizer", EqToggle);
         Tog("PlSwitch", L.PlSwitch, "Playlist panel", "Show or hide the playlist", PlaylistToggle);

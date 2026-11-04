@@ -41,6 +41,7 @@ public partial class MainWindow : SkinWindow
         _c.Engine.Balance = (float)settings.Balance;
         BalanceSlider.Value = Math.Round(settings.Balance * 100);
         BalanceSlider.ToolTip = BalanceText(BalanceSlider.Value);
+        SliderReset.OnDoubleClick(BalanceSlider, 0);
         Activated += (_, _) => ClassicActivation(true);
         Deactivated += (_, _) => ClassicActivation(false);
         DpiChanged += (_, _) => ApplyClassicScale();
@@ -199,6 +200,7 @@ public partial class MainWindow : SkinWindow
         _media.ButtonPressed += button => Dispatcher.BeginInvoke(async () =>
         {
             var state = _c.Engine.State;
+            DiagnosticLog.Write($"Windows media button {button} while {state}");
             switch (button)
             {
                 case MediaSession.Button.Play when state == PlayState.Paused: _c.TogglePause(); break;

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0 (2026-11-04)
+
+Same requirements as 0.1.0: Windows 10 (1607 or later) and 11, x64, with the .NET 10 Desktop Runtime.
+
+- About: CHECK FOR UPDATE asks GitHub for the newest release and says whether there is one; DOWNLOAD then opens its page. Nothing is checked unless the button is pressed.
+- A double-click on an equalizer slider (bands and preamp) sets it back to 0 dB; a double-click on the balance sets it back to the centre. Also with classic skins.
+- Fixed: on Windows 11 a click on Fernplay's taskbar button did not minimise it (Windows 10 did).
+- Fixed: after Windows was locked, or a screen went to sleep or was unplugged, the player, equalizer and playlist could come back apart. Fernplay now remembers where the panels were and puts them back once the screens are as before.
+- Radio: a station that can't be reached now says why instead of always "the station is offline": no answer, connection refused or blocked (with a hint that a firewall or security program is blocking Fernplay.exe when the station plays in a browser), secure (https) connection failed, address not found, proxy refused, or the station's own answer (404 moved, 403 refused). Anything else shows Windows' own message and code.
+- Radio: a station whose https address hands on to a plain http server now plays (browsers follow that step; Fernplay did not).
+- A small diagnostics log (`diagnostics.log` next to the settings, at most about 512 KB, never sent anywhere) notes play and pause with what asked for them, Windows media buttons, track ends, lock and unlock, and display changes, so faults that happen now and then can be traced.
+
 ## 0.5.0 (2026-11-03)
 
 Same requirements as 0.1.0: Windows 10 (1607 or later) and 11, x64, with the .NET 10 Desktop Runtime.

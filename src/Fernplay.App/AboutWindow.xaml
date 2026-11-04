@@ -31,8 +31,17 @@
                     <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" Margin="0,4,0,0" Text="© 2026 CodeKunde" />
                 </StackPanel>
             </Grid>
-            <Button Style="{StaticResource SkinButton}" Content="CLOSE" Height="11" Padding="8,0" Margin="8,0,8,7" HorizontalAlignment="Right"
-                    IsDefault="True" Click="Close_Click" AutomationProperties.Name="Close about" />
+            <!-- Update check: only when pressed; says the result here (and offers the download page when there is a newer one). -->
+            <TextBlock x:Name="UpdateText" Style="{StaticResource SkinLabel}" FontWeight="Normal" Foreground="{StaticResource SkinText}" Margin="8,0,8,5"
+                       TextWrapping="Wrap" Visibility="Collapsed" AutomationProperties.LiveSetting="Polite" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="8,0,8,7">
+                <Button x:Name="UpdateButton" Style="{StaticResource SkinButton}" Content="CHECK FOR UPDATE" Height="11" Padding="6,0" Margin="0,0,4,0"
+                        Click="CheckUpdate_Click" ToolTip="Ask GitHub whether a newer Fernplay is out" AutomationProperties.Name="Check for update" />
+                <Button x:Name="DownloadButton" Style="{StaticResource SkinButton}" Content="DOWNLOAD" Height="11" Padding="6,0" Margin="0,0,4,0"
+                        Visibility="Collapsed" Click="Download_Click" ToolTip="Open the release page in the browser" AutomationProperties.Name="Open the download page" />
+                <Button Style="{StaticResource SkinButton}" Content="CLOSE" Height="11" Padding="8,0"
+                        IsDefault="True" Click="Close_Click" AutomationProperties.Name="Close about" />
+            </StackPanel>
         </StackPanel>
     </Border>
 </local:SkinDialog>

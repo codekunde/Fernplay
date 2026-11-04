@@ -61,7 +61,20 @@ public sealed class IcyMp3Decoder : ITrackDecoder, ILiveStream
         request.Headers.Add("Icy-MetaData", "1");
         using var timeout = new CancellationTokenSource(ConnectTimeout);
         HttpResponseMessage response;
-        try { response = Http.Send(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token); }
+        try
+        {
+            response = Http.Send(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            // .NET follows redirects itself except from https to http, which browsers do follow (some stations hand
+            // their https address on to a plain http server). Follow that one hop too.
+            if ((int)response.StatusCode is >= 300 and < 400 && response.Headers.Location is { } to
+                && new Uri(response.RequestMessage?.RequestUri ?? request.RequestUri!, to) is { Scheme: "http" } next)
+            {
+                response.Dispose();
+                using var again = new HttpRequestMessage(HttpMethod.Get, next);
+                again.Headers.Add("Icy-MetaData", "1");
+                response = Http.Send(again, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            }
+        }
         catch (HttpRequestException ex) when (ex.HttpRequestError == HttpRequestError.InvalidResponse) { return null; } // e.g. an old "ICY 200 OK" server
         catch (OperationCanceledException ex) when (timeout.IsCancellationRequested) { throw new TimeoutException($"No answer from {url}.", ex); }
         try
