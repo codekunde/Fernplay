@@ -3,6 +3,9 @@
 ## Unreleased
 
 - The mouse wheel over the position bar moves through the track, 5 seconds per notch (up = forward), like the wheel over the volume bar. Also on the shade strip and with classic skins; not on a radio station.
+- Installer: `Fernplay-<version>-win-x64.msi` installs Fernplay for the current Windows account (no admin prompt, .NET inside) with a Start menu entry, and sets it up in Explorer ("Open with" for music files and playlists, "Play in Fernplay" and "Add to Fernplay playlist"). A newer MSI updates in place and keeps the settings. Unticking the Explorer option in Settings stays off through later updates. Uninstalling also removes the Explorer set-up.
+- Portable: the zips now carry `portable.txt`, which keeps settings, library and skins in a `Data` folder next to `Fernplay.exe`. The first start copies them from an installed Fernplay. Without the file, settings stay in `%APPDATA%\CodeKunde\Fernplay` as before.
+- `tools\Build-Release.ps1` builds the MSI and both zips into `dist\<version>`.
 
 ## 0.6.0 (2026-11-04)
 

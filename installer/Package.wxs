@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fernplay MSI: per-user (no admin prompt), installs to %LOCALAPPDATA%\Programs\Fernplay.
+  A newer MSI replaces the installed one in place (MajorUpgrade); settings in %APPDATA% are never touched.
+  Uninstall runs "Fernplay.exe /unregister" so the Explorer set-up the app made goes too (not on an upgrade).
+  The UpgradeCode below must never change: it is how Windows knows a newer Fernplay MSI is the same product.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Fernplay" Manufacturer="CodeKunde" Version="$(Version)"
+           UpgradeCode="5CA1A984-271E-48D3-A4E6-6FC50A02DF52" Scope="perUser" Compressed="yes">
+
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer Fernplay is already installed. Uninstall it first to go back to this version." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- Add/Remove Programs (Settings > Apps): icon, links, no Modify button. -->
+    <Icon Id="Fernplay.ico" SourceFile="$(AssetsDir)Fernplay.ico" />
+    <Property Id="ARPPRODUCTICON" Value="Fernplay.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/codekunde/Fernplay" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/codekunde/Fernplay/issues" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <!--
+      %LOCALAPPDATA%\Programs\Fernplay, named directly: Windows moves only the 32-bit ProgramFilesFolder there for a
+      per-user package; ProgramFiles64Folder stays C:\Program Files (Error 1303 without admin, seen 2026-11-05).
+      Folders in the user profile need an HKCU key path and a RemoveFolder per folder (ICE38/ICE64).
+    -->
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="UserProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="Fernplay">
+          <Directory Id="AssetsFolder" Name="Assets" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <ComponentGroup Id="AppFiles">
+      <!-- Where Fernplay is installed and from which version: a later in-app update can find the MSI copy here. -->
+      <!-- Fixed GUIDs: a component with a file and a registry key path cannot get an automatic one. Never change them. -->
+      <Component Id="AppExe" Directory="INSTALLFOLDER" Guid="492BB567-5238-4E7F-830F-53826BFD4A8D">
+        <File Id="FernplayExe" Source="$(PublishDir)Fernplay.exe" />
+        <Shortcut Id="FernplayShortcut" Directory="ProgramMenuFolder" Name="Fernplay"
+                  Description="Music player: player, equalizer and playlist"
+                  Target="[#FernplayExe]" WorkingDirectory="INSTALLFOLDER" />
+        <RegistryKey Root="HKCU" Key="Software\CodeKunde\Fernplay\Install">
+          <RegistryValue Name="Folder" Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+          <RegistryValue Name="Version" Type="string" Value="$(Version)" />
+        </RegistryKey>
+        <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
+        <!-- Removed only when empty, so other apps' folders under Programs are safe. -->
+        <RemoveFolder Id="RemoveUserProgramsFolder" Directory="UserProgramsFolder" On="uninstall" />
+      </Component>
+      <Component Id="AppAssets" Directory="AssetsFolder" Guid="8BFBF6A0-4B08-435E-B052-494D395AA46E">
+        <File Id="FernplayFileIco" Source="$(PublishDir)Assets\FernplayFile.ico" />
+        <RegistryValue Root="HKCU" Key="Software\CodeKunde\Fernplay\Install" Name="Assets" Type="integer" Value="1" KeyPath="yes" />
+        <RemoveFolder Id="RemoveAssetsFolder" On="uninstall" />
+      </Component>
+    </ComponentGroup>
+
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Main">
+      <ComponentGroupRef Id="AppFiles" />
+    </Feature>
+
+    <!-- Install, update and repair: set Fernplay up in Explorer, unless the user unticked it in Settings (the exe checks). -->
+    <CustomAction Id="RegisterExplorer" FileRef="FernplayExe" ExeCommand="/register"
+                  Execute="deferred" Impersonate="yes" Return="ignore" />
+    <!-- Uninstall only (not the removal of the old version during an upgrade): undo the Explorer set-up. -->
+    <CustomAction Id="UnregisterExplorer" FileRef="FernplayExe" ExeCommand="/unregister"
+                  Execute="deferred" Impersonate="yes" Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="RegisterExplorer" After="InstallFiles" Condition='NOT REMOVE~="ALL"' />
+      <Custom Action="UnregisterExplorer" Before="RemoveFiles"
+              Condition='REMOVE~="ALL" AND NOT UPGRADINGPRODUCTCODE' />
+    </InstallExecuteSequence>
+
+  </Package>
+</Wix>

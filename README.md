@@ -6,12 +6,13 @@ Windows 10 (1607 or later) and 11, x64.
 
 ## Download
 
-From [Releases](https://github.com/codekunde/Fernplay/releases), pick one zip:
+From [Releases](https://github.com/codekunde/Fernplay/releases), pick one:
 
-- **`Fernplay-<version>-win-x64.zip`** (under 1 MB) needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (x64). If it is missing, Fernplay says so at start with a link to it.
-- **`Fernplay-<version>-win-x64-standalone.zip`** (about 60 MB) has .NET inside: nothing else to install.
+- **`Fernplay-<version>-win-x64.msi`** (installer, .NET inside): double-click it. It installs for your Windows account only (no admin prompt) into `%LOCALAPPDATA%\Programs\Fernplay` adds Fernplay to the Start menu and sets it up in Explorer ("Open with" for music files and playlists). To make it the player for a file type, right-click such a file, choose Open with > Choose another app, pick Fernplay and **Always** (Windows lets only you make that choice). To update, run the newer MSI: it replaces the old version and keeps your settings; if you unticked "Open music and playlists from Explorer" in Settings, it stays off. Remove it under Settings > Apps; that also removes the Explorer set-up. Settings live in `%APPDATA%\CodeKunde\Fernplay` and stay after an uninstall.
+- **`Fernplay-<version>-win-x64-standalone.zip`** (portable, about 60 MB, .NET inside): unzip anywhere, for example a USB stick, and run `Fernplay.exe`.
+- **`Fernplay-<version>-win-x64.zip`** (portable, under 1 MB) is the same but needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (x64). If it is missing, Fernplay says so at start with a link to it.
 
-Unzip it anywhere and run `Fernplay.exe`. There is no installer; settings live in `%APPDATA%\CodeKunde\Fernplay`. To remove Fernplay, first untick "Open music and playlists from Explorer" in Settings if you ticked it, then delete the folder.
+A portable Fernplay keeps its settings, library and skins in a `Data` folder next to `Fernplay.exe`, because of the `portable.txt` file beside it (delete that file to use `%APPDATA%\CodeKunde\Fernplay` instead). On its first start it copies them from an installed Fernplay, if there is one. To remove a portable Fernplay, first untick "Open music and playlists from Explorer" in Settings if you ticked it, then delete the folder.
 
 Fernplay is not code-signed yet, so Windows may show "Windows protected your PC" the first time: choose **More info**, then **Run anyway**.
 
@@ -149,7 +150,7 @@ The published exe (about 2 MB) is framework-dependent: it needs the .NET 10 Desk
 dotnet publish src/Fernplay.App -c Release -o publish-standalone -p:SelfContained=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
 ```
 
-App and file icons are drawn by `tools/Make-FernplayIcons.ps1`.
+`tools/Build-Release.ps1` builds the release files (MSI and both portable zips) into `dist/<version>`; the MSI is built with the [WiX Toolset](https://wixtoolset.org) 5.0.2 SDK (MS-RL), which NuGet fetches (`-SkipMsi` builds only the zips). It stays on 5.0.2: later WiX versions add maintenance-fee terms. App and file icons are drawn by `tools/Make-FernplayIcons.ps1`.
 
 ## How it is built
 
@@ -157,8 +158,9 @@ Three parts in a chain, each replaceable on its own: **decoder → EQ → output
 
 | Folder | What |
 |---|---|
-| `src/Fernplay.Core` | No UI. `PlayerEngine` (load in the background, play, pause, stop, seek, volume, track end, stream titles), `Audio/` (`MediaFoundationDecoder`; `IcyMp3Decoder`, `IcyStream` and `IcyMetadata` for radio song titles; `Equalizer` and `EqualizerStage` (RBJ peaking biquads), `SpectrumTap` (FFT), `GainStage`, `WasapiAudioOutput`), `Playlist` (shuffle, repeat, remove, move, opening playlists), `M3u` and `Pls`, `PanelLayout` (snapping and docking maths), `PlaylistHeight`, `Track` and `TagReader` (Windows property system), `ShellRegistration` (Explorer entries under HKCU), `OpenRequest`, `PlaybackErrors` (including why a station could not be reached), `UpdateCheck` (GitHub's latest release), `TimeFormat`; `Skins/` (`ClassicSkin`: `.wsz` reader with size limits, own `BmpDecoder`, `SkinTextFiles` for PLEDIT/VISCOLOR/REGION, `SpriteMap`, `SkinFont`, `ClassicLayout` and `ClassicPlaylist` positions, `SkinLibrary`, `GenSkin` for the library's frame and colours); `Library/` (`LibraryIndex` (the JSON index, play counts, ratings, history), `LibraryScanner` (background scan, only changed files re-read), `LibraryQuery` (views, search, panes, status line), `PathTags`, `CoverFiles`, `PlayRules`) |
+| `src/Fernplay.Core` | No UI. `PlayerEngine` (load in the background, play, pause, stop, seek, volume, track end, stream titles), `Audio/` (`MediaFoundationDecoder`; `IcyMp3Decoder`, `IcyStream` and `IcyMetadata` for radio song titles; `Equalizer` and `EqualizerStage` (RBJ peaking biquads), `SpectrumTap` (FFT), `GainStage`, `WasapiAudioOutput`), `Playlist` (shuffle, repeat, remove, move, opening playlists), `M3u` and `Pls`, `PanelLayout` (snapping and docking maths), `PlaylistHeight`, `Track` and `TagReader` (Windows property system), `ShellRegistration` (Explorer entries under HKCU), `DataFolder` (where settings live: installed or portable), `OpenRequest`, `PlaybackErrors` (including why a station could not be reached), `UpdateCheck` (GitHub's latest release), `TimeFormat`; `Skins/` (`ClassicSkin`: `.wsz` reader with size limits, own `BmpDecoder`, `SkinTextFiles` for PLEDIT/VISCOLOR/REGION, `SpriteMap`, `SkinFont`, `ClassicLayout` and `ClassicPlaylist` positions, `SkinLibrary`, `GenSkin` for the library's frame and colours); `Library/` (`LibraryIndex` (the JSON index, play counts, ratings, history), `LibraryScanner` (background scan, only changed files re-read), `LibraryQuery` (views, search, panes, status line), `PathTags`, `CoverFiles`, `PlayRules`) |
 | `src/Fernplay.App` | `Fernplay.exe`, WPF: `Skin.xaml` (Fernplay's own look: palette, buttons, sliders, menus, scroll bar, glyphs; all drawn, no bitmaps), `SkinControls` (7-segment clock, spectrum, marquee, EQ curve), `SkinWindow` (dragging, snapping, docked panels following a size change), `MainWindow`, `EqWindow`, `PlaylistWindow` (each with a `.Classic.cs` part that builds the skinned view over the same controls), `Classic/` (sprite buttons, sliders, text, clock, spectrum, EQ graph, `GenFrame` for the library), `LibraryWindow` and `LibraryService` (index file, scans, play counting), `CoverCache` (Windows thumbnails and folder pictures), `StarRating`, `SettingsWindow`, `AboutWindow`, `PlayerController`, `MediaSession` (Windows media session through COM, no WinRT package), `SingleInstance`, `ShellNotify`, `FocusRing`, `UserSettings`, `DiagnosticLog` |
+| `installer` | WiX 5.0.2 MSI (`Package.wxs`): per-user, Start menu entry, in-place upgrades, `Fernplay.exe /register` on install and update, `/unregister` on uninstall |
 | `tests/Fernplay.Tests` | xUnit tests; they write their own audio and use a fake output, so they need no sound card or internet (the station error tests use small servers on localhost) |
 
 Audio: [NAudio](https://github.com/naudio/NAudio) 3.2 (MIT), Media Foundation for decoding, Windows' MP3 codec (ACM) for radio stations with song titles, WASAPI shared mode for output (follows the default device when it changes). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

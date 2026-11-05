@@ -37,6 +37,42 @@ public sealed class ShellRegistration(RegistryKey root, string exePath, string f
         return k is not null;
     }
 
+    private const string AppKey = @"Software\CodeKunde\Fernplay";
+    private const string TurnedOffValue = "ExplorerTurnedOff";
+
+    /// <summary>
+    /// The user unticked the Explorer option in Settings: the installer's "/register" (install and every update)
+    /// then leaves Explorer alone. Kept apart from the keys <see cref="Unregister"/> removes.
+    /// </summary>
+    public bool TurnedOff
+    {
+        get
+        {
+            using var k = root.OpenSubKey(AppKey);
+            return k?.GetValue(TurnedOffValue) is int v && v != 0;
+        }
+        set
+        {
+            if (value)
+            {
+                using var k = root.CreateSubKey(AppKey);
+                k.SetValue(TurnedOffValue, 1, RegistryValueKind.DWord);
+            }
+            else
+            {
+                using var k = root.OpenSubKey(AppKey, writable: true);
+                k?.DeleteValue(TurnedOffValue, throwOnMissingValue: false);
+            }
+        }
+    }
+
+    /// <summary>True when Explorer is set up for this exe path (not another Fernplay copy).</summary>
+    public bool IsRegisteredHere()
+    {
+        using var k = root.OpenSubKey($@"{Classes}\{AudioProgId}\shell\open\command");
+        return string.Equals(k?.GetValue(null) as string, OpenCommand, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>
     /// True when registered, but for another exe path (the app was moved) or without a file type a newer
     /// Fernplay plays (.pls came later): call <see cref="Register"/> again.

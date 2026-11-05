@@ -2,6 +2,7 @@ bin/
 obj/
 publish/
 publish-standalone/
+dist/
 *.user
 .vs/
 TestResults/

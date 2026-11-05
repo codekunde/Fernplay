@@ -93,6 +93,41 @@ public sealed class ExplorerTests : IDisposable
         Assert.Equal("\"D:\\Elsewhere\\Fernplay.exe\" \"%1\"", Value(@"Software\Classes\Fernplay.Audio\shell\open\command"));
     }
 
+    [Fact]
+    public void Untick_is_remembered_apart_from_the_keys_unregister_removes()
+    {
+        var reg = new ShellRegistration(_root, Exe, Icon);
+        Assert.False(reg.TurnedOff);
+
+        reg.Register();
+        reg.Unregister();
+        reg.TurnedOff = true; // what Settings does on an untick
+        Assert.True(reg.TurnedOff);
+        reg.Unregister(); // a second unregister must not forget it
+        Assert.True(reg.TurnedOff);
+        Assert.False(KeyExists(@"Software\CodeKunde\Fernplay\Capabilities"));
+
+        reg.TurnedOff = false;
+        Assert.False(reg.TurnedOff);
+        reg.TurnedOff = false; // clearing twice is fine
+    }
+
+    [Fact]
+    public void Registered_here_only_for_the_exe_explorer_points_at()
+    {
+        var installed = new ShellRegistration(_root, Exe, Icon);
+        var portable = new ShellRegistration(_root, @"E:\Portable\Fernplay\Fernplay.exe", Icon);
+        Assert.False(installed.IsRegisteredHere());
+
+        installed.Register();
+        Assert.True(installed.IsRegisteredHere());
+        Assert.True(new ShellRegistration(_root, Exe.ToUpperInvariant(), Icon).IsRegisteredHere()); // paths ignore case
+        Assert.False(portable.IsRegisteredHere()); // the uninstaller of one copy leaves another copy's set-up alone
+
+        portable.Register();
+        Assert.False(installed.IsRegisteredHere());
+    }
+
     // ---------- launch requests
 
     [Fact]

@@ -25,10 +25,13 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (e.Args is ["/register"]) { RegisterForInstall(); Shutdown(); return; }
+        if (e.Args is ["/unregister"]) { UnregisterForUninstall(); Shutdown(); return; }
         var request = OpenRequest.FromArgs(e.Args, Environment.CurrentDirectory);
         _instance = SingleInstance.Claim(request);
         if (_instance is null) { Shutdown(); return; } // handed to the running Fernplay
 
+        if (UserSettings.IsPortable) DataFolder.SeedPortable(UserSettings.AppDataFolder, Path.GetDirectoryName(UserSettings.FilePath)!);
         FocusRing.Install();
         KeepShellRegistrationCurrent();
         _settings = UserSettings.Load();
@@ -242,6 +245,38 @@ public partial class App : Application
         {
             if (!Shell.NeedsRefresh()) return;
             Shell.Register();
+            ShellNotify.AssociationsChanged();
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException) { }
+    }
+
+    /// <summary>
+    /// "Fernplay.exe /register", run by the MSI on install and on every update: sets Fernplay up in Explorer
+    /// ("Open with", folder verbs, Default apps) unless the user unticked that in Settings. No window.
+    /// </summary>
+    private static void RegisterForInstall()
+    {
+        try
+        {
+            if (Shell.TurnedOff) return;
+            Shell.Register();
+            ShellNotify.AssociationsChanged();
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException) { }
+    }
+
+    /// <summary>
+    /// "Fernplay.exe /unregister", run by the MSI on uninstall (not on an upgrade): removes the Explorer set-up
+    /// if it points at this exe (a portable copy that took Explorer over keeps it) and forgets an untick, so a
+    /// later install starts fresh. No window, no settings touched.
+    /// </summary>
+    private static void UnregisterForUninstall()
+    {
+        try
+        {
+            Shell.TurnedOff = false;
+            if (!Shell.IsRegisteredHere()) return;
+            Shell.Unregister();
             ShellNotify.AssociationsChanged();
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException) { }

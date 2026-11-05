@@ -68,6 +68,7 @@ public partial class SettingsWindow : SkinDialog
         try
         {
             if (on) App.Shell.Register(); else App.Shell.Unregister();
+            App.Shell.TurnedOff = !on; // the installer's /register on an update respects an untick
             ShellNotify.AssociationsChanged();
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or System.IO.IOException)

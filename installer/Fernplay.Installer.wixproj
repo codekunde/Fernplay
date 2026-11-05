@@ -1,0 +1,18 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <!--
+    Per-user MSI for Fernplay, built from the standalone (self-contained) publish.
+    Build through tools\Build-Release.ps1, which publishes first and passes Version and PublishDir:
+      dotnet build installer\Fernplay.Installer.wixproj -c Release -p:Version=0.7.0 -p:PublishDir=<standalone publish folder>\
+    WiX stays on 5.0.2 (MS-RL licence, no fee or EULA). Do not move to WiX 6 or later: those add the
+    Open Source Maintenance Fee terms (v7 also an EULA to accept), which the owner declined on 2026-11-05.
+  -->
+  <PropertyGroup>
+    <Version Condition="'$(Version)' == ''">0.0.0</Version>
+    <OutputName>Fernplay-$(Version)-win-x64</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <DefineConstants>Version=$(Version);PublishDir=$(PublishDir);AssetsDir=$(MSBuildThisFileDirectory)..\src\Fernplay.App\Assets\</DefineConstants>
+    <!-- ICE validation on (runs without admin here). Expected warnings: ICE61 (same-version upgrade allowed), ICE91 (per-user only). -->
+  </PropertyGroup>
+
+</Project>

@@ -56,15 +56,22 @@ public sealed class UserSettings
     /// <summary>Skin scale the panel positions were saved at; 0 = before this was saved (2.0).</summary>
     public double Scale { get; set; }
 
+    /// <summary>The installed (non-portable) data folder: %APPDATA%\CodeKunde\Fernplay.</summary>
+    public static string AppDataFolder { get; } =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CodeKunde", "Fernplay");
+
     /// <summary>
-    /// The FERNPLAY_DATA environment variable points it at another folder (test runs: the owner's settings stay
-    /// untouched). Changing APPDATA does not work for this: GetFolderPath asks Windows, not the environment.
+    /// See <see cref="DataFolder.Resolve"/>: FERNPLAY_DATA (test runs: the owner's settings stay untouched), else
+    /// Data next to a portable exe, else %APPDATA%. Changing APPDATA does not work for tests: GetFolderPath asks Windows.
     /// </summary>
     public static string FilePath { get; } = Path.Combine(
-        Environment.GetEnvironmentVariable("FERNPLAY_DATA") is { Length: > 0 } dir
-            ? dir
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CodeKunde", "Fernplay"),
+        DataFolder.Resolve(Environment.GetEnvironmentVariable("FERNPLAY_DATA"), AppContext.BaseDirectory,
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)),
         "settings.json");
+
+    /// <summary>True for a portable copy (portable.txt next to the exe, no FERNPLAY_DATA).</summary>
+    public static bool IsPortable =>
+        Environment.GetEnvironmentVariable("FERNPLAY_DATA") is not { Length: > 0 } && DataFolder.IsPortable(AppContext.BaseDirectory);
 
     /// <summary>Classic skins (.wsz) Fernplay can use, next to settings.json.</summary>
     public static string SkinsFolder => Path.Combine(Path.GetDirectoryName(FilePath)!, "Skins");
