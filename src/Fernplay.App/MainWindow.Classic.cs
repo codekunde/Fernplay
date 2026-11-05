@@ -283,6 +283,7 @@ public partial class MainWindow
         position.SetBinding(IsEnabledProperty, new Binding(nameof(IsEnabled)) { Source = SeekSlider });
         position.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler(Seek_DragStarted));
         position.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(Seek_DragCompleted));
+        position.PreviewMouseWheel += Seek_MouseWheel;
 
         // Transport, eject, shuffle, repeat.
         Btn("Buttons.Previous", L.Previous, "Previous track", "Previous track (Z)", Prev_Click, "Z");
@@ -402,6 +403,7 @@ public partial class MainWindow
         position.SetBinding(IsEnabledProperty, new Binding(nameof(IsEnabled)) { Source = SeekSlider });
         position.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler(Seek_DragStarted));
         position.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(Seek_DragCompleted));
+        position.PreviewMouseWheel += Seek_MouseWheel;
         position.ValueChanged += (_, _) =>
         {
             var knob = bm[L.ShadeThumb(position.Maximum > 0 ? position.Value / position.Maximum : 0)];

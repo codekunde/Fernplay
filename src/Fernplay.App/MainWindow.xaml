@@ -147,7 +147,8 @@
             <!-- Position -->
             <Slider x:Name="SeekSlider" Style="{StaticResource SkinSliderH}" Margin="6,6,6,0" Minimum="0" Maximum="1" IsEnabled="False"
                     SmallChange="5" LargeChange="30" AutomationProperties.Name="Position in the track"
-                    ValueChanged="Seek_ValueChanged" Thumb.DragStarted="Seek_DragStarted" Thumb.DragCompleted="Seek_DragCompleted" />
+                    ValueChanged="Seek_ValueChanged" Thumb.DragStarted="Seek_DragStarted" Thumb.DragCompleted="Seek_DragCompleted"
+                    PreviewMouseWheel="Seek_MouseWheel" />
 
             <!-- Transport -->
             <Grid Margin="6,5,6,5" Height="16">
@@ -275,7 +276,7 @@
                 <Slider x:Name="ShadeSeek" Style="{StaticResource SkinSliderH}" Width="34" Minimum="0" SmallChange="5" LargeChange="30"
                         Maximum="{Binding Maximum, ElementName=SeekSlider}" Value="{Binding Value, ElementName=SeekSlider, Mode=TwoWay}"
                         IsEnabled="{Binding IsEnabled, ElementName=SeekSlider}" AutomationProperties.Name="Position in the track"
-                        Thumb.DragStarted="Seek_DragStarted" Thumb.DragCompleted="Seek_DragCompleted" />
+                        Thumb.DragStarted="Seek_DragStarted" Thumb.DragCompleted="Seek_DragCompleted" PreviewMouseWheel="Seek_MouseWheel" />
             </Border>
             <Border Grid.Column="8" Background="{StaticResource FrameDark}" Padding="0,1,1,1">
                 <StackPanel Orientation="Horizontal">

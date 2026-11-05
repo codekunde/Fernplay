@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The mouse wheel over the position bar moves through the track, 5 seconds per notch (up = forward), like the wheel over the volume bar. Also on the shade strip and with classic skins; not on a radio station.
+
 ## 0.6.0 (2026-11-04)
 
 Same requirements as 0.1.0: Windows 10 (1607 or later) and 11, x64, with the .NET 10 Desktop Runtime.

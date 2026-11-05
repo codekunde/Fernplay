@@ -364,6 +364,25 @@ public partial class MainWindow : SkinWindow
 
     private int _wheel;
 
+    /// <summary>
+    /// Mouse wheel over a position bar: 5 s per notch, up = forward (touchpad deltas summed). Setting the seek bar's
+    /// value seeks through Seek_ValueChanged; off for a live station (the bar is disabled) and while the thumb is dragged.
+    /// </summary>
+    private void Seek_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        e.Handled = true;
+        if (!SeekSlider.IsEnabled || _seekDragging) return;
+        _seekWheel += e.Delta;
+        int notches = _seekWheel / Mouse.MouseWheelDeltaForOneLine;
+        if (notches != 0)
+        {
+            _seekWheel -= notches * Mouse.MouseWheelDeltaForOneLine;
+            SeekSlider.Value = Math.Clamp(SeekSlider.Value + notches * SeekSlider.SmallChange, 0, SeekSlider.Maximum);
+        }
+    }
+
+    private int _seekWheel;
+
     // ================= Display =================
 
     private void Animate()
