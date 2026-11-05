@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 (2026-11-05)
+
+Windows 10 (1607 or later) and 11, x64. The MSI and the standalone zip have .NET inside; the small zip needs the .NET 10 Desktop Runtime.
 
 - The mouse wheel over the position bar moves through the track, 5 seconds per notch (up = forward), like the wheel over the volume bar. Also on the shade strip and with classic skins; not on a radio station.
 - Installer: `Fernplay-<version>-win-x64.msi` installs Fernplay for the current Windows account (no admin prompt, .NET inside) with a Start menu entry, and sets it up in Explorer ("Open with" for music files and playlists, "Play in Fernplay" and "Add to Fernplay playlist"). A newer MSI updates in place and keeps the settings. Unticking the Explorer option in Settings stays off through later updates. Uninstalling also removes the Explorer set-up.

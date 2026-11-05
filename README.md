@@ -4,17 +4,37 @@ A small music player for Windows in the style of the late-90s desktop players: a
 
 Windows 10 (1607 or later) and 11, x64.
 
-## Download
+## Install
 
-From [Releases](https://github.com/codekunde/Fernplay/releases), pick one:
+Download from [Releases](https://github.com/codekunde/Fernplay/releases). Most people want the installer.
 
-- **`Fernplay-<version>-win-x64.msi`** (installer, .NET inside): double-click it. It installs for your Windows account only (no admin prompt) into `%LOCALAPPDATA%\Programs\Fernplay` adds Fernplay to the Start menu and sets it up in Explorer ("Open with" for music files and playlists). To make it the player for a file type, right-click such a file, choose Open with > Choose another app, pick Fernplay and **Always** (Windows lets only you make that choice). To update, run the newer MSI: it replaces the old version and keeps your settings; if you unticked "Open music and playlists from Explorer" in Settings, it stays off. Remove it under Settings > Apps; that also removes the Explorer set-up. Settings live in `%APPDATA%\CodeKunde\Fernplay` and stay after an uninstall.
-- **`Fernplay-<version>-win-x64-standalone.zip`** (portable, about 60 MB, .NET inside): unzip anywhere, for example a USB stick, and run `Fernplay.exe`.
-- **`Fernplay-<version>-win-x64.zip`** (portable, under 1 MB) is the same but needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (x64). If it is missing, Fernplay says so at start with a link to it.
+### Installer (recommended)
 
-A portable Fernplay keeps its settings, library and skins in a `Data` folder next to `Fernplay.exe`, because of the `portable.txt` file beside it (delete that file to use `%APPDATA%\CodeKunde\Fernplay` instead). On its first start it copies them from an installed Fernplay, if there is one. To remove a portable Fernplay, first untick "Open music and playlists from Explorer" in Settings if you ticked it, then delete the folder.
+**`Fernplay-<version>-win-x64.msi`** (about 56 MB, .NET included, nothing else to install)
 
-Fernplay is not code-signed yet, so Windows may show "Windows protected your PC" the first time: choose **More info**, then **Run anyway**.
+1. Double-click the MSI. It installs in a few seconds, for your Windows account only, with no admin prompt.
+2. Start Fernplay from the Start menu (type "Fernplay").
+
+The installer puts Fernplay in `%LOCALAPPDATA%\Programs\Fernplay` and sets it up in Explorer: music files and playlists list it under **Open with**, and folders get **Play in Fernplay** and **Add to Fernplay playlist**.
+
+**Make Fernplay your music player:** right-click a music file (an MP3, say), choose **Open with > Choose another app**, pick **Fernplay** and **Always**. Repeat for other file types you use (FLAC, M4A, playlists). Windows lets only you make this choice; no app can set itself as the default.
+
+**Update:** download the newer MSI and double-click it. It replaces the old version and keeps your settings, library and skins. If you unticked "Open music and playlists from Explorer" in Settings, it stays off.
+
+**Uninstall:** Windows Settings > Apps > Fernplay > Uninstall. This also removes the Explorer set-up. Your settings stay in `%APPDATA%\CodeKunde\Fernplay`; delete that folder too for a clean removal.
+
+### Portable (no install)
+
+- **`Fernplay-<version>-win-x64-standalone.zip`** (about 57 MB, .NET included)
+- **`Fernplay-<version>-win-x64.zip`** (under 1 MB): needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (x64). If it is missing, Fernplay says so at start with a link to it.
+
+Unzip anywhere, a USB stick included, and run `Fernplay.exe`. A portable Fernplay keeps its settings, library and skins in a `Data` folder next to `Fernplay.exe`, because of the `portable.txt` file beside it. On its first start it copies them from an installed Fernplay, if there is one. Delete `portable.txt` to use `%APPDATA%\CodeKunde\Fernplay` instead.
+
+A portable copy does not touch Explorer unless you tick "Open music and playlists from Explorer" in its Settings. To update, unzip the newer version over the old folder (the `Data` folder stays). To remove it, untick that option first if you ticked it, then delete the folder.
+
+### "Windows protected your PC"
+
+Fernplay is not code-signed yet, so Windows may show this the first time you run the MSI or the exe: choose **More info**, then **Run anyway**.
 
 ![Fernplay: player, equalizer and playlist docked together, playing a track](docs/screenshots/fernplay.png)
 
@@ -33,7 +53,7 @@ Drag a panel by its title bar: it snaps to the other panels and to the screen ed
 - The eject button (Ctrl+O), or ADD in the playlist.
 - Drop files or folders on the player (replaces the list and plays) or on the playlist (adds to the end).
 - From the command line: `Fernplay.exe song.mp3 Album\` replaces the list; `Fernplay.exe /add song.mp3` adds to the end.
-- From Explorer, once switched on in Settings (see below).
+- From Explorer: set up by the installer; a portable copy once switched on in Settings (see below).
 
 Only one Fernplay runs at a time: anything opened while it runs goes to the running player. Several files opened together become one list in Explorer's name order.
 
@@ -114,10 +134,10 @@ Open them from the Fernplay icon at the top left of the player (Settings…, Abo
 - **Keep Fernplay on top** of other windows.
 - **Snap panels** to each other and to the screen edges.
 - **Remember the playlist** between runs.
-- **Open music and playlists from Explorer** (off by default, for the current user only, no admin rights): adds Fernplay to Open with and Default apps, gives the files it plays its file icon, and adds "Add to Fernplay playlist" (files and folders) and "Play in Fernplay" (folders) to the right-click menu. Untick it to remove everything again. **Make Fernplay the default player…** then opens Windows' own page for the choice.
+- **Open music and playlists from Explorer** (on after installing with the MSI, off in a portable copy; for the current user only, no admin rights): adds Fernplay to Open with and Default apps, gives the files it plays its file icon, and adds "Add to Fernplay playlist" (files and folders) and "Play in Fernplay" (folders) to the right-click menu. Untick it to remove everything again. **Make Fernplay the default player…** then opens Windows' own page for the choice.
 - **Skin:** CHOOSE SKIN… picks a classic skin file, FERNPLAY LOOK goes back to Fernplay's own drawing, SIZE sets 1x, 2x or 3x for skins (see below).
 
-Fernplay remembers the panel positions, which panels are shown, volume, balance, EQ, shuffle, repeat, the playlist size, the skin and its size, the playlist and station names in `%APPDATA%\CodeKunde\Fernplay\settings.json`. The `FERNPLAY_DATA` environment variable points it at another folder.
+Fernplay remembers the panel positions, which panels are shown, volume, balance, EQ, shuffle, repeat, the playlist size, the skin and its size, the playlist and station names in `%APPDATA%\CodeKunde\Fernplay\settings.json` (a portable copy: `Data\settings.json` next to `Fernplay.exe`). The `FERNPLAY_DATA` environment variable points it at another folder.
 
 Next to it, `diagnostics.log` (at most about 512 KB, never sent anywhere) notes play and pause and what asked for them, Windows media buttons, track ends, stations that could not be opened and why, lock and unlock, and display changes with the panel positions. It helps trace a fault that happens only now and then.
 
@@ -150,7 +170,7 @@ The published exe (about 2 MB) is framework-dependent: it needs the .NET 10 Desk
 dotnet publish src/Fernplay.App -c Release -o publish-standalone -p:SelfContained=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
 ```
 
-`tools/Build-Release.ps1` builds the release files (MSI and both portable zips) into `dist/<version>`; the MSI is built with the [WiX Toolset](https://wixtoolset.org) 5.0.2 SDK (MS-RL), which NuGet fetches (`-SkipMsi` builds only the zips). It stays on 5.0.2: later WiX versions add maintenance-fee terms. App and file icons are drawn by `tools/Make-FernplayIcons.ps1`.
+`tools/Build-Release.ps1` builds the release files (MSI and both portable zips) into `dist/<version>`. The MSI is built with the [WiX Toolset](https://wixtoolset.org) 5.0.2 SDK (MS-RL), which NuGet fetches (`-SkipMsi` builds only the zips). It stays on 5.0.2: later WiX versions add maintenance-fee terms. App and file icons are drawn by `tools/Make-FernplayIcons.ps1`.
 
 ## How it is built
 
