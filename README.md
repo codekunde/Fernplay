@@ -40,9 +40,9 @@ Fernplay is not code-signed yet, so Windows may show this the first time you run
 
 ## The three panels
 
-- **Player:** 7-segment clock (click it for time left), spectrum analyser, scrolling title, kbps, kHz, mono/stereo, volume and balance (the mouse wheel works on both; balance snaps back to the centre within 15 %, and a double-click centres it), position bar, previous / play / pause / stop / next, open (right-click it for a folder), SHUFFLE, REPEAT (off, whole list, this track), and EQ / PL switches that show or hide the other panels.
-- **Equalizer:** ON switch, curve preview, preamp and 10 bands (60 Hz to 16 kHz, ±12 dB; bars turn from green to orange as they boost; a double-click sets a slider back to 0 dB), PRESETS (Flat, Rock, Pop, Classical, Dance, Bass boost, Treble boost, Vocal). Changes apply live.
-- **Playlist:** tracks as "03 - Artist - Title" (or "Artist - Title" without a track number) with their length, the playing one highlighted; double-click or Enter plays, Delete or REM removes, ADD adds files or a folder, CLEAR empties it, LIST opens or saves a playlist file; total length in the corner. Drag tracks to reorder them (several at once), or use Alt+Up / Alt+Down. Drag the panel's bottom edge to show more or fewer rows.
+- **Player:** 7-segment clock (click it for time left), spectrum analyser, scrolling title, kbps, kHz, mono/stereo, volume and balance (the mouse wheel works on both; balance snaps back to the centre within 15 %, and a double-click centres it), position bar, previous / play / pause / stop / next, open (right-click it for a folder), SHUFFLE, REPEAT (a click repeats the whole list or stops repeating; a right-click, the menu key or Shift+F10 repeats this track; the tooltip says which is on), and EQ / PL switches that show or hide the other panels.
+- **Equalizer:** ON switch, curve preview, preamp and 10 bands (60 Hz to 16 kHz, ±12 dB; bars turn from green to orange as they boost; a double-click sets a slider back to 0 dB), PRESETS (Flat, Rock, Pop, Classical, Dance, Bass boost, Treble boost, Vocal, and your own: **Save current as…** keeps the current settings under a name, **Delete preset** removes one of yours). Changes apply live.
+- **Playlist:** tracks as "03 - Artist - Title" (or "Artist - Title" without a track number) with their length, the playing one highlighted; double-click or Enter plays, Delete or REM removes, ADD adds files or a folder, CLEAR empties it, LIST opens or saves a playlist file; total length in the corner. Drag tracks to reorder them (several at once), or use Alt+Up / Alt+Down. Drag the panel's bottom edge to show more or fewer rows; near the bottom of the equalizer or another panel it snaps level with it. The bottom-right corner also changes the width (never narrower than the player).
 
 Drag a panel by its title bar: it snaps to the other panels and to the screen edges. Dragging the player panel moves every panel docked to it; dragging the EQ or playlist alone pulls it loose. The panel that has the keyboard shows a lit title bar; the others are dimmed.
 
@@ -125,6 +125,8 @@ Tags are written by Windows itself, the same way Explorer's Details pane edits t
 
 If the media keys do nothing while Fernplay plays, another program has taken them first. Winamp, for example, catches them with its global hotkeys while it runs: close it, or switch off its multimedia keys under Preferences, Global Hotkeys.
 
+A media-button pause in the first 3 seconds of a song is ignored: some Windows 11 PCs send one by themselves when a new song starts, which left the next song paused.
+
 ## Settings
 
 ![Fernplay settings: keep on top, snap panels, remember the playlist, open from Explorer, skin and skin size](docs/screenshots/settings.png)
@@ -137,9 +139,9 @@ Open them from the Fernplay icon at the top left of the player (Settings…, Abo
 - **Open music and playlists from Explorer** (on after installing with the MSI, off in a portable copy; for the current user only, no admin rights): adds Fernplay to Open with and Default apps, gives the files it plays its file icon, and adds "Add to Fernplay playlist" (files and folders) and "Play in Fernplay" (folders) to the right-click menu. Untick it to remove everything again. **Make Fernplay the default player…** then opens Windows' own page for the choice.
 - **Skin:** CHOOSE SKIN… picks a classic skin file, FERNPLAY LOOK goes back to Fernplay's own drawing, SIZE sets 1x, 1.5x or 1.75x for skins (see below).
 
-Fernplay remembers the panel positions, which panels are shown, volume, balance, EQ, shuffle, repeat, the playlist size, the skin and its size, the playlist and station names in `%APPDATA%\CodeKunde\Fernplay\settings.json` (a portable copy: `Data\settings.json` next to `Fernplay.exe`). The `FERNPLAY_DATA` environment variable points it at another folder.
+Fernplay remembers the panel positions, which panels are shown, volume, balance, EQ and your own EQ presets, shuffle, repeat, the playlist's height and width, the skin and its size, the playlist and station names in `%APPDATA%\CodeKunde\Fernplay\settings.json` (a portable copy: `Data\settings.json` next to `Fernplay.exe`). The `FERNPLAY_DATA` environment variable points it at another folder.
 
-Next to it, `diagnostics.log` (at most about 512 KB, never sent anywhere) notes play and pause and what asked for them, Windows media buttons, track ends, stations that could not be opened and why, lock and unlock, and display changes with the panel positions. It helps trace a fault that happens only now and then.
+Next to it, `diagnostics.log` (at most about 512 KB, never sent anywhere) notes play and pause and what asked for them, Windows media buttons (and the ones ignored at a song's start), track ends, stations that could not be opened and why, lock and unlock, and display changes with the panel positions. It helps trace a fault that happens only now and then.
 
 ## Classic skins
 
