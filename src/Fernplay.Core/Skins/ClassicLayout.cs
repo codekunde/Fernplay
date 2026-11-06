@@ -58,15 +58,22 @@ public static class ClassicLayout
         return from == 0 && Math.Abs(Math.Abs(to) - step) < 1e-9 ? Math.Sign(to) * BalanceStepOut : 0;
     }
 
+    /// <summary>The three size settings (1, 2, 3 in the settings file) as skin-to-screen factors: 1x, 1.5x, 1.75x.</summary>
+    public static readonly IReadOnlyList<double> SizeFactors = [1, 1.5, 1.75];
+
     /// <summary>
-    /// Layout scale for a size setting (1x, 2x, 3x) on a screen with the given DPI scale, chosen so one skin pixel is a
-    /// whole number of screen pixels (crisp), rounding half up: 2x at 100 % → 2.0; at 125 % → 2.4 (3 screen px); at 150 % → 2.0 (3 screen px).
+    /// Layout scale for a size setting (1, 2, 3 = 1x, 1.5x, 1.75x) on a screen with the given DPI scale.
+    /// 1x is a whole number of screen pixels per skin pixel (crisp), rounding half up: 1 at 100 %, 2 at 150 %.
+    /// 1.5x and 1.75x are what they say (2x and 3x were too big): some skin pixels then take one screen pixel more
+    /// than others, unless the size lands within 5 % of a whole number, which is used instead.
     /// </summary>
     public static double LayoutScale(int size, double dpiScale)
     {
         size = Math.Clamp(size, 1, 3);
         dpiScale = dpiScale > 0 ? dpiScale : 1;
-        double device = Math.Max(1, Math.Round(size * dpiScale, MidpointRounding.AwayFromZero));
+        double device = SizeFactors[size - 1] * dpiScale;
+        double whole = Math.Max(1, Math.Round(device, MidpointRounding.AwayFromZero));
+        if (size == 1 || Math.Abs(whole - device) <= device * 0.05) device = whole;
         return device / dpiScale;
     }
 
@@ -153,6 +160,14 @@ public static class ClassicPlaylist
 {
     public const int MinWidth = 275, WidthStep = 25, TopHeight = 20, BottomHeight = 38, TileHeight = 29, MinTiles = 2, DefaultTiles = 4;
     public const int ListLeft = 12, ListRight = 20, BottomLeftWidth = 125, BottomRightWidth = 150, VisualizerWidth = 75, RowHeight = 13;
+
+    /// <summary>
+    /// Font size and row height of the list in skin px, for <paramref name="screenPxPerSkinPx"/>. The skin's 9 px text on
+    /// 13 px rows is drawn at fewer than 1.5 screen px per skin px only at 1x on a 100 % to 125 % screen, and was hard
+    /// to read there: 11 px on 15 px rows then. Larger sizes keep the skin's own.
+    /// </summary>
+    public static (double FontSize, double RowHeight) ListText(double screenPxPerSkinPx) =>
+        screenPxPerSkinPx < 1.5 ? (11, 15) : (9, RowHeight);
 
     public static int Width(int widthSteps) => MinWidth + WidthStep * Math.Max(widthSteps, 0);
     public static int Height(int tiles) => TopHeight + TileHeight * Math.Max(tiles, MinTiles) + BottomHeight;

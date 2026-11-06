@@ -288,19 +288,22 @@ public partial class PlaylistWindow : SkinWindow
     private double RowHeight() =>
         List.ItemContainerGenerator.ContainerFromIndex(0) is ListBoxItem { ActualHeight: > 0 } row ? row.ActualHeight : FallbackRowHeight;
 
-    /// <summary>Tallest list that keeps the panel above the bottom of the screen it is on (no limit before it is shown).</summary>
+    /// <summary>Tallest list that keeps the panel on the desktop (never less than it is now; no limit before it is shown).</summary>
     private double MaxListHeight()
     {
         if (!IsLoaded) return double.MaxValue;
-        double spareDip = SystemParameters.WorkArea.Bottom - (Top + ActualHeight);
+        double spareDip = Desktop.Bottom - (Top + ActualHeight);
         return ListBorder.Height + Math.Max(0, spareDip) / SkinWindow.Scale;
     }
 
     private void SizeGrip_DragStarted(object sender, DragStartedEventArgs e)
     {
-        // Window coordinates: the panel's top stays put while its height changes.
-        _dragStartY = Mouse.GetPosition(this).Y;
+        // Window coordinates: the panel's top left stays put while its size changes.
+        var at = Mouse.GetPosition(this);
+        _dragStartY = at.Y;
+        _cornerStartX = at.X;
         _dragStartHeight = ListBorder.Height;
+        _dragStartWidth = FernplayView.Width;
     }
 
     private void SizeGrip_DragDelta(object sender, DragDeltaEventArgs e)
@@ -308,6 +311,24 @@ public partial class PlaylistWindow : SkinWindow
         double raw = _dragStartHeight + (Mouse.GetPosition(this).Y - _dragStartY) / SkinWindow.Scale;
         double snapped = PlaylistHeight.Snap(raw, RowHeight(), ListInset, MaxListHeight());
         if (Math.Abs(snapped - ListBorder.Height) > 0.01) ListBorder.Height = snapped;
+    }
+
+    private void CornerGrip_DragDelta(object sender, DragDeltaEventArgs e)
+    {
+        SizeGrip_DragDelta(sender, e);
+        double raw = _dragStartWidth + (Mouse.GetPosition(this).X - _cornerStartX) / SkinWindow.Scale;
+        double max = _dragStartWidth + Math.Max(0, Desktop.Right - (Left + _dragStartWidth * SkinWindow.Scale)) / SkinWindow.Scale;
+        double width = Math.Round(Math.Clamp(raw, PlaylistWidth.Default, Math.Max(PlaylistWidth.Default, max)));
+        if (Math.Abs(width - FernplayView.Width) > 0.01) FernplayView.Width = width;
+    }
+
+    private double _cornerStartX, _dragStartWidth;
+
+    /// <summary>Width of the playlist in Fernplay's look, in skin pixels (remembered in the settings; 280 at least).</summary>
+    public double ListWidth
+    {
+        get => FernplayView.Width;
+        set => FernplayView.Width = double.IsFinite(value) ? Math.Max(value, PlaylistWidth.Default) : PlaylistWidth.Default;
     }
 
     private void SizeGrip_DragCompleted(object sender, DragCompletedEventArgs e) =>

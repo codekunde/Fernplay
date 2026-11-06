@@ -1,0 +1,34 @@
+<local:SkinDialog x:Class="Fernplay.App.PresetNameDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Fernplay.App"
+        Title="Save EQ preset">
+    <Border Width="170" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
+        <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
+        <StackPanel>
+            <Grid x:Name="TitleBar" Height="10" Margin="2,2,2,0" Style="{StaticResource TitleBar}">
+                <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Center" Padding="5,0">
+                    <TextBlock Text="SAVE EQ PRESET" Style="{StaticResource TitleLabel}" VerticalAlignment="Center" />
+                </Border>
+                <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Right" Padding="1,1">
+                    <Button Style="{StaticResource TitleButton}" Content="x" Click="Close_Click" ToolTip="Cancel" AutomationProperties.Name="Cancel" />
+                </Border>
+            </Grid>
+
+            <StackPanel Margin="8,7,8,0">
+                <TextBlock x:Name="NameLabel" Text="Name of the preset" Style="{StaticResource SkinLabel}" Margin="0,0,0,2" />
+                <TextBox x:Name="NameBox" Style="{StaticResource SkinTextBox}" MaxLength="30" TextChanged="NameBox_TextChanged"
+                         AutomationProperties.LabeledBy="{Binding ElementName=NameLabel}" />
+                <!-- Why the name cannot be used, or that it replaces a saved preset. -->
+                <TextBlock x:Name="NoteText" Style="{StaticResource SkinLabel}" FontWeight="Normal" Foreground="{StaticResource SkinText}"
+                           Margin="0,3,0,0" TextWrapping="Wrap" Visibility="Collapsed" AutomationProperties.LiveSetting="Polite" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="8,6,8,7">
+                <Button x:Name="SaveButton" Style="{StaticResource SkinButton}" Content="SAVE" Height="11" Padding="8,0" Margin="0,0,4,0"
+                        IsDefault="True" IsEnabled="False" Click="Save_Click" AutomationProperties.Name="Save the preset" />
+                <Button Style="{StaticResource SkinButton}" Content="CANCEL" Height="11" Padding="6,0"
+                        IsCancel="True" Click="Close_Click" AutomationProperties.Name="Cancel" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</local:SkinDialog>

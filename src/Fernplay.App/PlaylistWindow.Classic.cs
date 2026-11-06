@@ -105,6 +105,11 @@ public partial class PlaylistWindow
         if (_classic is null) return;
         double s = ClassicScale(_skinSize);
         _classic.Root.LayoutTransform = new ScaleTransform(s, s);
+        // The list's text: the skin's 9 px at 1x was hard to read; one size up there, the skin's own above that.
+        var (font, row) = ClassicPlaylist.ListText(s * (PresentationSource.FromVisual(this) is not null ? VisualTreeHelper.GetDpi(this).DpiScaleY : 1));
+        List.Resources["PlFontSize"] = font;
+        List.Resources["PlRowHeight"] = row;
+        EmptyText.FontSize = font;
     }
 
     private ClassicView BuildClassic(ClassicSkin skin)
@@ -151,7 +156,7 @@ public partial class PlaylistWindow
         List.ItemTemplate = (DataTemplate)FindResource("ClassicRowTemplate");
         EmptyText.Foreground = Frozen(style.Normal);
         EmptyText.FontFamily = new FontFamily($"{style.Font}, Arial");
-        EmptyText.FontSize = 9;
+        EmptyText.FontSize = 9; // ApplyClassicScale sets the size for the scale
         ListBorder.Child = null;
         listArea.Child = ListHost;
         if (ScrollBarOf(FindScroller()) is { } bar) bar.Visibility = Visibility.Collapsed;
@@ -212,9 +217,11 @@ public partial class PlaylistWindow
         {
             double s = ClassicScale(_skinSize);
             var at = Mouse.GetPosition(this);
-            var wa = SystemParameters.WorkArea;
-            double spareDown = wa.Bottom - (Top + P.Height(_dragStartTiles) * s);
-            double spareRight = wa.Right - (Left + P.Width(_dragStartSteps) * s);
+            // Limit: the edge of the whole desktop, all screens and the taskbar included (the cursor stops there anyway).
+            // The main screen's work area left no room on another screen, or when the panel reached behind the taskbar.
+            var desk = Desktop;
+            double spareDown = desk.Bottom - (Top + P.Height(_dragStartTiles) * s);
+            double spareRight = desk.Right - (Left + P.Width(_dragStartSteps) * s);
             int maxTiles = _dragStartTiles + (int)Math.Floor(Math.Max(0, spareDown) / s / P.TileHeight);
             int maxSteps = _dragStartSteps + (int)Math.Floor(Math.Max(0, spareRight) / s / P.WidthStep);
             int tiles = P.TilesAfterDrag(_dragStartTiles, (at.Y - _dragStartY) / s, maxTiles);

@@ -77,6 +77,43 @@ public sealed record EqPreset(string Name, double Preamp, double[] Bands)
     ];
 }
 
+/// <summary>The user's own EQ presets: kept in the settings, listed above the built-in ones.</summary>
+public static class UserEqPresets
+{
+    public const int MaxNameLength = 30;
+
+    /// <summary>The EQ as it is now, under a name.</summary>
+    public static EqPreset FromCurrent(string name, Equalizer eq) => new(name.Trim(), eq.Preamp, eq.Bands);
+
+    /// <summary>Why a name cannot be used, or null when it can. A name already among the user's presets is fine (it replaces).</summary>
+    public static string? NameProblem(string name)
+    {
+        var n = name.Trim();
+        if (n.Length == 0) return "Type a name for the preset.";
+        if (n.Length > MaxNameLength) return $"Keep the name to {MaxNameLength} characters.";
+        if (EqPreset.BuiltIn.Any(p => string.Equals(p.Name, n, StringComparison.OrdinalIgnoreCase)))
+            return $"{n} is a built-in preset. Pick another name.";
+        return null;
+    }
+
+    /// <summary>Adds the preset, or replaces the one with the same name (any case) in its place. True when it replaced one.</summary>
+    public static bool Save(List<EqPreset> list, EqPreset preset)
+    {
+        int at = list.FindIndex(p => string.Equals(p.Name, preset.Name, StringComparison.OrdinalIgnoreCase));
+        if (at >= 0) { list[at] = preset; return true; }
+        list.Add(preset);
+        return false;
+    }
+
+    public static bool Delete(List<EqPreset> list, string name) =>
+        list.RemoveAll(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)) > 0;
+
+    /// <summary>Drops presets a damaged or hand-edited settings file could hold: no name, or not ten bands.</summary>
+    public static List<EqPreset> Clean(IEnumerable<EqPreset>? list) =>
+        (list ?? []).Where(p => p is { Name: { Length: > 0 } } && p.Bands is { Length: 10 } && p.Name.Trim().Length > 0)
+            .DistinctBy(p => p.Name.Trim(), StringComparer.OrdinalIgnoreCase).ToList();
+}
+
 /// <summary>
 /// Middle of the chain (decoder → EQ → output): one peaking biquad per band and channel (RBJ cookbook),
 /// plus the preamp. Filter memory is kept when settings change, so moving a slider does not click.

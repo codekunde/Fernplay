@@ -50,10 +50,10 @@
                     <TextBlock Text="SIZE" Style="{StaticResource SkinLabel}" VerticalAlignment="Center" Margin="0,0,5,0" />
                     <RadioButton x:Name="Size1" GroupName="SkinSize" Style="{StaticResource LedToggle}" Content="1X" Tag="1" Checked="Size_Checked"
                                  ToolTip="Classic skins at their own pixel size" AutomationProperties.Name="Skin size 1x" />
-                    <RadioButton x:Name="Size2" GroupName="SkinSize" Style="{StaticResource LedToggle}" Content="2X" Tag="2" Margin="2,0,0,0" Checked="Size_Checked"
-                                 ToolTip="Classic skins at twice their pixel size" AutomationProperties.Name="Skin size 2x" />
-                    <RadioButton x:Name="Size3" GroupName="SkinSize" Style="{StaticResource LedToggle}" Content="3X" Tag="3" Margin="2,0,0,0" Checked="Size_Checked"
-                                 ToolTip="Classic skins at three times their pixel size" AutomationProperties.Name="Skin size 3x" />
+                    <RadioButton x:Name="Size2" GroupName="SkinSize" Style="{StaticResource LedToggle}" Content="1.5X" Tag="2" Margin="2,0,0,0" Checked="Size_Checked"
+                                 ToolTip="Classic skins at one and a half times their pixel size" AutomationProperties.Name="Skin size 1.5x" />
+                    <RadioButton x:Name="Size3" GroupName="SkinSize" Style="{StaticResource LedToggle}" Content="1.75X" Tag="3" Margin="2,0,0,0" Checked="Size_Checked"
+                                 ToolTip="Classic skins at one and three quarter times their pixel size, about as big as Fernplay's own look" AutomationProperties.Name="Skin size 1.75x" />
                 </StackPanel>
 
                 <Button Style="{StaticResource SkinButton}" Content="CLOSE" Height="11" Padding="8,0" Margin="0,7,0,0" HorizontalAlignment="Right"

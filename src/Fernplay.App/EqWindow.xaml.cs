@@ -11,9 +11,15 @@ public partial class EqWindow : SkinWindow
     private readonly Slider[] _bands = new Slider[10];
     private bool _syncing;
 
-    public EqWindow(Equalizer eq)
+    private readonly List<EqPreset> _userPresets;
+
+    /// <summary>A preset was saved or deleted (the list given to the constructor changed): save the settings.</summary>
+    public event Action? PresetsChanged;
+
+    public EqWindow(Equalizer eq, List<EqPreset> userPresets)
     {
         _eq = eq;
+        _userPresets = userPresets;
         InitializeComponent();
         AttachDragHandle(TitleBar);
 
@@ -33,12 +39,9 @@ public partial class EqWindow : SkinWindow
 
         SliderReset.OnDoubleClick(PreampSlider, 0);
 
-        foreach (var preset in EqPreset.BuiltIn)
-        {
-            var item = new MenuItem { Header = preset.Name };
-            item.Click += (_, _) => _eq.Apply(preset);
-            PresetsMenu.Items.Add(item);
-        }
+        // Built again after a save or delete (both looks share this menu).
+        PresetsChanged += () => Dispatcher.BeginInvoke(BuildPresetsMenu); // not while the menu is still closing
+        BuildPresetsMenu();
 
         _eq.Changed += (_, _) => Sync();
         Sync();
@@ -60,6 +63,38 @@ public partial class EqWindow : SkinWindow
         PresetsMenu.PlacementTarget = PresetsButton;
         PresetsMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
         PresetsMenu.IsOpen = true;
+    }
+
+    /// <summary>Your presets, then the built-in ones, then Save current as… and Delete (your presets only).</summary>
+    private void BuildPresetsMenu()
+    {
+        PresetsMenu.Items.Clear();
+        MenuItem Item(string header, Action click)
+        {
+            var item = new MenuItem { Header = header };
+            item.Click += (_, _) => click();
+            return item;
+        }
+        foreach (var preset in _userPresets) PresetsMenu.Items.Add(Item(preset.Name, () => _eq.Apply(preset)));
+        if (_userPresets.Count > 0) PresetsMenu.Items.Add(new Separator());
+        foreach (var preset in EqPreset.BuiltIn) PresetsMenu.Items.Add(Item(preset.Name, () => _eq.Apply(preset)));
+        PresetsMenu.Items.Add(new Separator());
+        PresetsMenu.Items.Add(Item("Save current as…", SaveCurrentPreset));
+        var delete = new MenuItem { Header = "Delete preset", IsEnabled = _userPresets.Count > 0 };
+        foreach (var preset in _userPresets)
+            delete.Items.Add(Item(preset.Name, () =>
+            {
+                if (UserEqPresets.Delete(_userPresets, preset.Name)) PresetsChanged?.Invoke();
+            }));
+        PresetsMenu.Items.Add(delete);
+    }
+
+    private void SaveCurrentPreset()
+    {
+        var dialog = new PresetNameDialog(_userPresets) { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+        UserEqPresets.Save(_userPresets, UserEqPresets.FromCurrent(dialog.PresetName, _eq));
+        PresetsChanged?.Invoke();
     }
 
     private void Preamp_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

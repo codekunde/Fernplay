@@ -29,6 +29,13 @@ public static class PlaylistHeight
     }
 }
 
+/// <summary>Width of the playlist in Fernplay's look, in skin pixels.</summary>
+public static class PlaylistWidth
+{
+    /// <summary>The player's width: the playlist is never narrower.</summary>
+    public const double Default = 280;
+}
+
 /// <summary>
 /// How the player, EQ and playlist panels stick together: edges snap within a distance, and panels whose
 /// edges touch form a group that moves with the main panel.

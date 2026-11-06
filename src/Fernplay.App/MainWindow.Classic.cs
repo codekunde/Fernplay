@@ -298,8 +298,11 @@ public partial class MainWindow
         ejectMenu.Items.Add(files); ejectMenu.Items.Add(folder);
         eject.ContextMenu = ejectMenu;
         Tog("Shuffle", L.Shuffle, "Shuffle", "Play the list in a random order", ShuffleToggle);
-        var repeat = Tog("Repeat", L.Repeat, "Repeat", "Repeat: off, whole list, this track", RepeatToggle);
-        repeat.SetBinding(FrameworkElement.ToolTipProperty, new Binding { Path = new PropertyPath(AutomationProperties.HelpTextProperty), Source = RepeatToggle, StringFormat = "Repeat: {0} (click for off, whole list, this track)" });
+        var repeat = Tog("Repeat", L.Repeat, "Repeat", "Repeat the whole list; right-click for this track", RepeatToggle);
+        repeat.SetBinding(FrameworkElement.ToolTipProperty, new Binding(nameof(ToolTip)) { Source = RepeatToggle });
+        repeat.SetBinding(AutomationProperties.HelpTextProperty, new Binding { Path = new PropertyPath(AutomationProperties.HelpTextProperty), Source = RepeatToggle });
+        repeat.MouseRightButtonUp += Repeat_RightClick;
+        repeat.KeyDown += Repeat_KeyDown;
 
         // The logo opens About, as on the classic player.
         var about = Place(new SpriteButton { Width = 13, Height = 15, ToolTip = "About Fernplay" }, L.About);

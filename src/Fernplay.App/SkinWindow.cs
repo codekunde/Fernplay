@@ -274,6 +274,14 @@ public class SkinWindow : Window
         return PanelLayout.Group(visible.Select(w => w.Box).ToList(), visible.IndexOf(start)).Select(i => visible[i]).ToList();
     }
 
+    /// <summary>
+    /// The whole desktop (every screen, taskbars included) in the units of Left and Top. Resize limits use it: the main
+    /// screen's work area (SystemParameters.WorkArea) left no room on a second screen, or once the panel reached behind
+    /// the taskbar, so the playlist could shrink but never grow back.
+    /// </summary>
+    protected static Rect Desktop => new(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
+        SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+
     private Box Box => new(Left, Top, ActualWidth, ActualHeight);
     internal static bool IsInsideButton(DependencyObject d, FrameworkElement stopAt)
     {

@@ -54,10 +54,12 @@ public partial class App : Application
             main.Top = Math.Max(SystemParameters.WorkArea.Top, (SystemParameters.WorkArea.Height - main.ActualHeight * 3.2) / 2);
         }
 
-        var eq = new EqWindow(c.Engine.Equalizer) { Owner = main };
+        var eq = new EqWindow(c.Engine.Equalizer, _settings.EqPresets) { Owner = main };
+        eq.PresetsChanged += () => _settings.Save(); // kept at once, not only at the next close
         eq.ApplySkin(main.Skin, _settings.SkinSize);
         var playlist = new PlaylistWindow(c) { Owner = main };
         playlist.ListHeight = _settings.PlaylistHeight; // snapped to rows once shown and filled (below)
+        playlist.ListWidth = _settings.PlaylistWidth;
         playlist.ClassicTiles = _settings.PlaylistTiles;
         playlist.ClassicWidthSteps = _settings.PlaylistWidthSteps;
         playlist.ApplySkin(main.Skin, _settings.SkinSize);
@@ -175,6 +177,7 @@ public partial class App : Application
             _settings.EqualizerVisible = eq.IsVisible;
             _settings.PlaylistVisible = playlist.IsVisible;
             _settings.PlaylistHeight = playlist.ListHeight;
+            _settings.PlaylistWidth = playlist.ListWidth;
             _settings.PlaylistTiles = playlist.ClassicTiles;
             _settings.PlaylistWidthSteps = playlist.ClassicWidthSteps;
             _settings.EqEnabled = eqSettings.Enabled;

@@ -11,7 +11,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Row" Background="Transparent" Height="13" Padding="2,0,2,0">
+                        <Border x:Name="Row" Background="Transparent" Height="{DynamicResource PlRowHeight}" Padding="2,0,2,0">
                             <ContentPresenter VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -34,7 +34,7 @@
         <Style x:Key="ClassicRowText" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource PlNormal}" />
             <Setter Property="FontFamily" Value="{DynamicResource PlFont}" />
-            <Setter Property="FontSize" Value="9" />
+            <Setter Property="FontSize" Value="{DynamicResource PlFontSize}" />
             <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsCurrent}" Value="True">
@@ -177,7 +177,8 @@
                 </Border>
             </Grid>
 
-            <!-- Bottom edge: drag to make the list taller or shorter (snaps to whole rows). -->
+            <!-- Bottom edge: drag to make the list taller or shorter (snaps to whole rows); the corner also wider or narrower. -->
+            <Grid>
             <Thumb x:Name="SizeGrip" Height="5" Cursor="SizeNS" Focusable="False"
                    DragStarted="SizeGrip_DragStarted" DragDelta="SizeGrip_DragDelta" DragCompleted="SizeGrip_DragCompleted"
                    ToolTip="Drag to make the playlist taller or shorter">
@@ -198,6 +199,24 @@
                     </ControlTemplate>
                 </Thumb.Template>
             </Thumb>
+            <Thumb x:Name="CornerGrip" Width="10" Height="5" HorizontalAlignment="Right" Cursor="SizeNWSE" Focusable="False"
+                   DragStarted="SizeGrip_DragStarted" DragDelta="CornerGrip_DragDelta" DragCompleted="SizeGrip_DragCompleted"
+                   ToolTip="Drag to make the playlist taller, shorter, wider or narrower">
+                <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                        <Grid Background="Transparent">
+                            <!-- A small corner mark; brighter on hover. -->
+                            <Path x:Name="Mark" Data="M7,4.2 L9.2,2 M8.4,4.2 L9.2,3.4" Stroke="#9CA2B5" StrokeThickness="0.6" Opacity="0.75" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Mark" Property="Opacity" Value="1" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Thumb.Template>
+            </Thumb>
+            </Grid>
         </StackPanel>
     </Border>
     </Grid>

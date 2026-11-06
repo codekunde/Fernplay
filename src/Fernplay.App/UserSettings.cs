@@ -18,7 +18,7 @@ public sealed class UserSettings
     public double Balance { get; set; }
     /// <summary>File name of the classic skin in <see cref="SkinsFolder"/>; null = Fernplay's own look.</summary>
     public string? Skin { get; set; }
-    /// <summary>Classic skin size: 1x, 2x or 3x the skin's pixels.</summary>
+    /// <summary>Classic skin size: 1, 2, 3 = 1x, 1.5x, 1.75x the skin's pixels (2x and 3x until 0.7.0).</summary>
     public int SkinSize { get; set; } = 2;
     /// <summary>The player rolled up to its strip (windowshade), in Fernplay's look or a classic skin's.</summary>
     public bool PlayerShaded { get; set; }
@@ -42,6 +42,10 @@ public sealed class UserSettings
     public bool RememberPlaylist { get; set; } = true;
     /// <summary>Height of the playlist's list area in skin pixels.</summary>
     public double PlaylistHeight { get; set; } = Fernplay.Core.PlaylistHeight.Default;
+    /// <summary>Width of the playlist in Fernplay's look, in skin pixels (280 at least).</summary>
+    public double PlaylistWidth { get; set; } = Fernplay.Core.PlaylistWidth.Default;
+    /// <summary>EQ presets saved by the user (name, preamp, ten bands), shown above the built-in ones.</summary>
+    public List<Fernplay.Core.Audio.EqPreset> EqPresets { get; set; } = [];
     /// <summary>Height of the playlist on a classic skin, in 29 px tiles (at least 2).</summary>
     public int PlaylistTiles { get; set; } = Fernplay.Core.Skins.ClassicPlaylist.DefaultTiles;
     /// <summary>Width of the playlist on a classic skin, in 25 px steps beyond 275.</summary>
@@ -90,6 +94,7 @@ public sealed class UserSettings
             {
                 var s = JsonSerializer.Deserialize<UserSettings>(File.ReadAllText(FilePath), Json) ?? new UserSettings();
                 if (s.Bands.Length != 10) s.Bands = new double[10];
+                s.EqPresets = Fernplay.Core.Audio.UserEqPresets.Clean(s.EqPresets);
                 return s;
             }
         }

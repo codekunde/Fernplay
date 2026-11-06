@@ -292,18 +292,48 @@ public partial class MainWindow : SkinWindow
         if (_ready) _c.Playlist.Shuffle = ShuffleToggle.IsChecked == true;
     }
 
-    /// <summary>Each press (click or toggle) moves repeat on: off, whole list, this track, off.</summary>
+    /// <summary>
+    /// A press (click or toggle) turns repeat of the whole list on or off; from "this track" it goes off.
+    /// It used to cycle off, whole list, this track: one press too many looked the same on a classic skin but
+    /// repeated one song, and the next press turned repeat off.
+    /// </summary>
     private void Repeat_Changed(object sender, RoutedEventArgs e)
     {
         if (!_ready || _showingRepeat) return;
-        _c.Playlist.Repeat = _c.Playlist.Repeat switch
-        {
-            RepeatMode.Off => RepeatMode.All,
-            RepeatMode.All => RepeatMode.One,
-            _ => RepeatMode.Off,
-        };
+        _c.Playlist.Repeat = RepeatToggle.IsChecked == true ? RepeatMode.All : RepeatMode.Off;
         ShowRepeat();
     }
+
+    /// <summary>Right-click (or the menu key) on repeat: repeat this track on, or off again.</summary>
+    internal void ToggleRepeatOne()
+    {
+        _c.Playlist.Repeat = _c.Playlist.Repeat == RepeatMode.One ? RepeatMode.Off : RepeatMode.One;
+        ShowRepeat();
+    }
+
+    private void Repeat_RightClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        ToggleRepeatOne();
+    }
+
+    private void Repeat_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Apps || (e.Key == Key.F10 && Keyboard.Modifiers == ModifierKeys.Shift)
+            || (e.Key == Key.System && e.SystemKey == Key.F10 && Keyboard.Modifiers == ModifierKeys.Shift))
+        {
+            e.Handled = true;
+            ToggleRepeatOne();
+        }
+    }
+
+    /// <summary>What repeat does now, for the tooltip and screen readers.</summary>
+    private string RepeatText => _c.Playlist.Repeat switch
+    {
+        RepeatMode.All => "whole list",
+        RepeatMode.One => "this track",
+        _ => "off",
+    };
 
     private bool _showingRepeat;
 
@@ -313,7 +343,8 @@ public partial class MainWindow : SkinWindow
         RepeatToggle.IsChecked = _c.Playlist.Repeat != RepeatMode.Off;
         _showingRepeat = false;
         RepeatToggle.Content = _c.Playlist.Repeat == RepeatMode.One ? "REPEAT 1" : "REPEAT";
-        System.Windows.Automation.AutomationProperties.SetHelpText(RepeatToggle, _c.Playlist.Repeat.ToString());
+        System.Windows.Automation.AutomationProperties.SetHelpText(RepeatToggle, RepeatText);
+        RepeatToggle.ToolTip = $"Repeat: {RepeatText}. Click: the whole list on or off. Right-click: this track on or off.";
     }
 
     // ================= Seek, clock, volume =================

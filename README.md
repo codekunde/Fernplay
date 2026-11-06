@@ -1,4 +1,4 @@
-# Fernplay
+# <img src="docs/fernplay.svg" width="28" height="32" alt=""> Fernplay
 
 A small music player for Windows in the style of the late-90s desktop players: a player panel with a green LCD, a 10-band equalizer and a playlist, as three panels that snap together and come apart. It also plays internet radio and has an optional media library. No account, and nothing goes online except the radio stations you play and the update check when you press it.
 
@@ -135,7 +135,7 @@ Open them from the Fernplay icon at the top left of the player (Settings…, Abo
 - **Snap panels** to each other and to the screen edges.
 - **Remember the playlist** between runs.
 - **Open music and playlists from Explorer** (on after installing with the MSI, off in a portable copy; for the current user only, no admin rights): adds Fernplay to Open with and Default apps, gives the files it plays its file icon, and adds "Add to Fernplay playlist" (files and folders) and "Play in Fernplay" (folders) to the right-click menu. Untick it to remove everything again. **Make Fernplay the default player…** then opens Windows' own page for the choice.
-- **Skin:** CHOOSE SKIN… picks a classic skin file, FERNPLAY LOOK goes back to Fernplay's own drawing, SIZE sets 1x, 2x or 3x for skins (see below).
+- **Skin:** CHOOSE SKIN… picks a classic skin file, FERNPLAY LOOK goes back to Fernplay's own drawing, SIZE sets 1x, 1.5x or 1.75x for skins (see below).
 
 Fernplay remembers the panel positions, which panels are shown, volume, balance, EQ, shuffle, repeat, the playlist size, the skin and its size, the playlist and station names in `%APPDATA%\CodeKunde\Fernplay\settings.json` (a portable copy: `Data\settings.json` next to `Fernplay.exe`). The `FERNPLAY_DATA` environment variable points it at another folder.
 
@@ -145,7 +145,7 @@ Next to it, `diagnostics.log` (at most about 512 KB, never sent anywhere) notes 
 
 Fernplay can wear classic player skins: the `.wsz` files made for the 2.x generation of skinnable players (many are still shared online). Choose one in Settings (CHOOSE SKIN…) or drop a `.wsz` on the player. Fernplay copies it into a `Skins` folder next to its settings and remembers it. Fernplay ships no skins; its own look stays the default.
 
-With a skin, all three panels and the library are drawn from the skin's pictures, pixel-sharp at 1x, 2x or 3x:
+With a skin, all three panels and the library are drawn from the skin's pictures, at 1x (pixel-sharp), 1.5x or 1.75x (about the size of Fernplay's own look):
 
 - **Player:** everything as above, plus the skin's balance slider; rolled up (windowshade), it is the skin's own strip with a mini spectrum, time, transport and position bar.
 - **Equalizer:** preamp and bands whose colour follows the gain, ON, PRESETS and the curve in the skin's colours.

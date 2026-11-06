@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 16" width="56" height="64" role="img" aria-label="Fernplay">
+  <!-- Same shapes as the fern mark in MainWindow.xaml -->
+  <path d="M6.5,15.5 Q7,8 11,0.8" fill="none" stroke="#7FBF6E" stroke-width="0.8"/>
+  <path fill="#5FA052" d="M6.9,13 L2.5,12 L6.8,11.3 Z M7.1,12.6 L11.6,10.6 L7.4,11.2 Z M7.2,10 L3.4,8.4 L7.4,8.6 Z M7.6,9.6 L11.8,7.2 L8,8.2 Z M8.1,6.9 L5,5.2 L8.4,5.6 Z M8.7,6.4 L12,3.9 L9,5.2 Z M9.6,3.9 L7.5,2.3 L9.9,3 Z"/>
+</svg>

@@ -125,19 +125,35 @@ public sealed class ClassicLayoutTests
     }
 
     [Theory]
-    [InlineData(2, 1.0, 2.0)]
-    [InlineData(2, 1.25, 2.4)]  // 3 screen pixels per skin pixel
-    [InlineData(2, 1.5, 2.0)]   // 3 screen pixels
+    [InlineData(1, 1.0, 1.0)]
+    [InlineData(1, 1.5, 1.333333)]  // 2 screen pixels per skin pixel
     [InlineData(1, 1.75, 1.142857)] // 2 screen pixels
-    [InlineData(3, 1.0, 3.0)]
-    [InlineData(9, 1.0, 3.0)]   // sizes are 1 to 3
-    public void Layout_scale_gives_whole_screen_pixels(int size, double dpi, double expected)
+    public void Size_1x_gives_whole_screen_pixels(int size, double dpi, double expected)
     {
         double s = ClassicLayout.LayoutScale(size, dpi);
         Assert.Equal(expected, s, 5);
         double device = s * dpi;
         Assert.Equal(Math.Round(device), device, 6);
     }
+
+    [Theory]
+    [InlineData(1.0, 11, 15)]   // 1x at 100 %: one size up, easier to read
+    [InlineData(1.25, 11, 15)]
+    [InlineData(1.5, 9, 13)]    // 1.5x at 100 %: the skin's own
+    [InlineData(2.0, 9, 13)]    // 1x at 150 % (2 screen px per skin px)
+    public void List_text_is_bigger_only_where_it_is_tiny(double screenPx, double font, double row) =>
+        Assert.Equal((font, row), ClassicPlaylist.ListText(screenPx));
+
+    [Theory]
+    [InlineData(2, 1.0, 1.5)]     // 413 px wide at 100 %
+    [InlineData(3, 1.0, 1.75)]    // 481 px, about Fernplay's own look (476)
+    [InlineData(2, 1.5, 1.5)]     // 2.25 screen pixels: not near a whole number
+    [InlineData(3, 1.25, 1.75)]   // 2.1875 screen pixels: more than 5 % from 2
+    [InlineData(3, 1.75, 1.714286)] // 3.0625 is within 5 % of 3: 3 screen pixels
+    [InlineData(9, 1.0, 1.75)]    // sizes are 1 to 3
+    [InlineData(0, 1.0, 1.0)]
+    public void Larger_sizes_are_one_and_a_half_and_one_and_three_quarters(int size, double dpi, double expected) =>
+        Assert.Equal(expected, ClassicLayout.LayoutScale(size, dpi), 5);
 
     [Fact]
     public void Number_boxes_right_align_and_keep_the_right_end()
