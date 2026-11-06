@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: on some Windows 11 PCs the next song started paused, and a double-click in the playlist sometimes paused the song it started. Windows sent a media-button Pause just after the song started, with nothing pressed. A media-button Pause in the first 3 seconds of a song is now ignored (and noted in the diagnostics log).
+- Playlist (Fernplay's look): dragging the bottom edge snaps it level with the bottom of the equalizer or another panel. The list still shows whole rows; the few spare pixels go under it.
+- Playlist: resizing can reach the whole desktop (other screens included) and never shrinks below the size the drag started at. In Fernplay's look the corner grip also changes the width (the player's width at least), and the width is remembered.
+- Repeat: a click turns repeating the whole list on or off; a right-click (or the menu key, or Shift+F10) turns repeating this track on or off. The tooltip says which is on. The old three-step cycle looked the same for list and track on classic skins.
+- Equalizer: Presets has Save current as… and Delete preset › for your own presets, kept with the settings.
+- Classic skin sizes are now 1x, 1.5x and 1.75x (were 1x, 2x and 3x). At 1x on 100–125 % displays the playlist text is larger and easier to read.
+
 ## 0.7.0 (2026-11-05)
 
 Windows 10 (1607 or later) and 11, x64. The MSI and the standalone zip have .NET inside; the small zip needs the .NET 10 Desktop Runtime.

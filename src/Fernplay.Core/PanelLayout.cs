@@ -20,12 +20,30 @@ public static class PlaylistHeight
     /// <param name="rowHeight">Height of one row.</param>
     /// <param name="inset">Fixed part of the list area (its border).</param>
     /// <param name="max">Tallest allowed (down to the bottom of the screen).</param>
-    public static double Snap(double raw, double rowHeight, double inset, double max)
+    /// <param name="edges">Heights at which the panel's bottom lines up with another panel's bottom. Within half a row
+    /// of one, the height snaps to it instead of to whole rows (the spare part goes under the list, see <see cref="Split"/>).</param>
+    public static double Snap(double raw, double rowHeight, double inset, double max, IEnumerable<double>? edges = null)
     {
         if (rowHeight <= 0) return Math.Max(raw, inset);
         int rows = (int)Math.Round((raw - inset) / rowHeight);
         int maxRows = Math.Max(MinRows, (int)Math.Floor((max - inset) / rowHeight));
-        return Math.Clamp(rows, MinRows, maxRows) * rowHeight + inset;
+        double whole = Math.Clamp(rows, MinRows, maxRows) * rowHeight + inset;
+        double min = MinRows * rowHeight + inset;
+        double best = whole, bestDistance = double.MaxValue;
+        foreach (double e in edges ?? [])
+        {
+            double d = Math.Abs(raw - e);
+            if (e >= min && e <= Math.Max(max, min) && d < rowHeight / 2 && d < bestDistance) (best, bestDistance) = (e, d);
+        }
+        return best;
+    }
+
+    /// <summary>Splits a height into the list's part (whole rows) and the spare part shown as space under the list.</summary>
+    public static (double List, double Spare) Split(double height, double rowHeight, double inset)
+    {
+        if (rowHeight <= 0 || height <= inset) return (height, 0);
+        double list = Math.Floor((height - inset) / rowHeight + 1e-6) * rowHeight + inset;
+        return (list, Math.Max(0, height - list));
     }
 }
 

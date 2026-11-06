@@ -23,7 +23,10 @@ public sealed class PlayerController : IDisposable
         // Engine events can come from the audio thread.
         Engine.StateChanged += (_, _) =>
         {
-            DiagnosticLog.Write($"state {Engine.State} {System.IO.Path.GetFileName(Engine.CurrentPath)}");
+            var state = Engine.State;
+            if (state == PlayState.Playing && _lastEngineState == PlayState.Stopped) Interlocked.Exchange(ref _playStartedAt, Environment.TickCount64);
+            _lastEngineState = state;
+            DiagnosticLog.Write($"state {state} {System.IO.Path.GetFileName(Engine.CurrentPath)}");
             _ui.BeginInvoke(() => StateChanged?.Invoke(this, EventArgs.Empty));
         };
         Engine.TrackEnded += (_, _) => _ui.BeginInvoke(async () =>
@@ -73,6 +76,12 @@ public sealed class PlayerController : IDisposable
     /// <summary>The song the playing station says it is playing ("Artist - Title"), or null.</summary>
     public string? StreamTitle { get; private set; }
     public string? Status { get; private set; }
+
+    private PlayState _lastEngineState = PlayState.Stopped;
+    private long _playStartedAt;
+
+    /// <summary>Milliseconds since playback last went from Stopped to Playing (a track or station started).</summary>
+    public long MsSincePlayStarted => Environment.TickCount64 - Interlocked.Read(ref _playStartedAt);
 
     public event EventHandler? StateChanged;
     public event EventHandler? NowPlayingChanged;

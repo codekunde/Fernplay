@@ -17,6 +17,10 @@ public class SkinWindow : Window
     /// <summary>Screen pixels per skin pixel for every panel and dialog (1.7 = 476 px wide; was 2.0 until 0.1.x).</summary>
     public const double Scale = 1.7;
 
+    /// <summary>The other panels on screen (not minimised).</summary>
+    protected IEnumerable<SkinWindow> OtherVisiblePanels() =>
+        Panels.Where(w => w != this && w.IsVisible && w.WindowState != WindowState.Minimized);
+
     /// <summary>Settings: snap to other panels and the screen edges while dragging.</summary>
     public static bool SnapEnabled { get; set; } = true;
 

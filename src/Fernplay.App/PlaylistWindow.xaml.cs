@@ -49,6 +49,7 @@ public partial class PlaylistWindow : SkinWindow
         InitializeComponent();
         AttachDragHandle(TitleBar);
         List.ItemsSource = _rows;
+        List.ItemContainerGenerator.StatusChanged += List_ContainersGenerated;
         _c.Playlist.Changed += (_, _) => Rebuild();
         _c.Playlist.ItemUpdated += (_, i) => { if (i < _rows.Count) _rows[i].Refresh(_c.Playlist.Tracks[i]); UpdateTotal(); };
         _c.Playlist.CurrentChanged += (_, _) => MarkCurrent(scroll: true);
@@ -274,15 +275,43 @@ public partial class PlaylistWindow : SkinWindow
     private const double ListInset = 1; // the list well's top border (Inset style), skin px
     private const double FallbackRowHeight = 9; // until a row exists to measure
     private double _dragStartY, _dragStartHeight;
+    private double _listTotal = PlaylistHeight.Default;
+    private bool _rowsMeasured;
+    // While dragging: list heights that line the panel's bottom up with another panel's bottom, and those bottoms (DIP).
+    private List<(double Height, double BottomDip)> _edges = [];
 
     /// <summary>
-    /// Height of the list area in skin pixels (remembered in the settings). Set as saved: the value came from a
-    /// drag that already snapped it to real rows, and no row exists yet to measure at start-up.
+    /// Height of the list area in skin pixels (remembered in the settings): whole rows for the list, plus any spare
+    /// part (when the bottom was snapped to another panel) as space under the list, so no half row is cut off.
     /// </summary>
     public double ListHeight
     {
-        get => ListBorder.Height;
-        set => ListBorder.Height = double.IsFinite(value) ? Math.Max(value, PlaylistHeight.MinRows * FallbackRowHeight * 0.8 + ListInset) : PlaylistHeight.Default;
+        get => _listTotal;
+        set
+        {
+            _listTotal = double.IsFinite(value) ? Math.Max(value, PlaylistHeight.MinRows * FallbackRowHeight * 0.8 + ListInset) : PlaylistHeight.Default;
+            ApplyListHeight();
+        }
+    }
+
+    private void ApplyListHeight()
+    {
+        var (list, spare) = PlaylistHeight.Split(_listTotal, RowHeight(), ListInset);
+        ListBorder.Height = list;
+        var m = ListBorder.Margin;
+        if (Math.Abs(m.Bottom - spare) > 0.001) ListBorder.Margin = new Thickness(m.Left, m.Top, m.Right, spare);
+    }
+
+    /// <summary>At start-up no row exists to measure: split the saved height again once the first rows are there.</summary>
+    private void List_ContainersGenerated(object? sender, EventArgs e)
+    {
+        if (_rowsMeasured || List.ItemContainerGenerator.Status != System.Windows.Controls.Primitives.GeneratorStatus.ContainersGenerated) return;
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_rowsMeasured || List.ItemContainerGenerator.ContainerFromIndex(0) is not ListBoxItem { ActualHeight: > 0 }) return;
+            _rowsMeasured = true;
+            ApplyListHeight();
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     private double RowHeight() =>
@@ -293,7 +322,7 @@ public partial class PlaylistWindow : SkinWindow
     {
         if (!IsLoaded) return double.MaxValue;
         double spareDip = Desktop.Bottom - (Top + ActualHeight);
-        return ListBorder.Height + Math.Max(0, spareDip) / SkinWindow.Scale;
+        return _listTotal + Math.Max(0, spareDip) / SkinWindow.Scale;
     }
 
     private void SizeGrip_DragStarted(object sender, DragStartedEventArgs e)
@@ -302,15 +331,29 @@ public partial class PlaylistWindow : SkinWindow
         var at = Mouse.GetPosition(this);
         _dragStartY = at.Y;
         _cornerStartX = at.X;
-        _dragStartHeight = ListBorder.Height;
+        _dragStartHeight = _listTotal;
         _dragStartWidth = FernplayView.Width;
+        double bottom = Top + ActualHeight;
+        _edges = !SnapEnabled ? [] : OtherVisiblePanels()
+            .Select(p => p.Top + p.ActualHeight)
+            .Select(b => (_dragStartHeight + (b - bottom) / SkinWindow.Scale, b))
+            .ToList();
     }
 
     private void SizeGrip_DragDelta(object sender, DragDeltaEventArgs e)
     {
         double raw = _dragStartHeight + (Mouse.GetPosition(this).Y - _dragStartY) / SkinWindow.Scale;
-        double snapped = PlaylistHeight.Snap(raw, RowHeight(), ListInset, MaxListHeight());
-        if (Math.Abs(snapped - ListBorder.Height) > 0.01) ListBorder.Height = snapped;
+        double snapped = PlaylistHeight.Snap(raw, RowHeight(), ListInset, MaxListHeight(), _edges.Select(x => x.Height));
+        if (Math.Abs(snapped - _listTotal) > 0.001) ListHeight = snapped;
+    }
+
+    /// <summary>After a snap to another panel's bottom, take up the rounding to whole screen pixels so the edges line up exactly.</summary>
+    private void AlignToSnappedEdge()
+    {
+        if (_edges.FirstOrDefault(x => Math.Abs(x.Height - _listTotal) < 0.001) is not { BottomDip: > 0 } edge) return;
+        UpdateLayout();
+        double diff = edge.BottomDip - (Top + ActualHeight);
+        if (Math.Abs(diff) > 0.01) ListHeight = _listTotal + diff / SkinWindow.Scale;
     }
 
     private void CornerGrip_DragDelta(object sender, DragDeltaEventArgs e)
@@ -331,8 +374,12 @@ public partial class PlaylistWindow : SkinWindow
         set => FernplayView.Width = double.IsFinite(value) ? Math.Max(value, PlaylistWidth.Default) : PlaylistWidth.Default;
     }
 
-    private void SizeGrip_DragCompleted(object sender, DragCompletedEventArgs e) =>
+    private void SizeGrip_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        AlignToSnappedEdge();
+        _edges = [];
         ScrollIntoViewCurrent();
+    }
 
     private void ScrollIntoViewCurrent()
     {

@@ -19,6 +19,11 @@ public partial class MainWindow : SkinWindow
     private Window? _eq, _playlist;
     private bool _ready; // false while the constructor sets controls from the saved settings
     private MediaSession? _media; // Windows media session: background media keys and the overlay
+    /// <summary>
+    /// On some Windows 11 PCs a media-button Pause arrives 50 ms to 2 s after a new track starts, with no key pressed
+    /// (laptop diagnostics.log, 2026-11-06), leaving the next song paused. A Pause that soon after a start is ignored.
+    /// </summary>
+    private const long SpuriousPauseWindowMs = 3000;
 
     private static readonly Brush LitLabel = new SolidColorBrush(Color.FromRgb(0x4B, 0xE8, 0x68));
     private static readonly Brush DimLabel = new SolidColorBrush(Color.FromRgb(0x4A, 0x4F, 0x5E));
@@ -200,6 +205,12 @@ public partial class MainWindow : SkinWindow
         _media.ButtonPressed += button => Dispatcher.BeginInvoke(async () =>
         {
             var state = _c.Engine.State;
+            long sinceStart = _c.MsSincePlayStarted;
+            if (button == MediaSession.Button.Pause && state == PlayState.Playing && sinceStart < SpuriousPauseWindowMs)
+            {
+                DiagnosticLog.Write($"Windows media button Pause ignored, {sinceStart} ms after the track started");
+                return;
+            }
             DiagnosticLog.Write($"Windows media button {button} while {state}");
             switch (button)
             {
