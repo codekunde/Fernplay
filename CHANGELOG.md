@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.8.0 (2026-11-06)
+
+Windows 10 (1607 or later) and 11, x64. The MSI and the standalone zip have .NET inside; the small zip needs the .NET 10 Desktop Runtime.
 
 - Fixed: on some Windows 11 PCs the next song started paused, and a double-click in the playlist sometimes paused the song it started. Windows sent a media-button Pause just after the song started, with nothing pressed. A media-button Pause in the first 3 seconds of a song is now ignored (and noted in the diagnostics log).
 - Playlist (Fernplay's look): dragging the bottom edge snaps it level with the bottom of the equalizer or another panel. The list still shows whole rows; the few spare pixels go under it.
