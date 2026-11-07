@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Phone remote (desktop side): Settings → PHONE REMOTE lets the Fernplay app on your phone control this player over the home Wi-Fi: play, pause, stop, skip, seek, volume, shuffle, repeat, crossfade, and pick from the playlist. Off by default. PAIR A PHONE… shows a 6-digit code for 2 minutes; paired phones are listed with REMOVE. The link is encrypted (TLS with the PC's own certificate, which the phone pins at pairing) and only addresses on the local network are served. Windows Firewall asks once when it is first switched on. The Android side follows in the Fernplay for Android app.
 - Update from About: when CHECK FOR UPDATE finds a newer release, the installed Fernplay (from the MSI) offers UPDATE. It downloads the release's MSI, checks it against the SHA-256 checksum GitHub lists for it, closes Fernplay, installs the update (progress bar only, no admin prompt) and starts Fernplay again. Portable and zip copies keep DOWNLOAD, which opens the release page. Closing About stops the download.
 - Crossfade: XFADE next to REPEAT (and Crossfade in the app menu, also with classic skins) fades the end of a song into the next one, 1 to 12 seconds (Settings, default 5). Only when a song ends by itself: skipping by hand, stations, and repeat track never fade, and neither do songs shorter than twice the fade.
 - Gapless: songs now follow each other without a gap, on one sound stream that stays open (the next file is opened a few seconds before the end). Repeat track loops without a gap.

@@ -19,6 +19,21 @@ public partial class MainWindow : SkinWindow
     }
 
     internal int CrossfadeSeconds => _c.CrossfadeSeconds;
+
+    // ================= Phone remote: same paths as the controls, so the window shows what the phone did =================
+
+    /// <summary>Volume, shuffle, repeat or crossfade changed (the phone remote tells the phone).</summary>
+    internal event EventHandler? ControlsChanged;
+
+    internal void RemoteSetVolume(double volume) => VolumeSlider.Value = Math.Round(Math.Clamp(volume, 0, 1) * 100);
+    internal void RemoteSetShuffle(bool on) => ShuffleToggle.IsChecked = on;
+    internal void RemoteSetXfade(bool on) => XfadeToggle.IsChecked = on;
+
+    internal void RemoteSetRepeat(RepeatMode mode)
+    {
+        _c.Playlist.Repeat = mode;
+        ShowRepeat();
+    }
     private readonly UserSettings _settings;
     private readonly DispatcherTimer _anim = new(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
     private int _frame;
@@ -312,6 +327,7 @@ public partial class MainWindow : SkinWindow
     private void Shuffle_Changed(object sender, RoutedEventArgs e)
     {
         if (_ready) _c.Playlist.Shuffle = ShuffleToggle.IsChecked == true;
+        ControlsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -367,6 +383,7 @@ public partial class MainWindow : SkinWindow
         RepeatToggle.Content = _c.Playlist.Repeat == RepeatMode.One ? "REPEAT 1" : "REPEAT";
         System.Windows.Automation.AutomationProperties.SetHelpText(RepeatToggle, RepeatText);
         RepeatToggle.ToolTip = $"Repeat: {RepeatText}. Click: the whole list on or off. Right-click: this track on or off.";
+        ControlsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     // Checked/Unchecked (not Click): the app menu's Crossfade item and UI Automation toggle it without a click.
@@ -395,6 +412,7 @@ public partial class MainWindow : SkinWindow
         string state = _c.CrossfadeOn ? $"on, {_c.CrossfadeSeconds} s" : "off";
         XfadeToggle.ToolTip = $"Crossfade between songs: {state}. Gapless with repeat track; a skip by hand never fades. Length in Settings.";
         System.Windows.Automation.AutomationProperties.SetHelpText(XfadeToggle, $"{state}; gapless with repeat track");
+        ControlsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     // ================= Seek, clock, volume =================
@@ -428,6 +446,7 @@ public partial class MainWindow : SkinWindow
         _c.Engine.Volume = (float)(e.NewValue / 100);
         _settings.Volume = e.NewValue / 100;
         VolumeSlider.ToolTip = $"Volume {e.NewValue:0}%";
+        ControlsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>Mouse wheel over the volume bar: 5 % per notch (touchpads send smaller steps, added up).</summary>

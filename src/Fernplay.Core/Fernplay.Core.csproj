@@ -17,6 +17,8 @@
     <PackageReference Include="NAudio.Wasapi" Version="3.2.0" />
     <!-- Windows' ACM MP3 codec for radio stations read by IcyMp3Decoder (song titles). -->
     <PackageReference Include="NAudio.WinMM" Version="3.2.0" />
+    <!-- Windows DPAPI: the phone remote's certificate key and phone keys stay readable only by this Windows user. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.13" />
   </ItemGroup>
 
   <ItemGroup>

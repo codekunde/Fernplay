@@ -30,6 +30,9 @@ public sealed class UserSettings
     /// <summary>Crossfade between songs on a natural end (XFADE), and its length in seconds (1 to 12).</summary>
     public bool Crossfade { get; set; }
     public int CrossfadeSeconds { get; set; } = PlayerController.DefaultCrossfade;
+    /// <summary>The phone remote: on (listening on the home network) and its TCP port.</summary>
+    public bool RemoteOn { get; set; }
+    public int RemotePort { get; set; } = Fernplay.Core.Remote.RemoteServer.DefaultPort;
     public bool ShowRemaining { get; set; }
     public List<string> Playlist { get; set; } = [];
     /// <summary>Names of the radio stations in <see cref="Playlist"/> (address → name).</summary>

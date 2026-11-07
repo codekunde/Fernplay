@@ -129,17 +129,19 @@ A media-button pause in the first 3 seconds of a song is ignored: some Windows 1
 
 ## Settings
 
-![Fernplay settings: keep on top, snap panels, remember the playlist, crossfade length, open from Explorer, skin and skin size](docs/screenshots/settings.png)
+![Fernplay settings: keep on top, snap panels, remember the playlist, crossfade length, phone remote, open from Explorer, skin and skin size](docs/screenshots/settings.png)
 
 Open them from the Fernplay icon at the top left of the player (Settings…, About Fernplay, Exit). About shows the version; CHECK FOR UPDATE asks GitHub for the newest release. When there is a newer one, the installed Fernplay offers UPDATE (download, check, install, restart); a portable or zip copy offers DOWNLOAD, which opens the release page.
 
 - **Keep Fernplay on top** of other windows.
 - **Snap panels** to each other and to the screen edges.
 - **Remember the playlist** between runs.
+- **Crossfade:** how long one song fades into the next when XFADE is on, 1 to 12 seconds.
+- **Phone remote:** lets the Fernplay app on your phone control this player over the home Wi-Fi (play, pause, stop, skip, seek, volume, shuffle, repeat, crossfade, pick from the playlist). Off by default. **Pair a phone…** shows a 6-digit code for 2 minutes to type into the app once; paired phones are listed with REMOVE. The connection is encrypted and only phones on the local network are answered (TCP port 47800, discovery on UDP 47801). Windows Firewall asks once the first time it is switched on: allow it on private networks.
 - **Open music and playlists from Explorer** (on after installing with the MSI, off in a portable copy; for the current user only, no admin rights): adds Fernplay to Open with and Default apps, gives the files it plays its file icon, and adds "Add to Fernplay playlist" (files and folders) and "Play in Fernplay" (folders) to the right-click menu. Untick it to remove everything again. **Make Fernplay the default player…** then opens Windows' own page for the choice.
 - **Skin:** CHOOSE SKIN… picks a classic skin file, FERNPLAY LOOK goes back to Fernplay's own drawing, SIZE sets 1x, 1.5x or 1.75x for skins (see below).
 
-Fernplay remembers the panel positions, which panels are shown, volume, balance, EQ and your own EQ presets, shuffle, repeat, crossfade, the playlist's height and width, the skin and its size, the playlist and station names in `%APPDATA%\CodeKunde\Fernplay\settings.json` (a portable copy: `Data\settings.json` next to `Fernplay.exe`). The `FERNPLAY_DATA` environment variable points it at another folder.
+Fernplay remembers the panel positions, which panels are shown, volume, balance, EQ and your own EQ presets, shuffle, repeat, crossfade, whether the phone remote is on, the playlist's height and width, the skin and its size, the playlist and station names in `%APPDATA%\CodeKunde\Fernplay\settings.json` (a portable copy: `Data\settings.json` next to `Fernplay.exe`). The `FERNPLAY_DATA` environment variable points it at another folder. The phone remote keeps its certificate (`remote-cert.bin`) and the paired phones (`remote-phones.bin`) beside it, encrypted for your Windows account.
 
 Next to it, `diagnostics.log` (at most about 512 KB, never sent anywhere) notes play and pause and what asked for them, Windows media buttons (and the ones ignored at a song's start), track ends, stations that could not be opened and why, lock and unlock, and display changes with the panel positions. It helps trace a fault that happens only now and then.
 

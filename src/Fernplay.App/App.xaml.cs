@@ -13,6 +13,9 @@ public partial class App : Application
     private readonly OpenBatch _batch = new();
     private DispatcherTimer? _batchTimer;
 
+    /// <summary>The phone remote (off until switched on in Settings); null before the player window exists.</summary>
+    public static RemoteControl? Remote { get; private set; }
+
     /// <summary>The exe and file icon Explorer is pointed at.</summary>
     public static ShellRegistration Shell { get; } = ShellRegistration.ForCurrentUser(
         Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Fernplay.exe"),
@@ -163,9 +166,13 @@ public partial class App : Application
         ApplyWindowSettings(_settings);
         main.Activate();
 
+        Remote = new RemoteControl(c, main, _settings);
+        if (_settings.RemoteOn) Remote.TurnOn();
+
         main.Closing += (_, _) =>
         {
             quitting = true;
+            Remote?.Dispose();
             library.StopScan();
             library.SaveNow();
             _settings.LibraryVisible = libraryWindow.IsVisible;
