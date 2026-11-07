@@ -33,6 +33,8 @@
                         <Button.ContextMenu>
                             <ContextMenu x:Name="AppMenu">
                                 <MenuItem Header="Media library…" Click="Library_Click" ToolTip="Alt+L" />
+                                <MenuItem x:Name="XfadeMenuItem" Header="Crossfade" IsCheckable="True"
+                                          Checked="XfadeMenu_Changed" Unchecked="XfadeMenu_Changed" />
                                 <MenuItem Header="Settings…" Click="Settings_Click" />
                                 <MenuItem Header="About Fernplay" Click="About_Click" />
                                 <Separator />
@@ -183,6 +185,8 @@
                     <ToggleButton x:Name="RepeatToggle" Style="{StaticResource LedToggle}" Content="REPEAT" Margin="2,0,0,0" Checked="Repeat_Changed" Unchecked="Repeat_Changed"
                                   MouseRightButtonUp="Repeat_RightClick" KeyDown="Repeat_KeyDown"
                                   AutomationProperties.Name="Repeat" />
+                    <ToggleButton x:Name="XfadeToggle" Style="{StaticResource LedToggle}" Content="XFADE" Margin="2,0,0,0" Checked="Xfade_Changed" Unchecked="Xfade_Changed"
+                                  AutomationProperties.Name="Crossfade" />
                 </StackPanel>
                 <!-- Fern mark (Fernplay's own logo) -->
                 <Viewbox HorizontalAlignment="Right" Width="13" Height="15" ToolTip="Fernplay">

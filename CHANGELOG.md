@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Crossfade: XFADE next to REPEAT (and Crossfade in the app menu, also with classic skins) fades the end of a song into the next one, 1 to 12 seconds (Settings, default 5). Only when a song ends by itself: skipping by hand, stations, and repeat track never fade, and neither do songs shorter than twice the fade.
+- Gapless: songs now follow each other without a gap, on one sound stream that stays open (the next file is opened a few seconds before the end). Repeat track loops without a gap.
+- Files with more than two channels (5.1) are mixed down to stereo.
+- An isolated test run (`FERNPLAY_DATA` set) no longer moves the Explorer set-up to its own copy of Fernplay.
+
 ## 0.8.0 (2026-11-06)
 
 Windows 10 (1607 or later) and 11, x64. The MSI and the standalone zip have .NET inside; the small zip needs the .NET 10 Desktop Runtime.

@@ -42,6 +42,8 @@ public partial class App : Application
         eqSettings.Enabled = _settings.EqEnabled;
         c.Playlist.Repeat = _settings.Repeat;
         c.Playlist.Shuffle = _settings.Shuffle;
+        c.CrossfadeSeconds = _settings.CrossfadeSeconds;
+        c.CrossfadeOn = _settings.Crossfade;
 
         var main = new MainWindow(c, _settings);
         MainWindow = main;
@@ -185,6 +187,8 @@ public partial class App : Application
             _settings.Bands = eqSettings.Bands;
             _settings.Shuffle = c.Playlist.Shuffle;
             _settings.Repeat = c.Playlist.Repeat;
+            _settings.Crossfade = c.CrossfadeOn;
+            _settings.CrossfadeSeconds = c.CrossfadeSeconds;
             _settings.Playlist = _settings.RememberPlaylist ? c.Playlist.Tracks.Select(t => t.Path).ToList() : [];
             _settings.CurrentIndex = _settings.RememberPlaylist ? c.Playlist.CurrentIndex : -1;
             _settings.StationNames = _settings.RememberPlaylist
@@ -244,6 +248,8 @@ public partial class App : Application
     /// <summary>If Fernplay was set up for Explorer from another folder, point Explorer at this exe.</summary>
     private static void KeepShellRegistrationCurrent()
     {
+        // An isolated test run (FERNPLAY_DATA set) never moves the Explorer registration to its own exe.
+        if (Environment.GetEnvironmentVariable("FERNPLAY_DATA") is { Length: > 0 }) return;
         try
         {
             if (!Shell.NeedsRefresh()) return;

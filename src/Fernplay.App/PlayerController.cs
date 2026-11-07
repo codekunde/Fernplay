@@ -48,6 +48,106 @@ public sealed class PlayerController : IDisposable
             StreamTitle = title;
             NowPlayingChanged?.Invoke(this, EventArgs.Empty);
         });
+        Engine.NearEnd += (_, id) => _ui.BeginInvoke(() => QueueNextAsync(id));
+        Engine.TrackChanged += (_, path) => _ui.BeginInvoke(() => OnTrackChanged(path));
+        Playlist.Changed += (_, _) => Replan();
+        Playlist.ModeChanged += (_, _) => Replan();
+    }
+
+    // ================= What follows the playing track =================
+
+    private bool _nearEndSeen;   // the playing track asked for its follower (whether one was queued or not)
+    private int _plan;           // goes up when an earlier choice of the next track no longer holds
+    private (int Index, string Path)? _queued;
+
+    /// <summary>Crossfade on natural track ends (never on a skip by hand, never for stations or repeat track).</summary>
+    public bool CrossfadeOn
+    {
+        get => _crossfadeOn;
+        set { if (_crossfadeOn == value) return; _crossfadeOn = value; ApplyCrossfade(); }
+    }
+    private bool _crossfadeOn;
+
+    /// <summary>Crossfade length in seconds, 1 to 12.</summary>
+    public int CrossfadeSeconds
+    {
+        get => _crossfadeSeconds;
+        set { value = Math.Clamp(value, MinCrossfade, MaxCrossfade); if (_crossfadeSeconds == value) return; _crossfadeSeconds = value; ApplyCrossfade(); }
+    }
+    private int _crossfadeSeconds = DefaultCrossfade;
+
+    public const int MinCrossfade = 1, MaxCrossfade = 12, DefaultCrossfade = 5;
+
+    private void ApplyCrossfade()
+    {
+        Engine.Crossfade = _crossfadeOn ? TimeSpan.FromSeconds(_crossfadeSeconds) : TimeSpan.Zero;
+        Replan();
+    }
+
+    /// <summary>
+    /// The playing file nears its end: open the track the playlist picks next and queue it, so it follows gapless or
+    /// with the crossfade. The choice is made once here (shuffle stays consistent). Stations are never queued: a
+    /// station that follows starts after the end, as before.
+    /// </summary>
+    private async Task QueueNextAsync(int forTrack)
+    {
+        _nearEndSeen = true;
+        if (NowPlaying is null or { IsStream: true } || !Engine.IsLoaded) return;
+        if (Playlist.NextIndex(trackEnded: true) is not { } next || Playlist.Tracks[next].IsStream) return;
+        var path = Playlist.Tracks[next].Path;
+        bool repeatOne = Playlist.Repeat == RepeatMode.One;
+        int plan = ++_plan;
+        _queued = (next, path);
+        try
+        {
+            bool queued = await Engine.QueueNextAsync(path, forTrack, gapless: repeatOne);
+            if (plan != _plan) { if (queued) Engine.CancelQueued(); return; } // the list or a setting changed meanwhile
+            if (!queued) _queued = null;
+            else DiagnosticLog.Write($"queued {System.IO.Path.GetFileName(path)} ({(repeatOne || !_crossfadeOn ? "gapless" : $"crossfade {_crossfadeSeconds} s")})");
+        }
+        catch (Exception ex)
+        {
+            // It plays out normally; at the end the usual skip-and-say takes over.
+            DiagnosticLog.Write($"could not open the next track {System.IO.Path.GetFileName(path)}: {PlaybackErrors.Detail(ex)}");
+            if (plan == _plan) _queued = null;
+        }
+    }
+
+    /// <summary>The list, repeat, shuffle or crossfade changed after the next track was chosen: choose again.</summary>
+    private void Replan()
+    {
+        if (!_nearEndSeen) return;
+        _plan++;
+        _queued = null;
+        _nearEndSeen = false;
+        Engine.CancelQueued(); // the engine asks again (NearEnd) while the end is still close
+    }
+
+    /// <summary>The queued track took over by itself (gapless or at the start of the crossfade).</summary>
+    private void OnTrackChanged(string path)
+    {
+        if (!string.Equals(Engine.CurrentPath, path, StringComparison.OrdinalIgnoreCase)) return; // a later load won
+        _nearEndSeen = false;
+        int i = _queued is { } q && q.Index < Playlist.Tracks.Count && Playlist.Tracks[q.Index].Path == path ? q.Index : IndexOf(path);
+        _queued = null;
+        _reconnects.Clear();
+        Interlocked.Exchange(ref _playStartedAt, Environment.TickCount64); // a song start, for the stray-pause guard
+        DiagnosticLog.Write($"next track by itself: {System.IO.Path.GetFileName(path)}");
+        var track = Track.FromFile(path);
+        if (i >= 0)
+        {
+            Playlist.MoveTo(i);
+            if (track != Playlist.Tracks[i]) Playlist.Update(i, track);
+        }
+        SetNowPlaying(track);
+        SetStatus(null);
+    }
+
+    private int IndexOf(string path)
+    {
+        for (int i = 0; i < Playlist.Tracks.Count; i++)
+            if (string.Equals(Playlist.Tracks[i].Path, path, StringComparison.OrdinalIgnoreCase)) return i;
+        return -1;
     }
 
     /// <summary>The station dropped out: try again a few times, then say so.</summary>
@@ -181,6 +281,8 @@ public sealed class PlayerController : IDisposable
     {
         int request = ++_request;
         if (!reconnecting) _reconnects.Clear();
+        // A track picked here cuts in (no fade); whatever was queued for the old one is dropped by the load.
+        _plan++; _queued = null; _nearEndSeen = false;
         string? skipped = null;
         for (int i = index, tries = 0; i >= 0 && i < Playlist.Tracks.Count && tries < Playlist.Tracks.Count; i += forward ? 1 : -1, tries++)
         {

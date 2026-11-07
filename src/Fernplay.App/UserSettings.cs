@@ -27,6 +27,9 @@ public sealed class UserSettings
     public double[] Bands { get; set; } = new double[10];
     public bool Shuffle { get; set; }
     public RepeatMode Repeat { get; set; }
+    /// <summary>Crossfade between songs on a natural end (XFADE), and its length in seconds (1 to 12).</summary>
+    public bool Crossfade { get; set; }
+    public int CrossfadeSeconds { get; set; } = PlayerController.DefaultCrossfade;
     public bool ShowRemaining { get; set; }
     public List<string> Playlist { get; set; } = [];
     /// <summary>Names of the radio stations in <see cref="Playlist"/> (address → name).</summary>

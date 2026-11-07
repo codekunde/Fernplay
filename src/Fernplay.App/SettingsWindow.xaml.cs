@@ -18,8 +18,23 @@ public partial class SettingsWindow : SkinDialog
         ExplorerCheck.IsChecked = App.Shell.IsRegistered();
         DefaultButton.IsEnabled = ExplorerCheck.IsChecked == true;
         (settings.SkinSize switch { 1 => Size1, 3 => Size3, _ => Size2 }).IsChecked = true;
+        XfadeSlider.Value = Player?.CrossfadeSeconds ?? settings.CrossfadeSeconds;
+        ShowXfadeLength();
         ShowSkin();
         _ready = true;
+    }
+
+    private void Xfade_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (XfadeText is null) return; // during InitializeComponent
+        ShowXfadeLength();
+        if (_ready) Player?.SetCrossfadeSeconds((int)Math.Round(XfadeSlider.Value));
+    }
+
+    private void ShowXfadeLength()
+    {
+        XfadeText.Text = $"{(int)Math.Round(XfadeSlider.Value)} S";
+        System.Windows.Automation.AutomationProperties.SetItemStatus(XfadeSlider, $"{(int)Math.Round(XfadeSlider.Value)} seconds");
     }
 
     private static MainWindow? Player => Application.Current.MainWindow as MainWindow;

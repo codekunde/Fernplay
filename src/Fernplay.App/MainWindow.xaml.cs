@@ -10,6 +10,15 @@ namespace Fernplay.App;
 public partial class MainWindow : SkinWindow
 {
     private readonly PlayerController _c;
+
+    /// <summary>Settings sets the crossfade length here; the player's button and menu then say it.</summary>
+    internal void SetCrossfadeSeconds(int seconds)
+    {
+        _c.CrossfadeSeconds = seconds;
+        ShowXfade();
+    }
+
+    internal int CrossfadeSeconds => _c.CrossfadeSeconds;
     private readonly UserSettings _settings;
     private readonly DispatcherTimer _anim = new(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
     private int _frame;
@@ -55,6 +64,8 @@ public partial class MainWindow : SkinWindow
         ShowShadeState();
         ShuffleToggle.IsChecked = _c.Playlist.Shuffle;
         ShowRepeat();
+        XfadeToggle.IsChecked = _c.CrossfadeOn;
+        ShowXfade();
 
         _c.StateChanged += (_, _) => UpdateState();
         _c.NowPlayingChanged += (_, _) => ShowNowPlaying();
@@ -356,6 +367,34 @@ public partial class MainWindow : SkinWindow
         RepeatToggle.Content = _c.Playlist.Repeat == RepeatMode.One ? "REPEAT 1" : "REPEAT";
         System.Windows.Automation.AutomationProperties.SetHelpText(RepeatToggle, RepeatText);
         RepeatToggle.ToolTip = $"Repeat: {RepeatText}. Click: the whole list on or off. Right-click: this track on or off.";
+    }
+
+    // Checked/Unchecked (not Click): the app menu's Crossfade item and UI Automation toggle it without a click.
+    private void Xfade_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_ready) return;
+        _c.CrossfadeOn = XfadeToggle.IsChecked == true;
+        ShowXfade();
+    }
+
+    // The app menu's item (both looks; classic skins have no XFADE button) drives the same switch.
+    private void XfadeMenu_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || _showingXfade) return;
+        XfadeToggle.IsChecked = XfadeMenuItem.IsChecked;
+    }
+
+    private bool _showingXfade;
+
+    /// <summary>Shows the crossfade state on the button and the menu item; also after the length changed in Settings.</summary>
+    internal void ShowXfade()
+    {
+        _showingXfade = true;
+        XfadeMenuItem.IsChecked = _c.CrossfadeOn;
+        _showingXfade = false;
+        string state = _c.CrossfadeOn ? $"on, {_c.CrossfadeSeconds} s" : "off";
+        XfadeToggle.ToolTip = $"Crossfade between songs: {state}. Gapless with repeat track; a skip by hand never fades. Length in Settings.";
+        System.Windows.Automation.AutomationProperties.SetHelpText(XfadeToggle, $"{state}; gapless with repeat track");
     }
 
     // ================= Seek, clock, volume =================

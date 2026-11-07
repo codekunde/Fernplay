@@ -26,6 +26,21 @@
                            Text="Changes apply at once and are saved when Fernplay closes." />
 
                 <Border Height="0.5" Background="#4A4F62" Margin="0,7,0,6" />
+                <TextBlock Text="CROSSFADE" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" Margin="0,0,0,4" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="22" />
+                    </Grid.ColumnDefinitions>
+                    <Slider x:Name="XfadeSlider" Style="{StaticResource SkinSliderH}" Minimum="1" Maximum="12" SmallChange="1" LargeChange="1"
+                            IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" ValueChanged="Xfade_ValueChanged"
+                            AutomationProperties.Name="Crossfade length in seconds" />
+                    <TextBlock x:Name="XfadeText" Grid.Column="1" Style="{StaticResource SkinLabel}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5" Margin="0,3,0,0" TextWrapping="Wrap"
+                           Text="How long one song fades into the next when XFADE is on (app menu: Crossfade). With repeat track the song loops gapless instead. Skipping by hand and stations never fade." />
+
+                <Border Height="0.5" Background="#4A4F62" Margin="0,7,0,6" />
                 <TextBlock Text="EXPLORER" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" Margin="0,0,0,4" />
                 <CheckBox x:Name="ExplorerCheck" Style="{StaticResource SkinCheck}" Content="Open music and playlists from Explorer"
                           Checked="Explorer_Changed" Unchecked="Explorer_Changed" />

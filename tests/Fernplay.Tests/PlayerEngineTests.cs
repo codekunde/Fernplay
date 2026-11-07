@@ -129,17 +129,36 @@ public sealed class PlayerEngineTests : IDisposable
     }
 
     [Fact]
-    public async Task Loading_a_new_track_disposes_the_old_output_and_ignores_its_events()
+    public async Task Loading_a_new_track_keeps_the_output_open_and_does_not_count_as_an_end()
     {
         int ended = 0;
         _engine.TrackEnded += (_, _) => ended++;
         await _engine.LoadAsync(_audio.Tone("a.wav", 0.5));
-        var first = Output;
+        _engine.Play();
+        Output.Pump(0.2);
         await _engine.LoadAsync(_audio.Tone("b.wav", 0.5));
-        Assert.True(first.Disposed);
-        first.Fail(new InvalidOperationException()); // a late event from the old track
+        Assert.Single(_outputs);
+        Assert.False(Output.Disposed);
         Assert.Equal(0, ended);
         Assert.EndsWith("b.wav", _engine.CurrentPath);
+        Assert.Equal(PlayState.Stopped, _engine.State);
+        _engine.Play();
+        Output.Pump(0.2);
+        Assert.Equal(0.2, _engine.Position.TotalSeconds, 1);
+    }
+
+    [Fact]
+    public async Task After_a_device_error_the_next_load_opens_a_new_output()
+    {
+        await _engine.LoadAsync(_audio.Tone("a.wav", 1.0));
+        _engine.Play();
+        var first = Output;
+        first.Fail(new InvalidOperationException("device gone"));
+        await _engine.LoadAsync(_audio.Tone("b.wav", 1.0));
+        Assert.Equal(2, _outputs.Count);
+        Assert.True(first.Disposed);
+        first.Fail(new InvalidOperationException()); // a late event from the old output is ignored
+        Assert.Equal(PlayState.Stopped, _engine.State);
     }
 
     [Fact]

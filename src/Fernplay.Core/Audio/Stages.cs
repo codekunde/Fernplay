@@ -46,19 +46,3 @@ public sealed class GainStage(ISampleProvider source) : ISampleProvider
     internal static (float Left, float Right) BalanceGains(float balance) =>
         balance >= 0 ? (1f - balance, 1f) : (1f, 1f + balance);
 }
-
-/// <summary>Remembers whether the source ran out, so a natural end can be told apart from Stop.</summary>
-public sealed class EndWatchStage(ISampleProvider source) : ISampleProvider
-{
-    private volatile bool _reachedEnd;
-    public bool ReachedEnd => _reachedEnd;
-    public void Reset() => _reachedEnd = false;
-    public WaveFormat WaveFormat => source.WaveFormat;
-
-    public int Read(Span<float> buffer)
-    {
-        int n = source.Read(buffer);
-        if (n == 0 && buffer.Length > 0) _reachedEnd = true;
-        return n;
-    }
-}

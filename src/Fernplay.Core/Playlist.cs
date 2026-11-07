@@ -18,13 +18,21 @@ public sealed class Playlist
     public IReadOnlyList<Track> Tracks => _tracks;
     public int CurrentIndex { get; private set; } = -1;
     public Track? Current => CurrentIndex >= 0 && CurrentIndex < _tracks.Count ? _tracks[CurrentIndex] : null;
-    public RepeatMode Repeat { get; set; }
+    public RepeatMode Repeat
+    {
+        get => _repeat;
+        set { if (_repeat == value) return; _repeat = value; ModeChanged?.Invoke(this, EventArgs.Empty); }
+    }
+    private RepeatMode _repeat;
 
     public bool Shuffle
     {
         get => _shuffle;
-        set { _shuffle = value; Reshuffle(); }
+        set { _shuffle = value; Reshuffle(); ModeChanged?.Invoke(this, EventArgs.Empty); }
     }
+
+    /// <summary>Repeat or shuffle changed (what plays next may differ).</summary>
+    public event EventHandler? ModeChanged;
 
     /// <summary>Tracks were added, removed or cleared (the rows must be rebuilt).</summary>
     public event EventHandler? Changed;
