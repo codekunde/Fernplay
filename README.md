@@ -19,7 +19,7 @@ The installer puts Fernplay in `%LOCALAPPDATA%\Programs\Fernplay` and sets it up
 
 **Make Fernplay your music player:** right-click a music file (an MP3, say), choose **Open with > Choose another app**, pick **Fernplay** and **Always**. Repeat for other file types you use (FLAC, M4A, playlists). Windows lets only you make this choice; no app can set itself as the default.
 
-**Update:** download the newer MSI and double-click it. It replaces the old version and keeps your settings, library and skins. If you unticked "Open music and playlists from Explorer" in Settings, it stays off.
+**Update:** About Fernplay → CHECK FOR UPDATE → UPDATE (from 0.9.0 on) downloads the newer MSI, checks it against the checksum GitHub lists for it, closes Fernplay, installs the update and starts Fernplay again. Or download the newer MSI yourself and double-click it. Either way it replaces the old version and keeps your settings, library and skins. If you unticked "Open music and playlists from Explorer" in Settings, it stays off.
 
 **Uninstall:** Windows Settings > Apps > Fernplay > Uninstall. This also removes the Explorer set-up. Your settings stay in `%APPDATA%\CodeKunde\Fernplay`; delete that folder too for a clean removal.
 
@@ -131,7 +131,7 @@ A media-button pause in the first 3 seconds of a song is ignored: some Windows 1
 
 ![Fernplay settings: keep on top, snap panels, remember the playlist, crossfade length, open from Explorer, skin and skin size](docs/screenshots/settings.png)
 
-Open them from the Fernplay icon at the top left of the player (Settings…, About Fernplay, Exit). About shows the version; CHECK FOR UPDATE asks GitHub for the newest release, and DOWNLOAD opens its page when there is a newer one.
+Open them from the Fernplay icon at the top left of the player (Settings…, About Fernplay, Exit). About shows the version; CHECK FOR UPDATE asks GitHub for the newest release. When there is a newer one, the installed Fernplay offers UPDATE (download, check, install, restart); a portable or zip copy offers DOWNLOAD, which opens the release page.
 
 - **Keep Fernplay on top** of other windows.
 - **Snap panels** to each other and to the screen edges.

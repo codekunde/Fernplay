@@ -39,6 +39,9 @@
                         Click="CheckUpdate_Click" ToolTip="Ask GitHub whether a newer Fernplay is out" AutomationProperties.Name="Check for update" />
                 <Button x:Name="DownloadButton" Style="{StaticResource SkinButton}" Content="DOWNLOAD" Height="11" Padding="6,0" Margin="0,0,4,0"
                         Visibility="Collapsed" Click="Download_Click" ToolTip="Open the release page in the browser" AutomationProperties.Name="Open the download page" />
+                <Button x:Name="InstallButton" Style="{StaticResource SkinButton}" Content="UPDATE" Height="11" Padding="6,0" Margin="0,0,4,0"
+                        Visibility="Collapsed" Click="Install_Click" ToolTip="Download the installer, close Fernplay, install the update and start Fernplay again"
+                        AutomationProperties.Name="Update Fernplay now" />
                 <Button Style="{StaticResource SkinButton}" Content="CLOSE" Height="11" Padding="8,0"
                         IsDefault="True" Click="Close_Click" AutomationProperties.Name="Close about" />
             </StackPanel>
