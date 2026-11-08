@@ -32,6 +32,8 @@ public sealed class UserSettings
     public int CrossfadeSeconds { get; set; } = PlayerController.DefaultCrossfade;
     /// <summary>Volume levelling by ReplayGain tags: Off, Track or Album.</summary>
     public Fernplay.Core.Audio.LevelMode Levelling { get; set; }
+    /// <summary>MilkDrop3's exe ("MilkDrop 3.exe") as found once by the user (app menu: Visualizer); null until then.</summary>
+    public string? VisualizerPath { get; set; }
     /// <summary>The phone remote: on (listening on the home network) and its TCP port.</summary>
     public bool RemoteOn { get; set; }
     public int RemotePort { get; set; } = Fernplay.Core.Remote.RemoteServer.DefaultPort;

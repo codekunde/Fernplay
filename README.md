@@ -133,6 +133,8 @@ A media-button pause in the first 3 seconds of a song is ignored: some Windows 1
 
 Open them from the Fernplay icon at the top left of the player (Settings…, About Fernplay, Exit). About shows the version; CHECK FOR UPDATE asks GitHub for the newest release. When there is a newer one, the installed Fernplay offers UPDATE (download, check, install, restart); a portable or zip copy offers DOWNLOAD, which opens the release page.
 
+**Visualizer (MilkDrop3)…** in the same menu starts [MilkDrop3](https://github.com/milkdrop2077/MilkDrop3), a separate free program that shows full-screen visuals for whatever the PC plays (Fernplay does not hand it any audio). The first time, point Fernplay at `MilkDrop 3.exe` in MilkDrop3's folder; it remembers the place and asks again if the file has moved.
+
 Settings has two tabs. **General:**
 
 - **Keep Fernplay on top** of other windows.

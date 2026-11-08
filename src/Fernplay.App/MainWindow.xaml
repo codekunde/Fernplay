@@ -33,6 +33,8 @@
                         <Button.ContextMenu>
                             <ContextMenu x:Name="AppMenu">
                                 <MenuItem Header="Media library…" Click="Library_Click" ToolTip="Alt+L" />
+                                <MenuItem Header="Visualizer (MilkDrop3)…" Click="Visualizer_Click"
+                                          ToolTip="Starts MilkDrop3, a separate program that shows what the PC is playing" />
                                 <MenuItem x:Name="XfadeMenuItem" Header="Crossfade" IsCheckable="True"
                                           Checked="XfadeMenu_Changed" Unchecked="XfadeMenu_Changed" />
                                 <MenuItem Header="Settings…" Click="Settings_Click" />
