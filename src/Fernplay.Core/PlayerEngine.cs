@@ -17,6 +17,9 @@ public sealed class PlayerEngine : IDisposable
 
     private readonly Func<string, ITrackDecoder> _openDecoder;
     private readonly Func<Task<IAudioOutput>> _createOutput;
+    private readonly Func<string, ReplayGain?> _readGain;
+    private ReplayGain? _currentGain, _queuedGain;
+    private LevelMode _levelling;
 
     private IAudioOutput? _output;
     private TrackMixer? _mixer;
@@ -32,10 +35,12 @@ public sealed class PlayerEngine : IDisposable
     // Each load or unload gets a number; work started for an older one is dropped.
     private int _generation;
 
-    public PlayerEngine(Func<string, ITrackDecoder> openDecoder, Func<Task<IAudioOutput>> createOutput)
+    /// <param name="readGain">Reads a file's ReplayGain tags (null: none); not called for stations. Default: no tags.</param>
+    public PlayerEngine(Func<string, ITrackDecoder> openDecoder, Func<Task<IAudioOutput>> createOutput, Func<string, ReplayGain?>? readGain = null)
     {
         _openDecoder = openDecoder;
         _createOutput = createOutput;
+        _readGain = readGain ?? (_ => null);
     }
 
     /// <summary>
@@ -46,7 +51,30 @@ public sealed class PlayerEngine : IDisposable
         new(path => Track.IsStreamPath(path)
             ? (ITrackDecoder?)IcyMp3Decoder.TryOpen(path) ?? new MediaFoundationDecoder(path)
             : new MediaFoundationDecoder(path),
-            WasapiAudioOutput.CreateAsync);
+            WasapiAudioOutput.CreateAsync,
+            ReplayGainReader.TryRead);
+
+    /// <summary>
+    /// Volume levelling by ReplayGain tags; changes the playing and queued tracks at once. Untagged files and stations
+    /// play at <see cref="ReplayGain.UntaggedDb"/> while it is on.
+    /// </summary>
+    public LevelMode Levelling
+    {
+        get => _levelling;
+        set
+        {
+            _levelling = value;
+            if (_mixer is not { } mixer) return;
+            if (_decoder is { } d) mixer.SetGain(d, ReplayGain.GainFor(_currentGain, value));
+            if (_queuedDecoder is { } q) mixer.SetGain(q, ReplayGain.GainFor(_queuedGain, value));
+        }
+    }
+
+    /// <summary>The playing file's ReplayGain tags (null: none, or a station).</summary>
+    public ReplayGain? CurrentGainTags => _currentGain;
+
+    private (ITrackDecoder Decoder, ReplayGain? Gain) Open(string path) =>
+        (_openDecoder(path), Track.IsStreamPath(path) ? null : _readGain(path));
 
     public PlayState State { get; private set; }
     public string? CurrentPath => _currentPath;
@@ -130,7 +158,7 @@ public sealed class PlayerEngine : IDisposable
     {
         int opening = ++_generation;
         Detach();
-        var decoder = await Task.Run(() => _openDecoder(path));
+        var (decoder, tags) = await Task.Run(() => Open(path));
         if (opening != _generation) { decoder.Dispose(); throw new OperationCanceledException("Another track was loaded meanwhile."); }
         try
         {
@@ -149,8 +177,8 @@ public sealed class PlayerEngine : IDisposable
         }
         if (decoder is ILiveStream live)
             live.TitleChanged += (_, title) => { if (opening == _generation && _decoder == decoder) StreamTitleChanged?.Invoke(this, title); };
-        _mixer!.SetCurrent(decoder);
-        (_decoder, _currentPath) = (decoder, path);
+        _mixer!.SetCurrent(decoder, ReplayGain.GainFor(tags, _levelling));
+        (_decoder, _currentPath, _currentGain) = (decoder, path, tags);
         SetState(PlayState.Stopped);
     }
 
@@ -166,13 +194,13 @@ public sealed class PlayerEngine : IDisposable
         var current = _decoder;
         if (mixer is null || current is null || Track.IsStreamPath(path) || !CanSeek) return false;
         int generation = _generation;
-        var next = await Task.Run(() => _openDecoder(path));
+        var (next, tags) = await Task.Run(() => Open(path));
         var fade = gapless ? TimeSpan.Zero : _crossfade;
         if (fade > TimeSpan.Zero && (next.TotalTime < 2 * fade || current.TotalTime < 2 * fade)) fade = TimeSpan.Zero;
         if (generation != _generation || mixer != _mixer || current != _decoder) { next.Dispose(); return false; }
-        (_queuedDecoder, _queuedPath) = (next, path);
-        if (mixer.Queue(next, fade, forTrack)) return true;
-        (_queuedDecoder, _queuedPath) = (null, null);
+        (_queuedDecoder, _queuedPath, _queuedGain) = (next, path, tags);
+        if (mixer.Queue(next, fade, forTrack, ReplayGain.GainFor(tags, _levelling))) return true;
+        (_queuedDecoder, _queuedPath, _queuedGain) = (null, null, null);
         next.Dispose();
         return false;
     }
@@ -223,6 +251,7 @@ public sealed class PlayerEngine : IDisposable
         _generation++;
         CloseOutput();
         (_decoder, _currentPath, _queuedDecoder, _queuedPath) = (null, null, null, null);
+        (_currentGain, _queuedGain) = (null, null);
         SetState(PlayState.Stopped);
     }
 
@@ -237,6 +266,7 @@ public sealed class PlayerEngine : IDisposable
         _mixer?.SetCurrent(null);
         _output?.Stop();
         (_decoder, _currentPath, _queuedDecoder, _queuedPath) = (null, null, null, null);
+        (_currentGain, _queuedGain) = (null, null);
         SetState(PlayState.Stopped);
     }
 
@@ -264,7 +294,7 @@ public sealed class PlayerEngine : IDisposable
     private void OnSwitched(TrackMixer mixer, ITrackDecoder decoder)
     {
         if (mixer != _mixer || decoder != _queuedDecoder || _queuedPath is not { } path) return;
-        (_decoder, _currentPath, _queuedDecoder, _queuedPath) = (decoder, path, null, null);
+        (_decoder, _currentPath, _currentGain, _queuedDecoder, _queuedPath, _queuedGain) = (decoder, path, _queuedGain, null, null, null);
         TrackChanged?.Invoke(this, path);
     }
 

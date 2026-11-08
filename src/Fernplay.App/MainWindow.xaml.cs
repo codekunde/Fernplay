@@ -20,6 +20,17 @@ public partial class MainWindow : SkinWindow
 
     internal int CrossfadeSeconds => _c.CrossfadeSeconds;
 
+    /// <summary>Settings sets volume levelling here; it applies to the playing track at once.</summary>
+    internal Fernplay.Core.Audio.LevelMode Levelling
+    {
+        get => _c.Engine.Levelling;
+        set
+        {
+            _c.Engine.Levelling = value;
+            DiagnosticLog.Write($"levelling {value}");
+        }
+    }
+
     // ================= Phone remote: same paths as the controls, so the window shows what the phone did =================
 
     /// <summary>Volume, shuffle, repeat or crossfade changed (the phone remote tells the phone).</summary>

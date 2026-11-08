@@ -20,6 +20,12 @@ public partial class SettingsWindow : SkinDialog
         (settings.SkinSize switch { 1 => Size1, 3 => Size3, _ => Size2 }).IsChecked = true;
         XfadeSlider.Value = Player?.CrossfadeSeconds ?? settings.CrossfadeSeconds;
         ShowXfadeLength();
+        ((Player?.Levelling ?? settings.Levelling) switch
+        {
+            Fernplay.Core.Audio.LevelMode.Track => LevelTrack,
+            Fernplay.Core.Audio.LevelMode.Album => LevelAlbum,
+            _ => LevelOff,
+        }).IsChecked = true;
         ShowSkin();
         RemoteCheck.IsChecked = App.Remote?.IsOn == true;
         _pairTimer.Tick += (_, _) => ShowPairing();
@@ -194,6 +200,15 @@ public partial class SettingsWindow : SkinDialog
     {
         Player?.UseFernplayLook();
         ShowSkin();
+    }
+
+    // Checked (not Click): UI Automation selects without a click.
+    private void Level_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || Player is not { } player || sender is not FrameworkElement { Tag: string tag }) return;
+        var mode = Enum.Parse<Fernplay.Core.Audio.LevelMode>(tag);
+        player.Levelling = mode;
+        _settings.Levelling = mode;
     }
 
     // Checked (not Click): UI Automation selects without a click.

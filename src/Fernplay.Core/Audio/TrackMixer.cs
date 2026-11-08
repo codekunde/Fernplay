@@ -49,14 +49,17 @@ public sealed class TrackMixer : ISampleProvider
     /// <summary>The queued track took over (at the start of its fade, or gapless at the end). Carries its decoder.</summary>
     public event EventHandler<ITrackDecoder>? Switched;
 
-    /// <summary>Plays this track from where its decoder stands, at once: no fade. Everything else held is let go.</summary>
-    public void SetCurrent(ITrackDecoder? decoder)
+    /// <summary>
+    /// Plays this track from where its decoder stands, at once: no fade. Everything else held is let go.
+    /// <paramref name="gain"/> is the track's own level (ReplayGain), applied before the mix.
+    /// </summary>
+    public void SetCurrent(ITrackDecoder? decoder, float gain = 1f)
     {
         List<Deck> drop = [];
         lock (_gate)
         {
             AddIf(drop, _current); AddIf(drop, _queued); AddIf(drop, _outgoing);
-            _current = decoder is null ? null : new Deck(decoder, WaveFormat.SampleRate);
+            _current = decoder is null ? null : new Deck(decoder, WaveFormat.SampleRate) { Gain = gain };
             _queued = null; _outgoing = null;
             _currentId++;
             _nearEndRaised = false;
@@ -69,14 +72,14 @@ public sealed class TrackMixer : ISampleProvider
     /// Queues the track that follows the playing one. fade zero = gapless. Refused (false, nothing kept) when the playing
     /// track is no longer the one with <paramref name="forCurrentId"/>; the caller then disposes the decoder.
     /// </summary>
-    public bool Queue(ITrackDecoder decoder, TimeSpan fade, int forCurrentId)
+    public bool Queue(ITrackDecoder decoder, TimeSpan fade, int forCurrentId, float gain = 1f)
     {
         Deck? old;
         lock (_gate)
         {
             if (_current is null || forCurrentId != _currentId) return false;
             old = _queued;
-            _queued = new Deck(decoder, WaveFormat.SampleRate);
+            _queued = new Deck(decoder, WaveFormat.SampleRate) { Gain = gain };
             _queuedFade = fade < TimeSpan.Zero ? TimeSpan.Zero : fade;
         }
         old?.Dispose();
@@ -94,6 +97,18 @@ public sealed class TrackMixer : ISampleProvider
             _nearEndRaised = false;
         }
         old?.Dispose();
+    }
+
+    /// <summary>Changes the level of a track held here (playing, queued or fading out); false when it is not held.</summary>
+    public bool SetGain(ITrackDecoder decoder, float gain)
+    {
+        lock (_gate)
+        {
+            bool found = false;
+            foreach (var d in new[] { _current, _queued, _outgoing })
+                if (d is not null && d.Decoder == decoder) { d.Gain = gain; found = true; }
+            return found;
+        }
     }
 
     /// <summary>Drops the old track that is fading out (Stop: nothing should keep sounding).</summary>
@@ -233,6 +248,9 @@ public sealed class TrackMixer : ISampleProvider
 
         public ITrackDecoder Decoder => decoder;
 
+        /// <summary>The track's own level, 1 = as decoded; set under the mixer's lock.</summary>
+        public float Gain { get; set; } = 1f;
+
         /// <summary>Frames left by the decoder's stated length; -1 for a live stream. Only an estimate (VBR files).</summary>
         public long RemainingFrames => _total < 0 ? -1 : Math.Max(0, _total - _frames);
 
@@ -247,6 +265,9 @@ public sealed class TrackMixer : ISampleProvider
                 n += got;
             }
             _frames += n / 2;
+            float g = Gain;
+            if (g != 1f)
+                for (int i = 0; i < n; i++) span[i] *= g;
             return n;
         }
 

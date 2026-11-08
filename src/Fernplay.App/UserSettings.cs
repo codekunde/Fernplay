@@ -30,6 +30,8 @@ public sealed class UserSettings
     /// <summary>Crossfade between songs on a natural end (XFADE), and its length in seconds (1 to 12).</summary>
     public bool Crossfade { get; set; }
     public int CrossfadeSeconds { get; set; } = PlayerController.DefaultCrossfade;
+    /// <summary>Volume levelling by ReplayGain tags: Off, Track or Album.</summary>
+    public Fernplay.Core.Audio.LevelMode Levelling { get; set; }
     /// <summary>The phone remote: on (listening on the home network) and its TCP port.</summary>
     public bool RemoteOn { get; set; }
     public int RemotePort { get; set; } = Fernplay.Core.Remote.RemoteServer.DefaultPort;
