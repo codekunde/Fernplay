@@ -421,7 +421,7 @@ public partial class MainWindow : SkinWindow
         XfadeMenuItem.IsChecked = _c.CrossfadeOn;
         _showingXfade = false;
         string state = _c.CrossfadeOn ? $"on, {_c.CrossfadeSeconds} s" : "off";
-        XfadeToggle.ToolTip = $"Crossfade between songs: {state}. Gapless with repeat track; a skip by hand never fades. Length in Settings.";
+        XfadeToggle.ToolTip = $"Crossfade between songs: {state}. Gapless with repeat track; a skip by hand never fades. Length in Settings, Advanced tab.";
         System.Windows.Automation.AutomationProperties.SetHelpText(XfadeToggle, $"{state}; gapless with repeat track");
         ControlsChanged?.Invoke(this, EventArgs.Empty);
     }

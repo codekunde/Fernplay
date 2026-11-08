@@ -12,6 +12,7 @@ public partial class SettingsWindow : SkinDialog
         _settings = settings;
         InitializeComponent();
         AttachDragHandle(TitleBar);
+        GeneralTab.IsChecked = true;
         OnTopCheck.IsChecked = settings.AlwaysOnTop;
         SnapCheck.IsChecked = settings.SnapPanels;
         RememberCheck.IsChecked = settings.RememberPlaylist;
@@ -200,6 +201,15 @@ public partial class SettingsWindow : SkinDialog
     {
         Player?.UseFernplayLook();
         ShowSkin();
+    }
+
+    // Checked (not Click): UI Automation selects without a click. The other page is Hidden, so the window keeps its height.
+    private void Tab_Checked(object sender, RoutedEventArgs e)
+    {
+        if (GeneralPage is null || AdvancedPage is null) return; // during InitializeComponent
+        bool general = GeneralTab.IsChecked == true;
+        GeneralPage.Visibility = general ? Visibility.Visible : Visibility.Hidden;
+        AdvancedPage.Visibility = general ? Visibility.Hidden : Visibility.Visible;
     }
 
     // Checked (not Click): UI Automation selects without a click.
