@@ -19,9 +19,9 @@
                 <!-- Tabs: the page not shown is Hidden, not Collapsed, so the window keeps one height. -->
                 <StackPanel Orientation="Horizontal">
                     <RadioButton x:Name="GeneralTab" GroupName="SettingsTab" Style="{StaticResource LedToggle}" Content="GENERAL" Checked="Tab_Checked"
-                                 ToolTip="Windows, playlist, volume levelling, Explorer and skin" AutomationProperties.Name="General settings" />
+                                 ToolTip="Windows, playlist, Explorer and skin" AutomationProperties.Name="General settings" />
                     <RadioButton x:Name="AdvancedTab" GroupName="SettingsTab" Style="{StaticResource LedToggle}" Content="ADVANCED" Margin="2,0,0,0" Checked="Tab_Checked"
-                                 ToolTip="Crossfade length and the phone remote" AutomationProperties.Name="Advanced settings" />
+                                 ToolTip="Crossfade length, volume levelling and the phone remote" AutomationProperties.Name="Advanced settings" />
                 </StackPanel>
                 <Border Height="0.5" Background="#4A4F62" Margin="0,5,0,6" />
 
@@ -35,19 +35,6 @@
                                   Checked="Option_Changed" Unchecked="Option_Changed" />
                         <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5" Margin="10,5,0,0" TextWrapping="Wrap"
                                    Text="Changes apply at once and are saved when Fernplay closes." />
-
-                        <Border Height="0.5" Background="#4A4F62" Margin="0,7,0,6" />
-                        <TextBlock Text="VOLUME LEVELLING" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" Margin="0,0,0,4" />
-                        <StackPanel Orientation="Horizontal">
-                            <RadioButton x:Name="LevelOff" GroupName="Levelling" Style="{StaticResource LedToggle}" Content="OFF" Tag="Off" Checked="Level_Checked"
-                                         ToolTip="Play every file as it is" AutomationProperties.Name="Volume levelling off" />
-                            <RadioButton x:Name="LevelTrack" GroupName="Levelling" Style="{StaticResource LedToggle}" Content="TRACK" Tag="Track" Margin="2,0,0,0" Checked="Level_Checked"
-                                         ToolTip="Every song at the same loudness (ReplayGain track gain)" AutomationProperties.Name="Volume levelling by track" />
-                            <RadioButton x:Name="LevelAlbum" GroupName="Levelling" Style="{StaticResource LedToggle}" Content="ALBUM" Tag="Album" Margin="2,0,0,0" Checked="Level_Checked"
-                                         ToolTip="Every album at the same loudness, quiet and loud songs within it kept (ReplayGain album gain)" AutomationProperties.Name="Volume levelling by album" />
-                        </StackPanel>
-                        <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5" Margin="0,3,0,0" TextWrapping="Wrap"
-                                   Text="Uses the ReplayGain tags in MP3, FLAC and M4A files (a tagger such as foobar2000 or MusicBee writes them). Files without tags and stations play 6&#160;dB quieter, to match." />
 
                         <Border Height="0.5" Background="#4A4F62" Margin="0,7,0,6" />
                         <TextBlock Text="EXPLORER" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" Margin="0,0,0,4" />
@@ -95,6 +82,19 @@
                         </Grid>
                         <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5" Margin="0,3,0,0" TextWrapping="Wrap"
                                    Text="How long one song fades into the next when XFADE is on (app menu: Crossfade). With repeat track the song loops gapless instead. Skipping by hand and stations never fade." />
+
+                        <Border Height="0.5" Background="#4A4F62" Margin="0,7,0,6" />
+                        <TextBlock Text="VOLUME LEVELLING" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" Margin="0,0,0,4" />
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="LevelOff" GroupName="Levelling" Style="{StaticResource LedToggle}" Content="OFF" Tag="Off" Checked="Level_Checked"
+                                         ToolTip="Play every file as it is" AutomationProperties.Name="Volume levelling off" />
+                            <RadioButton x:Name="LevelTrack" GroupName="Levelling" Style="{StaticResource LedToggle}" Content="TRACK" Tag="Track" Margin="2,0,0,0" Checked="Level_Checked"
+                                         ToolTip="Every song at the same loudness (ReplayGain track gain)" AutomationProperties.Name="Volume levelling by track" />
+                            <RadioButton x:Name="LevelAlbum" GroupName="Levelling" Style="{StaticResource LedToggle}" Content="ALBUM" Tag="Album" Margin="2,0,0,0" Checked="Level_Checked"
+                                         ToolTip="Every album at the same loudness, quiet and loud songs within it kept (ReplayGain album gain)" AutomationProperties.Name="Volume levelling by album" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5" Margin="0,3,0,0" TextWrapping="Wrap"
+                                   Text="Uses the ReplayGain tags in MP3, FLAC and M4A files (a tagger such as foobar2000 or MusicBee writes them). Files without tags and stations play 6&#160;dB quieter, to match." />
 
                         <Border Height="0.5" Background="#4A4F62" Margin="0,7,0,6" />
                         <TextBlock Text="PHONE REMOTE" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" Margin="0,0,0,4" />

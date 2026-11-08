@@ -129,7 +129,7 @@ A media-button pause in the first 3 seconds of a song is ignored: some Windows 1
 
 ## Settings
 
-![Fernplay settings, General tab: keep on top, snap panels, remember the playlist, volume levelling, open from Explorer, skin and skin size](docs/screenshots/settings.png)
+![Fernplay settings, General tab: keep on top, snap panels, remember the playlist, open from Explorer, skin and skin size](docs/screenshots/settings.png)
 
 Open them from the Fernplay icon at the top left of the player (Settings…, About Fernplay, Exit). About shows the version; CHECK FOR UPDATE asks GitHub for the newest release. When there is a newer one, the installed Fernplay offers UPDATE (download, check, install, restart); a portable or zip copy offers DOWNLOAD, which opens the release page.
 
@@ -140,13 +140,13 @@ Settings has two tabs. **General:**
 - **Keep Fernplay on top** of other windows.
 - **Snap panels** to each other and to the screen edges.
 - **Remember the playlist** between runs.
-- **Volume levelling:** OFF, TRACK (every song at the same loudness) or ALBUM (every album at the same loudness, the quiet and loud songs within it kept). Fernplay reads the ReplayGain tags in MP3 (ID3v2, APEv2), FLAC and M4A files; a tagger such as foobar2000, MusicBee or rsgain writes them. While it is on, files without tags and radio stations play 6 dB quieter, so they sit close to tagged music.
 - **Open music and playlists from Explorer** (on after installing with the MSI, off in a portable copy; for the current user only, no admin rights): adds Fernplay to Open with and Default apps, gives the files it plays its file icon, and adds "Add to Fernplay playlist" (files and folders) and "Play in Fernplay" (folders) to the right-click menu. Untick it to remove everything again. **Make Fernplay the default player…** then opens Windows' own page for the choice.
 - **Skin:** CHOOSE SKIN… picks a classic skin file, FERNPLAY LOOK goes back to Fernplay's own drawing, SIZE sets 1x, 1.5x or 1.75x for skins (see below).
 
 **Advanced:**
 
 - **Crossfade:** how long one song fades into the next when XFADE is on, 1 to 12 seconds.
+- **Volume levelling:** OFF, TRACK (every song at the same loudness) or ALBUM (every album at the same loudness, the quiet and loud songs within it kept). Fernplay reads the ReplayGain tags in MP3 (ID3v2, APEv2), FLAC and M4A files; a tagger such as foobar2000, MusicBee or rsgain writes them. While it is on, files without tags and radio stations play 6 dB quieter, so they sit close to tagged music.
 - **Phone remote:** lets the Fernplay app on your phone control this player over the home Wi-Fi (play, pause, stop, skip, seek, volume, shuffle, repeat, crossfade, pick from the playlist). Off by default. **Pair a phone…** shows a 6-digit code for 2 minutes to type into the app once; paired phones are listed with REMOVE. The connection is encrypted and only phones on the local network are answered (TCP port 47800, discovery on UDP 47801). Windows Firewall asks once the first time it is switched on: allow it on private networks.
 
 Fernplay remembers the panel positions, which panels are shown, volume, balance, EQ and your own EQ presets, shuffle, repeat, crossfade, volume levelling, whether the phone remote is on, the playlist's height and width, the skin and its size, the playlist and station names in `%APPDATA%\CodeKunde\Fernplay\settings.json` (a portable copy: `Data\settings.json` next to `Fernplay.exe`). The `FERNPLAY_DATA` environment variable points it at another folder. The phone remote keeps its certificate (`remote-cert.bin`) and the paired phones (`remote-phones.bin`) beside it, encrypted for your Windows account.
