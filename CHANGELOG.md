@@ -11,7 +11,7 @@
 - Gapless: songs now follow each other without a gap, on one sound stream that stays open (the next file is opened a few seconds before the end). Repeat track loops without a gap.
 - Files with more than two channels (5.1) are mixed down to stereo.
 - An isolated test run (`FERNPLAY_DATA` set) no longer moves the Explorer set-up to its own copy of Fernplay.
-- Fixed: in the media library's FOLDERS menu, a folder name with an underscore (My_Music) lost it and showed an underlined letter instead; screen readers read it the same wrong way.
+- Fixed: a name with an underscore lost it and showed an underlined letter instead, and screen readers read it the same wrong way: folders in the media library's FOLDERS menu (My_Music) and your own presets in the equalizer's PRESETS menu (my_rock).
 
 ## 0.8.0 (2026-11-06)
 

@@ -71,7 +71,9 @@ public partial class EqWindow : SkinWindow
         PresetsMenu.Items.Clear();
         MenuItem Item(string header, Action click)
         {
-            var item = new MenuItem { Header = header };
+            // Menu headers take "_" as an access-key marker (my_rock showed as "myrock" with the r underlined):
+            // doubled, a preset name shows and is read as it is.
+            var item = new MenuItem { Header = header.Replace("_", "__") };
             item.Click += (_, _) => click();
             return item;
         }
