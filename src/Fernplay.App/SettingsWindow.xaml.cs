@@ -147,7 +147,10 @@ public partial class SettingsWindow : SkinDialog
         if (key != _shownPhones)
         {
             _shownPhones = key;
-            PhonesList.ItemsSource = phones.Select(p => new PhoneRow(p.Id, $"{p.Name} (paired {p.Paired.ToLocalTime():d MMM yyyy})", $"Remove {p.Name}")).ToList();
+            // A button with text content runs its automation name through access-key handling, which drops the
+            // first "_" (sdk_gphone64 was read as "sdkgphone64"); doubled, each one is read as it is.
+            PhonesList.ItemsSource = phones.Select(p => new PhoneRow(p.Id, $"{p.Name} (paired {p.Paired.ToLocalTime():d MMM yyyy})",
+                $"Remove {p.Name.Replace("_", "__")}")).ToList();
         }
         PhonesList.Visibility = phones.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }

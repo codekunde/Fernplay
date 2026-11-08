@@ -901,8 +901,10 @@ public partial class LibraryWindow : SkinWindow
             FoldersMenu.Items.Add(new Separator());
             foreach (var folder in _lib.Index.Folders)
             {
-                var remove = new MenuItem { Header = $"Remove {FolderName(folder)}", ToolTip = folder };
-                System.Windows.Automation.AutomationProperties.SetName(remove, $"Remove the folder {folder} from the library");
+                // Menu headers take "_" as an access-key marker (the first one vanished and underlined the next
+                // letter): doubled, a folder name such as My_Music shows and is read as it is.
+                var remove = new MenuItem { Header = $"Remove {FolderName(folder).Replace("_", "__")}", ToolTip = folder };
+                System.Windows.Automation.AutomationProperties.SetName(remove, $"Remove the folder {folder.Replace("_", "__")} from the library");
                 remove.Click += (_, _) => RemoveFolder(folder);
                 FoldersMenu.Items.Add(remove);
             }
