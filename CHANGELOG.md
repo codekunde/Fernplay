@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.0 (2026-11-10)
 
 - Visualizer: the app menu's Visualizer (MilkDrop3)… starts MilkDrop3, a separate free program (download it from github.com/milkdrop2077/MilkDrop3) that shows full-screen visuals for whatever the PC plays. The first time, point Fernplay at `MilkDrop 3.exe` in MilkDrop3's folder; it remembers the place. A visualizer inside Fernplay is planned.
 - Settings has two tabs: GENERAL (on top, snap, remember the playlist, Explorer, skin) and ADVANCED (crossfade length, volume levelling, phone remote). The window is about 40 % shorter and keeps its height when you switch tabs.
