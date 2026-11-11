@@ -202,15 +202,23 @@ public partial class LibraryWindow : SkinWindow
         ResizedByHand?.Invoke(this, EventArgs.Empty);
         _gripStart = Mouse.GetPosition(this); // window coordinates: the top left stays put
         _gripStartSize = new Size(Shell.Width, Shell.Height);
+        DiagnosticLog.Write($"library resize start: {Left:0},{Top:0} {Shell.Width:0}x{Shell.Height:0}, window {ActualWidth:0}x{ActualHeight:0}, " +
+            $"desktop {Desktop}, work area {SystemParameters.WorkArea}, dpi {VisualTreeHelper.GetDpi(this).DpiScaleX:0.##}");
     }
 
     private void Grip_DragDelta(object sender, DragDeltaEventArgs e)
     {
         var p = Mouse.GetPosition(this);
-        var wa = SystemParameters.WorkArea;
+        // Limit: the edge of the whole desktop (all screens, taskbar included), as for the playlist. The main screen's
+        // work area left no room on a second screen or below the taskbar's top, so the library could only shrink.
+        var desk = Desktop;
         double minW = MinSkinWidth * Scale, minH = MinSkinHeight * Scale;
-        double w = Math.Clamp(_gripStartSize.Width + p.X - _gripStart.X, minW, Math.Max(minW, wa.Right - Left));
-        double h = Math.Clamp(_gripStartSize.Height + p.Y - _gripStart.Y, minH, Math.Max(minH, wa.Bottom - Top));
+        // A drag never forces the window below the size it had at the start (a window already past the edge kept
+        // snapping smaller).
+        double maxW = Math.Max(Math.Max(minW, _gripStartSize.Width), desk.Right - Left);
+        double maxH = Math.Max(Math.Max(minH, _gripStartSize.Height), desk.Bottom - Top);
+        double w = Math.Clamp(_gripStartSize.Width + p.X - _gripStart.X, minW, maxW);
+        double h = Math.Clamp(_gripStartSize.Height + p.Y - _gripStart.Y, minH, maxH);
         SetShell(w, h);
     }
 
