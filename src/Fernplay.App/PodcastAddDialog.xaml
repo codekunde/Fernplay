@@ -1,0 +1,36 @@
+<local:SkinDialog x:Class="Fernplay.App.PodcastAddDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Fernplay.App"
+        Title="Add podcast">
+    <Border Width="240" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
+        <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
+        <StackPanel>
+            <Grid x:Name="TitleBar" Height="10" Margin="2,2,2,0" Style="{StaticResource TitleBar}">
+                <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Center" Padding="5,0">
+                    <TextBlock Text="ADD PODCAST" Style="{StaticResource TitleLabel}" VerticalAlignment="Center" />
+                </Border>
+                <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Right" Padding="1,1">
+                    <Button Style="{StaticResource TitleButton}" Content="x" Click="Close_Click" ToolTip="Cancel" AutomationProperties.Name="Cancel" />
+                </Border>
+            </Grid>
+
+            <StackPanel Margin="8,7,8,0">
+                <TextBlock x:Name="AddressLabel" Text="Feed address (RSS), Apple Podcasts or pod.link link" Style="{StaticResource SkinLabel}" Margin="0,0,0,2" />
+                <TextBox x:Name="AddressBox" Style="{StaticResource SkinTextBox}" TextChanged="AddressBox_TextChanged"
+                         AutomationProperties.LabeledBy="{Binding ElementName=AddressLabel}" />
+                <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" Foreground="{StaticResource SkinText}" Margin="0,3,0,0" TextWrapping="Wrap"
+                           Text="The show's website lists it as RSS, or copy the link from Apple Podcasts." />
+                <!-- Reading the feed, or why it could not be added. -->
+                <TextBlock x:Name="NoteText" Style="{StaticResource SkinLabel}" Margin="0,4,0,0" TextWrapping="Wrap" Visibility="Collapsed"
+                           AutomationProperties.LiveSetting="Assertive" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="8,6,8,7">
+                <Button x:Name="AddButton" Style="{StaticResource SkinButton}" Content="ADD" Height="11" Padding="8,0" Margin="0,0,4,0"
+                        IsDefault="True" IsEnabled="False" Click="Add_Click" AutomationProperties.Name="Add the podcast" />
+                <Button Style="{StaticResource SkinButton}" Content="CANCEL" Height="11" Padding="6,0"
+                        IsCancel="True" Click="Close_Click" AutomationProperties.Name="Cancel" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</local:SkinDialog>

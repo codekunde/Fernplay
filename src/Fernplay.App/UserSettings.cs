@@ -67,6 +67,8 @@ public sealed class UserSettings
     public double LibraryHeight { get; set; }
     /// <summary>False: the library is as tall as the player's stack and follows it; true once resized with its grip.</summary>
     public bool LibraryHeightByHand { get; set; }
+    /// <summary>Height of the library's artist and album panes in skin pixels, set with the divider; 0 = default.</summary>
+    public double LibraryPanesHeight { get; set; }
     /// <summary>Skin scale the panel positions were saved at; 0 = before this was saved (2.0).</summary>
     public double Scale { get; set; }
 

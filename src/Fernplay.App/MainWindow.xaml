@@ -32,7 +32,9 @@
                         <Image x:Name="AppMenuIcon" Width="8" Height="8" RenderOptions.BitmapScalingMode="HighQuality" />
                         <Button.ContextMenu>
                             <ContextMenu x:Name="AppMenu">
-                                <MenuItem Header="Media library…" Click="Library_Click" ToolTip="Alt+L" />
+                                <!-- The shortcut in the line itself (as in the library's menus): Fernplay's menu template draws no gesture column. -->
+                                <MenuItem Header="Media library…   Alt+L" Click="Library_Click"
+                                          AutomationProperties.Name="Media library" AutomationProperties.AcceleratorKey="Alt+L" />
                                 <MenuItem Header="Visualizer (MilkDrop3)…" Click="Visualizer_Click"
                                           ToolTip="Starts MilkDrop3, a separate program that shows what the PC is playing" />
                                 <MenuItem x:Name="XfadeMenuItem" Header="Crossfade" IsCheckable="True"

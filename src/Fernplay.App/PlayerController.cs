@@ -20,6 +20,7 @@ public sealed class PlayerController : IDisposable
     public PlayerController(Dispatcher ui)
     {
         _ui = ui;
+        Engine = PlayerEngine.CreateDefault(IsEpisode);
         // Engine events can come from the audio thread.
         Engine.StateChanged += (_, _) =>
         {
@@ -32,15 +33,16 @@ public sealed class PlayerController : IDisposable
         Engine.TrackEnded += (_, _) => _ui.BeginInvoke(async () =>
         {
             DiagnosticLog.Write($"track ended, repeat {Playlist.Repeat}, shuffle {Playlist.Shuffle}, index {Playlist.CurrentIndex} of {Playlist.Tracks.Count}");
-            // A radio stream never ends by itself: the station dropped the connection.
-            if (NowPlaying is { IsStream: true } station) { await ReconnectAsync(station, null); return; }
+            // A radio stream never ends by itself: the station dropped the connection. A podcast episode does end.
+            if (NowPlaying is { IsStream: true } station && !IsEpisode(station.Path)) { await ReconnectAsync(station, null); return; }
             if (Playlist.NextIndex(trackEnded: true) is { } next) await PlayIndexAsync(next, forward: true);
         });
         Engine.PlaybackFailed += (_, ex) => _ui.BeginInvoke(async () =>
         {
             DiagnosticLog.Write($"playback failed: {PlaybackErrors.Detail(ex)}");
-            if (NowPlaying is { IsStream: true } station) { await ReconnectAsync(station, ex); return; }
-            SetStatus(PlaybackErrors.Describe(ex, Engine.CurrentPath ?? ""));
+            if (NowPlaying is { IsStream: true } station && !IsEpisode(station.Path)) { await ReconnectAsync(station, ex); return; }
+            // An episode that broke off keeps its place: Play picks it up there.
+            SetStatus(NowPlaying is { IsStream: true } episode ? PlaybackErrors.Describe(ex, episode.Path, episode.DisplayName) : PlaybackErrors.Describe(ex, Engine.CurrentPath ?? ""));
         });
         Engine.StreamTitleChanged += (_, title) => _ui.BeginInvoke(() =>
         {
@@ -170,8 +172,14 @@ public sealed class PlayerController : IDisposable
         await PlayIndexAsync(Playlist.CurrentIndex, forward: true, reconnecting: true);
     }
 
-    public PlayerEngine Engine { get; } = PlayerEngine.CreateDefault();
+    public PlayerEngine Engine { get; }
     public Playlist Playlist { get; } = new();
+
+    /// <summary>The podcast episodes the library knows: web addresses of audio files, played and resumed as files.</summary>
+    public IEpisodeSource? Episodes { get; set; }
+
+    /// <summary>A podcast episode (may be asked from the audio thread).</summary>
+    public bool IsEpisode(string path) => Episodes?.IsEpisode(path) == true;
     public Track? NowPlaying { get; private set; }
     /// <summary>The song the playing station says it is playing ("Artist - Title"), or null.</summary>
     public string? StreamTitle { get; private set; }
@@ -219,7 +227,26 @@ public sealed class PlayerController : IDisposable
             SetStatus($"{missing} {(missing == 1 ? "file" : "files")} in {playlistName} could not be found or played and {(missing == 1 ? "was" : "were")} left out.");
     }
 
-    private static Track ToTrack(PlaylistEntry e) => e.IsStream ? Track.Stream(e.Path, e.Title) : new Track(e.Path, null, null, null, null, null);
+    /// <summary>
+    /// As <see cref="OpenAsync"/> for tracks that already carry their names and lengths (podcast episodes from the
+    /// library): the playlist shows them as given.
+    /// </summary>
+    public async Task OpenTracksAsync(IReadOnlyList<Track> tracks, bool replace)
+    {
+        if (tracks.Count == 0) return;
+        if (replace)
+        {
+            Engine.Unload();
+            Playlist.Clear();
+            SetNowPlaying(null);
+        }
+        int first = Playlist.AddRange(tracks);
+        ReadTagsInBackground();
+        if (replace) await PlayIndexAsync(first, forward: true);
+    }
+
+    private Track ToTrack(PlaylistEntry e) =>
+        e.IsStream ? Episodes?.TrackFor(e.Path) ?? Track.Stream(e.Path, e.Title) : new Track(e.Path, null, null, null, null, null);
 
     /// <summary>Entries of the playlist files among paths that are missing or not playable (streams count as playable).</summary>
     private static int MissingInPlaylists(IEnumerable<string> paths)
@@ -248,7 +275,7 @@ public sealed class PlayerController : IDisposable
     {
         Playlist.AddRange(paths
             .Where(p => Track.IsStreamPath(p) || System.IO.File.Exists(p))
-            .Select(p => Track.IsStreamPath(p) ? Track.Stream(p, stationNames?.GetValueOrDefault(p)) : new Track(p, null, null, null, null, null)));
+            .Select(p => Track.IsStreamPath(p) ? Episodes?.TrackFor(p) ?? Track.Stream(p, stationNames?.GetValueOrDefault(p)) : new Track(p, null, null, null, null, null)));
         if (current >= 0 && current < Playlist.Tracks.Count) Playlist.MoveTo(current);
         ReadTagsInBackground();
     }
@@ -313,6 +340,13 @@ public sealed class PlayerController : IDisposable
             // A station without a playlist name takes the name it sends (icy-name); it is then remembered.
             if (entry is { IsStream: true, Title: null } && Engine.StationName is { } name) track = Track.Stream(entry.Path, name);
             if (track != entry) Playlist.Update(i, track);
+            // A podcast episode carries on where listening stopped. Seeking over the network takes up to a second:
+            // off the UI thread.
+            if (entry.IsStream && Episodes?.ResumeAt(entry.Path) is { } resume && Engine.CanSeek)
+            {
+                await Task.Run(() => Engine.Seek(resume));
+                if (request != _request) return;
+            }
             SetNowPlaying(track);
             Engine.Play();
             SetStatus(skipped is null ? null : skipped + " Skipped.");

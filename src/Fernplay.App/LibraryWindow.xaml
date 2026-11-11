@@ -284,13 +284,14 @@
                         </ListBox>
                     </Border>
 
-                    <Grid Grid.Column="2">
+                    <Grid x:Name="RightPane" Grid.Column="2" SizeChanged="RightPane_SizeChanged">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="11" />
                             <RowDefinition Height="3" />
-                            <RowDefinition Height="68" />
+                            <!-- Artist and album panes: their height is dragged with PaneSplitter and remembered (PanesHeight). -->
+                            <RowDefinition x:Name="PanesRow" Height="68" MinHeight="30" />
                             <RowDefinition Height="3" />
-                            <RowDefinition Height="*" />
+                            <RowDefinition Height="*" MinHeight="40" />
                         </Grid.RowDefinitions>
 
                         <Grid>
@@ -349,6 +350,14 @@
                                 </ListView>
                             </Border>
                         </Grid>
+
+                        <!-- The gap between the panes and the track list moves up and down. -->
+                        <!-- 5 tall over the 3 gap (a pixel into each neighbour's edge) and on top of them: an easier target. -->
+                        <GridSplitter x:Name="PaneSplitter" Grid.Row="3" HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="5" Margin="0,-1"
+                                      Panel.ZIndex="1"
+                                      ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" Background="Transparent" Cursor="SizeNS"
+                                      Focusable="False" ShowsPreview="False" DragCompleted="PaneSplitter_DragCompleted"
+                                      ToolTip="Drag to make the artist and album lists taller or shorter" />
 
                         <Border Grid.Row="4" Style="{StaticResource LibInset}">
                             <Grid>

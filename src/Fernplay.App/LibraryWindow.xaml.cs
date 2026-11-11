@@ -9,24 +9,26 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Fernplay.Core;
 using Fernplay.Core.Library;
+using Fernplay.Core.Podcasts;
 using Fernplay.Core.Skins;
 
 namespace Fernplay.App;
 
-/// <summary>One line in the navigation list: a heading, a view, a playlist file or the history.</summary>
+/// <summary>One line in the navigation list: a heading, a view, a playlist file, a podcast, "Add podcast…" or the history.</summary>
 public sealed class NavEntry
 {
-    public enum Kinds { Heading, View, Playlist, History }
+    public enum Kinds { Heading, View, Playlist, History, Podcast, AddPodcast }
 
     public required string Text { get; init; }
     public Kinds Kind { get; init; }
     public LibraryView View { get; init; }
     public string? PlaylistPath { get; init; }
+    public PodcastShow? Show { get; init; }
     public string? ToolTip { get; init; }
     public bool IsHeading => Kind == Kinds.Heading;
-    public Thickness Indent => Kind is Kinds.View or Kinds.Playlist ? new Thickness(6, 0, 0, 0) : new Thickness(0);
+    public Thickness Indent => Kind is Kinds.View or Kinds.Playlist or Kinds.Podcast or Kinds.AddPodcast ? new Thickness(6, 0, 0, 0) : new Thickness(0);
     /// <summary>Same entry across rebuilds of the list (to keep the selection).</summary>
-    public string Key => $"{Kind}|{View}|{PlaylistPath}";
+    public string Key => $"{Kind}|{View}|{PlaylistPath}|{Show?.FeedUrl}";
 }
 
 /// <summary>A row of the artist pane; Key null = the "All" row.</summary>
@@ -44,12 +46,14 @@ public sealed record AlbumEntry(string Album, string Artist, int Tracks, int? Ye
 /// <summary>
 /// A row of the track list. In History one track can appear several times (once per play, <see cref="Entry"/>);
 /// a playlist can hold files outside the library and radio stations (tracks made up for the row, not in the index).
+/// A podcast episode (<see cref="Episode"/>) shows its show, length, how much was heard and when it came out.
 /// </summary>
-public sealed class LibraryRow(LibraryTrack track, HistoryEntry? entry = null, bool inLibrary = true)
+public sealed class LibraryRow(LibraryTrack track, HistoryEntry? entry = null, bool inLibrary = true, PodcastEpisode? episode = null)
 {
     public LibraryTrack Track { get; } = track;
     public HistoryEntry? Entry { get; } = entry;
-    /// <summary>False for a file outside the library folders or a station: it cannot be rated.</summary>
+    public PodcastEpisode? Episode { get; } = episode;
+    /// <summary>False for a file outside the library folders, a station or an episode: it cannot be rated.</summary>
     public bool InLibrary { get; } = inLibrary;
     public bool IsStream => Fernplay.Core.Track.IsStreamPath(Track.Path);
     public string Path => Track.Path;
@@ -57,16 +61,26 @@ public sealed class LibraryRow(LibraryTrack track, HistoryEntry? entry = null, b
     public string Album => Track.AlbumName;
     public string Number => Track.TrackNumber?.ToString() ?? "";
     public string Title => Track.TitleText;
-    public string Length => IsStream ? "LIVE" : Track.Duration is { } d ? TimeFormat.Clock(d) : "";
+    public string Length => Episode is { Duration: { } ed } ? TimeFormat.Clock(ed) : Episode is not null ? "" : IsStream ? "LIVE" : Track.Duration is { } d ? TimeFormat.Clock(d) : "";
     public string Genre => Track.Genre ?? "";
     public string Year => Track.Year?.ToString() ?? "";
     public int Stars => Track.Rating;
     public Visibility StarsVisible => InLibrary ? Visibility.Visible : Visibility.Hidden;
-    public string Plays => Track.PlayCount > 0 ? Track.PlayCount.ToString() : "";
-    /// <summary>History: when this play happened; elsewhere the track's last play.</summary>
-    public DateTime? Played => Entry?.PlayedAt ?? Track.LastPlayed;
-    public string LastPlayed => Played is { } p ? p.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "";
-    public string AccessibleName => IsStream ? $"{Title}, radio station"
+    /// <summary>Plays; for an episode how much was heard: ✓ played, "40%" part-way, empty when new.</summary>
+    public string Plays => Episode is { } e
+        ? e.Played ? "✓" : e.PositionMs > 0 && e.Duration is { } len ? $"{Math.Clamp((int)(100 * e.PositionMs / len.TotalMilliseconds), 1, 99)}%" : ""
+        : Track.PlayCount > 0 ? Track.PlayCount.ToString() : "";
+    /// <summary>For sorting the Plays column: play count, or how far into an episode (played = 100).</summary>
+    public int? PlaysValue => Episode is { } e
+        ? e.Played ? 100 : e.PositionMs > 0 && e.Duration is { } len ? (int)(100 * e.PositionMs / len.TotalMilliseconds) : null
+        : Track.PlayCount > 0 ? Track.PlayCount : null;
+    /// <summary>History: when this play happened; an episode: when it came out; elsewhere the track's last play.</summary>
+    public DateTime? Played => Episode is not null ? Episode.Published : Entry?.PlayedAt ?? Track.LastPlayed;
+    public string LastPlayed => Played is { } p ? p.ToLocalTime().ToString(Episode is null ? "yyyy-MM-dd HH:mm" : "yyyy-MM-dd") : "";
+    public string AccessibleName => Episode is { } ep
+        ? $"{Title}, {Album}{(LastPlayed == "" ? "" : ", published " + LastPlayed)}{(Length == "" ? "" : ", " + Length)}, "
+          + (ep.Played ? "played" : ep.PositionMs > 0 ? $"{Plays} heard" : "new")
+        : IsStream ? $"{Title}, radio station"
         : $"{Title} by {Artist}, {Album}{(Length == "" ? "" : ", " + Length)}{(Stars > 0 ? $", {Stars} of 5 stars" : "")}";
 }
 
@@ -118,10 +132,13 @@ public partial class LibraryWindow : SkinWindow
     private bool _sortDescending;
     private readonly Dictionary<GridViewColumn, (string Key, string Header)> _columns = [];
 
-    public LibraryWindow(PlayerController controller, LibraryService library)
+    private readonly PodcastService _pods;
+
+    public LibraryWindow(PlayerController controller, LibraryService library, PodcastService podcasts)
     {
         _c = controller;
         _lib = library;
+        _pods = podcasts;
         InitializeComponent();
         ApplyColors(null);
         AttachDragHandle(TitleBar);
@@ -154,8 +171,31 @@ public partial class LibraryWindow : SkinWindow
             if (!_lib.IsScanning && _lib.LastScan is not null) { _scanNotice.Stop(); _scanNotice.Start(); }
             ShowStatus();
         };
-        IsVisibleChanged += (_, _) => { if (IsVisible && _dirty) Refresh(); };
+        _pods.Store.Changed += (_, _) =>
+        {
+            if (IsVisible) { _refreshDelay.Stop(); _refreshDelay.Start(); }
+            else _dirty = true;
+        };
+        _pods.StatusChanged += (_, _) => ShowStatus();
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!IsVisible) return;
+            if (_dirty) Refresh();
+            _ = _pods.RefreshAsync(); // feeds not read for a while
+        };
         PreviewKeyDown += Window_PreviewKeyDown;
+        Nav.ContextMenu = new ContextMenu();
+        Nav.ContextMenuOpening += NavMenu_Opening;
+        Nav.KeyDown += (_, e) =>
+        {
+            if (e.Key is Key.Enter or Key.Space && Nav.SelectedItem is NavEntry { Kind: NavEntry.Kinds.AddPodcast }) { e.Handled = true; AddPodcast(); }
+        };
+        // A click on "Add podcast…" while the keyboard already rests on it (no selection change).
+        Nav.PreviewMouseLeftButtonUp += (_, e) =>
+        {
+            if (NavEntryAt(e.OriginalSource) is { Kind: NavEntry.Kinds.AddPodcast } && Nav.SelectedItem is NavEntry { Kind: NavEntry.Kinds.AddPodcast })
+                Dispatcher.BeginInvoke(AddPodcast);
+        };
 
         BuildNav();
         Nav.SelectedIndex = 1; // Audio
@@ -189,6 +229,38 @@ public partial class LibraryWindow : SkinWindow
         double step = FrameScale > 0 ? FrameScale : 1;
         Shell.Width = Math.Max(step, Math.Round(widthDip / step) * step);
         Shell.Height = Math.Max(step, Math.Round(heightDip / step) * step);
+    }
+
+    public const double DefaultPanesHeight = 68;
+
+    /// <summary>
+    /// Height of the artist and album panes in Fernplay skin pixels (dragged with the divider under them; remembered in
+    /// the settings); 0 = default.
+    /// </summary>
+    public double PanesHeight
+    {
+        get => PanesRow.ActualHeight > 0 ? PanesRow.ActualHeight : PanesRow.Height.Value;
+        set
+        {
+            PanesRow.Height = new GridLength(value > 0 ? Math.Max(value, PanesRow.MinHeight) : DefaultPanesHeight);
+            ClampPanes();
+        }
+    }
+
+    /// <summary>The owner moved the divider: its height is to be remembered.</summary>
+    public event EventHandler? PanesResized;
+
+    private void PaneSplitter_DragCompleted(object sender, DragCompletedEventArgs e) => PanesResized?.Invoke(this, EventArgs.Empty);
+
+    private void RightPane_SizeChanged(object sender, SizeChangedEventArgs e) => ClampPanes();
+
+    /// <summary>A smaller window never squeezes the track list below its least height: the panes give way.</summary>
+    private void ClampPanes()
+    {
+        if (RightPane.ActualHeight <= 0) return;
+        double fixedRows = RightPane.RowDefinitions.Where(r => r != PanesRow && r.Height.IsAbsolute).Sum(r => r.Height.Value);
+        double room = RightPane.ActualHeight - fixedRows - RightPane.RowDefinitions[4].MinHeight;
+        PanesRow.MaxHeight = Math.Max(PanesRow.MinHeight, room);
     }
 
     private Point _gripStart;
@@ -321,6 +393,15 @@ public partial class LibraryWindow : SkinWindow
         {
             Text = p.Label, Kind = NavEntry.Kinds.Playlist, PlaylistPath = p.Path, ToolTip = p.Path,
         }));
+        items.Add(new NavEntry { Text = "PODCASTS", Kind = NavEntry.Kinds.Heading });
+        items.AddRange(_pods.Store.Shows.Select(s => new NavEntry
+        {
+            // The count of new episodes, as podcast apps show it; a "!" when the feed could not be read.
+            Text = s.Title + (s.NewCount > 0 ? $" ({s.NewCount})" : "") + (s.Error is null ? "" : " !"),
+            Kind = NavEntry.Kinds.Podcast, Show = s,
+            ToolTip = s.Error is { } error ? $"Could not check the feed: {error}" : s.FeedUrl,
+        }));
+        items.Add(new NavEntry { Text = "Add podcast…", Kind = NavEntry.Kinds.AddPodcast, ToolTip = "Subscribe to a podcast by its feed address" });
         items.Add(new NavEntry { Text = "HISTORY", Kind = NavEntry.Kinds.History, ToolTip = "The last plays, newest first" });
 
         _filling = true;
@@ -334,6 +415,17 @@ public partial class LibraryWindow : SkinWindow
     private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_filling) return;
+        // "Add podcast…" is an action, not a view. A click runs it at once; arrowing onto it only rests there (Enter
+        // runs it), so walking the list with the keyboard does not pop up a dialog.
+        if (Nav.SelectedItem is NavEntry { Kind: NavEntry.Kinds.AddPodcast })
+        {
+            if (Mouse.LeftButton != MouseButtonState.Pressed) return;
+            _filling = true;
+            Nav.SelectedItem = e.RemovedItems.Count > 0 ? e.RemovedItems[0] : null;
+            _filling = false;
+            Dispatcher.BeginInvoke(AddPodcast); // after the click is done, or the dialog opens under the mouse capture
+            return;
+        }
         if (Nav.SelectedItem is not NavEntry { IsHeading: false } entry)
         {
             // A heading cannot be chosen: stay on the previous view.
@@ -360,6 +452,13 @@ public partial class LibraryWindow : SkinWindow
                 // Plays of files that left the library (folder removed) still show, by file name, while the file exists.
                 return [.. index.History.Select(h => index.Find(h.Path) is { } t ? new LibraryRow(t, h)
                     : File.Exists(h.Path) ? new LibraryRow(new LibraryTrack { Path = h.Path }, h, inLibrary: false) : null).OfType<LibraryRow>()];
+            case NavEntry.Kinds.Podcast when _nav.Show is { } show:
+                // Newest first. Artist pane: who makes it; album pane: the show.
+                return [.. show.Episodes.Select(e => new LibraryRow(new LibraryTrack
+                {
+                    Path = e.Url, Title = e.Title, Artist = show.Author ?? show.Title, Album = show.Title, TrackNumber = e.Number,
+                    Year = e.Published?.ToLocalTime().Year, DurationMs = e.Duration is { } d ? (long)d.TotalMilliseconds : null, Size = e.Size ?? 0,
+                }, inLibrary: false, episode: e))];
             case NavEntry.Kinds.Playlist when _nav.PlaylistPath is { } file:
                 try
                 {
@@ -482,6 +581,9 @@ public partial class LibraryWindow : SkinWindow
 
     private string EmptyMessage()
     {
+        if (_nav?.Kind == NavEntry.Kinds.Podcast)
+            return SearchBox.Text.Trim().Length > 0 ? "Nothing matches the search."
+                : _nav.Show?.Error is { } error ? $"Could not check the feed: {error}" : "No episodes in this feed yet.";
         if (_lib.Index.Folders.Count == 0) return "No music folders yet. Click FOLDERS below and add the folder that holds your music.";
         if (_lib.Index.Count == 0) return _lib.IsScanning ? "Scanning your folders…" : "No music found in your folders yet. FOLDERS ▸ Rescan looks again.";
         if (SearchBox.Text.Trim().Length > 0) return "Nothing matches the search.";
@@ -502,7 +604,7 @@ public partial class LibraryWindow : SkinWindow
 
     private void ShowStatus()
     {
-        StatusText.Text = _lib.ScanStatus ?? (_scanNotice.IsEnabled ? _lib.LastScan : null) ?? _status ?? "";
+        StatusText.Text = _lib.ScanStatus ?? _pods.Status ?? (_scanNotice.IsEnabled ? _lib.LastScan : null) ?? _status ?? "";
     }
 
     private static bool Same(string? a, string? b) => string.Equals(a, b, StringComparison.CurrentCultureIgnoreCase);
@@ -602,7 +704,7 @@ public partial class LibraryWindow : SkinWindow
             _columns[column] = (key, header);
             TrackColumns.Columns.Add(column);
         }
-        StretchColumn(TrackList, TrackColumns.Columns[3]);
+        _fitTitle = StretchColumn(TrackList, TrackColumns.Columns[3]);
         StretchColumn(ArtistList, ((GridView)ArtistList.View).Columns[0]);
         StretchColumn(AlbumList, ((GridView)AlbumList.View).Columns[0]);
     }
@@ -637,7 +739,9 @@ public partial class LibraryWindow : SkinWindow
     }
 
     /// <summary>One column (title, artist, album) takes the width the others leave, as the window is resized.</summary>
-    private static void StretchColumn(ListView list, GridViewColumn stretch, double min = 40)
+    private Action? _fitTitle;
+
+    private static Action StretchColumn(ListView list, GridViewColumn stretch, double min = 40)
     {
         void Fit()
         {
@@ -652,6 +756,7 @@ public partial class LibraryWindow : SkinWindow
         list.SizeChanged += (_, _) => Fit();
         list.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((_, e) => { if (e.ViewportWidthChange != 0) Fit(); }));
         list.Loaded += (_, _) => Fit();
+        return Fit;
     }
 
     /// <summary>A click on a column header sorts by it; a second click reverses.</summary>
@@ -664,12 +769,44 @@ public partial class LibraryWindow : SkinWindow
         FillTracks();
     }
 
+    /// <summary>Columns a podcast's episodes use: the rest (artist, album, genre, rating…) say nothing about an episode.</summary>
+    private static readonly HashSet<string> PodcastColumns = ["Title", "Length", "Plays", "LastPlayed"];
+    private const double PlaysWidth = 24, HeardWidth = 30; // "HEARD" needs a little more than "PLAYS"
+    private const double TimeWidth = 22, LongTimeWidth = 30;
+    private bool _podcastColumns;
+
+    /// <summary>Shows the podcast column set or the full one, keeping each column's width and order.</summary>
+    private void ShowColumnSet(bool podcast)
+    {
+        if (podcast == _podcastColumns) return;
+        _podcastColumns = podcast;
+        TrackColumns.Columns.Clear();
+        foreach (var (column, (key, _)) in _columns)
+        {
+            if (podcast && !PodcastColumns.Contains(key)) continue;
+            if (key == "Plays" && column.Width == (podcast ? PlaysWidth : HeardWidth)) column.Width = podcast ? HeardWidth : PlaysWidth;
+            // Episodes run past an hour ("1:00:54" was cut to "1:00:5").
+            if (key == "Length" && column.Width == (podcast ? TimeWidth : LongTimeWidth)) column.Width = podcast ? LongTimeWidth : TimeWidth;
+            TrackColumns.Columns.Add(column);
+        }
+        if (_sortKey is { } k && podcast && !PodcastColumns.Contains(k)) _sortKey = null;
+        if (_fitTitle is { } fit) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, fit); // the title takes the room the others left
+    }
+
     private void ShowSortMarks()
     {
-        bool history = _nav?.Kind == NavEntry.Kinds.History;
+        bool history = _nav?.Kind == NavEntry.Kinds.History, podcast = _nav?.Kind == NavEntry.Kinds.Podcast;
+        ShowColumnSet(podcast);
         foreach (var (column, (key, fixedHeader)) in _columns)
         {
-            string header = key == "LastPlayed" && history ? "PLAYED" : fixedHeader; // History: when each play happened
+            // History: when each play happened. A podcast: when each episode came out, and how much of it was heard.
+            string header = key switch
+            {
+                "LastPlayed" when history => "PLAYED",
+                "LastPlayed" when podcast => "PUBLISHED",
+                "Plays" when podcast => "HEARD",
+                _ => fixedHeader,
+            };
             column.Header = key == _sortKey ? header + (_sortDescending ? " ▼" : " ▲") : header;
         }
     }
@@ -706,7 +843,7 @@ public partial class LibraryWindow : SkinWindow
             "Genre" => ByText(r => r.Genre),
             "Year" => ByValue(r => r.Track.Year),
             "Rating" => ByValue(r => r.Track.Rating > 0 ? r.Track.Rating : (int?)null),
-            "Plays" => ByValue(r => r.Track.PlayCount > 0 ? r.Track.PlayCount : (int?)null),
+            "Plays" => ByValue(r => r.PlaysValue),
             "LastPlayed" => ByValue(r => r.Played),
             _ => rows,
         };
@@ -723,6 +860,14 @@ public partial class LibraryWindow : SkinWindow
     private void PlayRows(IReadOnlyList<LibraryRow> rows, bool replace)
     {
         if (rows.Count == 0) return;
+        // Episodes go in with their show and title (an address alone would show as a station).
+        if (rows.Any(r => r.Episode is not null))
+        {
+            var tracks = rows.Select(r => r.Episode is not null && _pods.TrackFor(r.Path) is { } t ? t : new Fernplay.Core.Track(r.Path, null, null, null, null, null)).ToList();
+            _ = _c.OpenTracksAsync(tracks, replace);
+            if (!replace) _c.ShowNotice($"Added {tracks.Count:N0} episode{(tracks.Count == 1 ? "" : "s")} to the playlist.");
+            return;
+        }
         // A whole playlist file (nothing picked out of it): open the file itself, so stations keep their names.
         if (_nav is { Kind: NavEntry.Kinds.Playlist, PlaylistPath: { } file } && ReferenceEquals(rows, _shown) && _shown.Count == _searched.Count && _sortKey is null
             && File.Exists(file))
@@ -786,7 +931,7 @@ public partial class LibraryWindow : SkinWindow
         var menu = TrackList.ContextMenu;
         menu.Items.Clear();
         var rows = TrackList.SelectedItems.Cast<LibraryRow>().ToList();
-        if (rows.Count == 0 && _nav?.Kind != NavEntry.Kinds.History) { e.Handled = true; return; } // nothing to act on
+        if (rows.Count == 0 && _nav?.Kind is not (NavEntry.Kinds.History or NavEntry.Kinds.Podcast)) { e.Handled = true; return; } // nothing to act on
         void Add(string header, Action act, bool enabled = true)
         {
             var item = new MenuItem { Header = header, IsEnabled = enabled };
@@ -813,12 +958,91 @@ public partial class LibraryWindow : SkinWindow
                 }
             }
         }
+        var episodes = rows.Where(r => r.Episode is not null).Select(r => r.Path).ToList();
+        if (episodes.Count > 0)
+        {
+            menu.Items.Add(new Separator());
+            Add("Mark as played", () => _pods.Store.SetPlayed(episodes, played: true));
+            Add("Mark as not played", () => _pods.Store.SetPlayed(episodes, played: false));
+            if (episodes.Count == 1) Add("Copy episode address", () => CopyText(episodes[0]));
+        }
+        if (_nav is { Kind: NavEntry.Kinds.Podcast, Show: { } show })
+        {
+            menu.Items.Add(new Separator());
+            AddShowItems(menu, show);
+        }
         if (_nav?.Kind == NavEntry.Kinds.History)
         {
             menu.Items.Add(new Separator());
             Add("Remove from history   Del", RemoveFromHistory, rows.Count > 0);
             Add("Clear history…", ClearHistory, _lib.Index.History.Count > 0);
         }
+    }
+
+    // ================= Podcasts =================
+
+    private void AddPodcast()
+    {
+        var dialog = new PodcastAddDialog(_pods) { Owner = this };
+        if (dialog.ShowDialog() != true || dialog.Podcast is not { } show) return;
+        BuildNav();
+        if (((IEnumerable<NavEntry>)Nav.ItemsSource).FirstOrDefault(n => n.Show == show) is { } entry) Nav.SelectedItem = entry;
+    }
+
+    /// <summary>Right-click on a podcast in the list on the left: the same actions as in its episode list.</summary>
+    private void NavMenu_Opening(object sender, ContextMenuEventArgs e)
+    {
+        var menu = Nav.ContextMenu;
+        menu.Items.Clear();
+        var entry = NavEntryAt(e.OriginalSource);
+        if (entry is { Kind: NavEntry.Kinds.Podcast, Show: { } show }) AddShowItems(menu, show);
+        else if (entry?.Kind == NavEntry.Kinds.AddPodcast || entry?.Text == "PODCASTS")
+        {
+            var add = new MenuItem { Header = "Add podcast…" };
+            add.Click += (_, _) => AddPodcast();
+            menu.Items.Add(add);
+            if (_pods.Store.Shows.Count > 0)
+            {
+                var all = new MenuItem { Header = "Check all podcasts now" };
+                all.Click += (_, _) => _ = _pods.RefreshAsync(force: true);
+                menu.Items.Add(all);
+            }
+        }
+        if (menu.Items.Count == 0) e.Handled = true;
+    }
+
+    private void AddShowItems(ContextMenu menu, PodcastShow show)
+    {
+        void Add(string header, Action act)
+        {
+            var item = new MenuItem { Header = header };
+            item.Click += (_, _) => act();
+            menu.Items.Add(item);
+        }
+        Add("Check for new episodes", () => _ = _pods.RefreshAsync(show));
+        Add("Mark all as played", () => _pods.Store.SetPlayed(show.Episodes.Select(x => x.Url), played: true));
+        Add("Copy feed address", () => CopyText(show.FeedUrl));
+        Add("Unsubscribe…", () => Unsubscribe(show));
+    }
+
+    private void Unsubscribe(PodcastShow show)
+    {
+        var answer = MessageBox.Show(this, $"Unsubscribe from {show.Title}?\n\nIts episode list and how far you got in each are forgotten.",
+            "Fernplay library", MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel);
+        if (answer == MessageBoxResult.OK) _pods.Unsubscribe(show);
+    }
+
+    private void CopyText(string text)
+    {
+        try { Clipboard.SetText(text); _c.ShowNotice("Address copied."); }
+        catch (System.Runtime.InteropServices.COMException) { _c.ShowNotice("Could not copy: another program holds the clipboard."); }
+    }
+
+    private NavEntry? NavEntryAt(object source)
+    {
+        for (var d = source as DependencyObject; d is not null && d != Nav; d = d is Visual ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
+            if (d is ListBoxItem { DataContext: NavEntry entry }) return entry;
+        return null;
     }
 
     private static void ShowInExplorer(string path)

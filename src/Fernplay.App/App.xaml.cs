@@ -82,10 +82,16 @@ public partial class App : Application
 
         // The library: nothing is scanned or saved until a folder is added; hidden unless it was open at the last close.
         var library = new LibraryService(c);
-        var libraryWindow = new LibraryWindow(c, library) { Owner = main };
+        // Podcasts: nothing is read or written until the first one is added. The player asks it which web addresses
+        // are episodes (files with a length, resumed where they stopped) rather than stations.
+        var podcasts = new PodcastService(c, AppIcon.Version);
+        c.Episodes = podcasts;
+        var libraryWindow = new LibraryWindow(c, library, podcasts) { Owner = main };
         libraryWindow.ApplySkin(main.Skin, _settings.SkinSize);
         libraryWindow.LibrarySize = new Size(_settings.LibraryWidth, _settings.LibraryHeight);
         libraryWindow.ResizedByHand += (_, _) => _settings.LibraryHeightByHand = true;
+        libraryWindow.PanesHeight = _settings.LibraryPanesHeight;
+        libraryWindow.PanesResized += (_, _) => _settings.LibraryPanesHeight = libraryWindow.PanesHeight;
         bool libraryPlaced = false, quitting = false;
 
         // As tall as the stack docked to the player (its top to the lowest panel's bottom), until resized by hand.
@@ -176,6 +182,7 @@ public partial class App : Application
             Remote?.Dispose();
             library.StopScan();
             library.SaveNow();
+            podcasts.SaveNow();
             _settings.LibraryVisible = libraryWindow.IsVisible;
             if (libraryPlaced) _settings.Library = new WindowPlace(libraryWindow.Left, libraryWindow.Top);
             _settings.LibraryWidth = libraryWindow.LibrarySize.Width;

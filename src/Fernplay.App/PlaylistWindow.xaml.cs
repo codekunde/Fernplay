@@ -18,7 +18,8 @@ public sealed class PlaylistRow(int number, Track track) : INotifyPropertyChange
 
     public int Number { get; set; } = number;
     public string Text => _track.DisplayName;
-    public string Length => _track.IsStream ? "LIVE" : _track.Duration is { } d ? TimeFormat.Clock(d) : "";
+    // A podcast episode is a web address with a length; a station has none.
+    public string Length => _track.Duration is { } d ? TimeFormat.Clock(d) : _track.IsStream ? "LIVE" : "";
     public string AccessibleName => (IsCurrent ? "Playing: " : "") + Text + (Length == "" ? "" : ", " + Length);
 
     public bool IsCurrent

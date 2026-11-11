@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Podcasts in the media library: PODCASTS ▸ Add podcast… takes a show's RSS feed address (or its Apple Podcasts or pod.link link) and lists its episodes, newest first, with length, how much you heard (✓ when played) and the date each came out. Episodes play from the internet (nothing is downloaded) and carry on where you stopped, a few seconds back; one counts as played once you reach its last minute or last 5 %. Feeds are checked again when the library opens (at most every 30 minutes); the number beside a show counts episodes out since you subscribed and not yet started. Right-click a show or an episode to check for new episodes, mark played or not played, copy the feed address, or unsubscribe. The playlist shows an episode as "Show - Episode" with its length.
+- Media library: drag the divider under the artist and album lists up or down to give them or the track list more room; Fernplay remembers the height.
+- Media library: the app menu's line reads "Media library…   Alt+L", so the shortcut is in sight.
+- Fixed: the media library's resize corner could only make it smaller, then stuck, on a second screen or low on the screen (seen on Windows 11).
+
 ## 0.9.0 (2026-11-10)
 
 - Visualizer: the app menu's Visualizer (MilkDrop3)… starts MilkDrop3, a separate free program (download it from github.com/milkdrop2077/MilkDrop3) that shows full-screen visuals for whatever the PC plays. The first time, point Fernplay at `MilkDrop 3.exe` in MilkDrop3's folder; it remembers the place. A visualizer inside Fernplay is planned.

@@ -45,10 +45,11 @@ public sealed class PlayerEngine : IDisposable
 
     /// <summary>
     /// The real thing: Media Foundation in (files, and stations without song titles), the own ICY reader for MP3
-    /// stations that send titles, WASAPI out.
+    /// stations that send titles, WASAPI out. <paramref name="isEpisode"/> picks out web addresses of podcast episodes
+    /// (audio files, not stations): they go straight to Media Foundation, which seeks in them, and skip the ICY probe.
     /// </summary>
-    public static PlayerEngine CreateDefault() =>
-        new(path => Track.IsStreamPath(path)
+    public static PlayerEngine CreateDefault(Func<string, bool>? isEpisode = null) =>
+        new(path => Track.IsStreamPath(path) && isEpisode?.Invoke(path) != true
             ? (ITrackDecoder?)IcyMp3Decoder.TryOpen(path) ?? new MediaFoundationDecoder(path)
             : new MediaFoundationDecoder(path),
             WasapiAudioOutput.CreateAsync,
