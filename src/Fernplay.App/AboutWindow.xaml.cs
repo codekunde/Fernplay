@@ -39,6 +39,9 @@ public partial class AboutWindow : SkinDialog
         DownloadButton.Visibility = InstallButton.Visibility = Visibility.Collapsed;
         ShowUpdateText("Checking…");
         var result = await UpdateCheck.CheckAsync(CurrentVersion);
+        DiagnosticLog.Write(result.Error is { } failed ? $"update check failed: {failed}"
+            : $"update check: newest {result.Latest!.Version.ToString(3)}, this {CurrentVersion}{(result.IsNewer ? ", newer one out" : "")}" +
+              $", {(IsInstalledCopy ? "installed copy" : "zip copy")}{(result.IsNewer && IsInstalledCopy && UpdateInstaller.Problem(result.Latest) is { } p ? $", no in-place update: {p}" : "")}");
         if (!IsLoaded) return; // closed meanwhile
         UpdateButton.IsEnabled = true;
         if (result.Error is { } error)
@@ -82,9 +85,10 @@ public partial class AboutWindow : SkinDialog
             ShowUpdateText($"Downloading Fernplay {_latest.Version.ToString(3)}…");
             msi = await UpdateInstaller.DownloadAsync(_latest, Path.Combine(Path.GetTempPath(), "Fernplay-update"), CurrentVersion, progress, ct: cts.Token);
         }
-        catch (OperationCanceledException) { return; } // About was closed
+        catch (OperationCanceledException) { DiagnosticLog.Write("update: download cancelled (About closed)"); return; }
         catch (UpdateException ex)
         {
+            DiagnosticLog.Write($"update: download failed: {ex.Message}");
             if (!IsLoaded) return;
             ShowUpdateText($"{ex.Message} DOWNLOAD opens the release page instead.");
             InstallButton.Visibility = Visibility.Collapsed;
@@ -106,6 +110,7 @@ public partial class AboutWindow : SkinDialog
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
+            DiagnosticLog.Write($"update: installer script not started: {ex.Message}");
             ShowUpdateText($"Could not start the installer ({ex.Message}). The installer is in {msi}.");
             InstallButton.IsEnabled = true;
             return;

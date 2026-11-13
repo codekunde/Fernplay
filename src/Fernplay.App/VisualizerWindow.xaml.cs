@@ -6,6 +6,7 @@ using System.Windows.Automation;
 using Fernplay.App.Visualizer;
 using Fernplay.Core.Audio;
 using Fernplay.Core.Skins;
+using DiagnosticLog = Fernplay.Core.DiagnosticLog;
 
 namespace Fernplay.App;
 

@@ -26,11 +26,27 @@ public sealed class WasapiAudioOutput : IAudioOutput
         _player.PlaybackStopped += (s, e) => PlaybackStopped?.Invoke(this, e);
     }
 
-    public static async Task<IAudioOutput> CreateAsync() =>
-        new WasapiAudioOutput(await new WasapiPlayerBuilder()
+    public static async Task<IAudioOutput> CreateAsync()
+    {
+        var output = new WasapiAudioOutput(await new WasapiPlayerBuilder()
             .WithDefaultDeviceStreamRouting()
             .WithLatency(100)
             .BuildAsync());
+        if (DiagnosticLog.Enabled) DiagnosticLog.Write($"audio output: WASAPI shared, default device \"{DefaultDeviceName()}\"");
+        return output;
+    }
+
+    /// <summary>The Windows default playback device's name, for the log.</summary>
+    private static string DefaultDeviceName()
+    {
+        try
+        {
+            using var devices = new NAudio.CoreAudioApi.MMDeviceEnumerator();
+            using var device = devices.GetDefaultAudioEndpoint(NAudio.CoreAudioApi.DataFlow.Render, NAudio.CoreAudioApi.Role.Multimedia);
+            return device.FriendlyName;
+        }
+        catch (Exception ex) { return $"unknown ({ex.GetType().Name})"; } // only for the log: never let it stop playback
+    }
 
     public event EventHandler<StoppedEventArgs>? PlaybackStopped;
     public void Init(ISampleProvider source) => _player.Init(source.ToWaveProvider());

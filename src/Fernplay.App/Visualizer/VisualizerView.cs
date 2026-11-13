@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using Fernplay.Core.Audio;
+using DiagnosticLog = Fernplay.Core.DiagnosticLog;
 using static Fernplay.App.Visualizer.Gl;
 
 namespace Fernplay.App.Visualizer;
@@ -322,7 +323,7 @@ internal sealed class VisualizerView : HwndHost
 
         Presets.projectm_playlist_clear(pl);
         uint added = Directory.Exists(folder) ? Presets.projectm_playlist_add_path(pl, folder, true, false) : 0;
-        DiagnosticLog.Write($"visualizer: {added} presets in {folder}");
+        DiagnosticLog.Write($"visualizer: {added} presets in the folder {Path.GetFileName(folder.TrimEnd('\\', '/'))}");
         if (added == 0) { Raise(v => v.NoPresets?.Invoke(folder)); return; }
         // A–Z by file name, not by folder and ignoring case (projectM's own sort puts "Z" before "a"), so the chooser's
         // list and NEXT with shuffle off follow the names.

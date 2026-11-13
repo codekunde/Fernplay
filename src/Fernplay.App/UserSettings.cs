@@ -128,7 +128,10 @@ public sealed class UserSettings
                 return s;
             }
         }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or NotSupportedException) { }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            Fernplay.Core.DiagnosticLog.Write($"settings.json not read, defaults used: {ex.GetType().Name}: {ex.Message}");
+        }
         return new UserSettings();
     }
 
@@ -142,6 +145,9 @@ public sealed class UserSettings
             File.WriteAllText(tmp, JsonSerializer.Serialize(this, Json));
             File.Move(tmp, FilePath, overwrite: true);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Fernplay.Core.DiagnosticLog.Write($"settings.json not saved: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 }
