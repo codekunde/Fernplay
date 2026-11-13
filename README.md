@@ -80,7 +80,7 @@ If a station plays in the browser but not in Fernplay on the same PC, a firewall
 
 ## Media library
 
-![Fernplay's media library: views on the left, search, artist and album panes with the album cover, and the tracks with ratings and play counts](docs/screenshots/library.png)
+![Fernplay's media library: views and a podcast on the left, search, artist and album panes with the album cover, and the tracks with ratings, play counts and when each last played](docs/screenshots/library.png)
 
 Open it from the app menu (Media library…) or with Alt+L. It is optional: nothing is scanned or saved until you add a folder, and the three panels work as before without it.
 
