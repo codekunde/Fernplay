@@ -30,6 +30,7 @@
       <Directory Id="UserProgramsFolder" Name="Programs">
         <Directory Id="INSTALLFOLDER" Name="Fernplay">
           <Directory Id="AssetsFolder" Name="Assets" />
+          <Directory Id="LicensesFolder" Name="licenses" />
         </Directory>
       </Directory>
     </StandardDirectory>
@@ -54,6 +55,23 @@
         <File Id="FernplayFileIco" Source="$(PublishDir)Assets\FernplayFile.ico" />
         <RegistryValue Root="HKCU" Key="Software\CodeKunde\Fernplay\Install" Name="Assets" Type="integer" Value="1" KeyPath="yes" />
         <RemoveFolder Id="RemoveAssetsFolder" On="uninstall" />
+      </Component>
+      <!-- The visualizer: libprojectM (LGPL-2.1, unmodified, its own DLLs) and GLEW, next to the exe (tools/Build-ProjectM.ps1). -->
+      <Component Id="VisualizerFiles" Directory="INSTALLFOLDER" Guid="F0D284A3-27FB-4E6E-8715-9B40D4AD3357">
+        <File Id="ProjectMDll" Source="$(PublishDir)projectM-4.dll" />
+        <File Id="ProjectMPlaylistDll" Source="$(PublishDir)projectM-4-playlist.dll" />
+        <File Id="GlewDll" Source="$(PublishDir)glew32.dll" />
+        <RegistryValue Root="HKCU" Key="Software\CodeKunde\Fernplay\Install" Name="Visualizer" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+      <!-- Their licence texts (the LGPL asks for it to travel with the library). -->
+      <Component Id="Licenses" Directory="LicensesFolder" Guid="CC7E14E2-7CDA-4D05-8F3F-680B2AC44AEA">
+        <File Id="LicenseProjectM" Source="$(PublishDir)licenses\projectM-LGPL-2.1.txt" />
+        <File Id="LicenseGlew" Source="$(PublishDir)licenses\GLEW-LICENSE.txt" />
+        <File Id="LicenseProjectMEval" Source="$(PublishDir)licenses\projectm-eval-LICENSE.md" />
+        <File Id="LicenseHlslParser" Source="$(PublishDir)licenses\hlslparser-LICENSE.txt" />
+        <File Id="LicenseSoil2Etc1" Source="$(PublishDir)licenses\SOIL2-etc1_utils-Apache-2.0.txt" />
+        <RegistryValue Root="HKCU" Key="Software\CodeKunde\Fernplay\Install" Name="Licenses" Type="integer" Value="1" KeyPath="yes" />
+        <RemoveFolder Id="RemoveLicensesFolder" On="uninstall" />
       </Component>
     </ComponentGroup>
 

@@ -109,6 +109,12 @@ public sealed class PlayerEngine : IDisposable
         }
     }
 
+    /// <summary>
+    /// What is playing, in stereo, for the visualizer (after the EQ, before the volume, like the spectrum). It keeps
+    /// samples only while the visualizer has it switched on.
+    /// </summary>
+    public PcmRing VisualizerPcm { get; } = new();
+
     /// <summary>Spectrum levels 0..1 of what is playing (after the EQ, before the volume); all zero when nothing plays.</summary>
     public float[] GetSpectrum(int bands) =>
         _spectrum is { } s && State == PlayState.Playing ? s.GetLevels(bands) : new float[bands];
@@ -275,7 +281,7 @@ public sealed class PlayerEngine : IDisposable
     {
         // mixer → EQ → spectrum tap → volume → output
         var mixer = new TrackMixer(sampleRate) { NearEndLead = _crossfade + OpenAhead };
-        var spectrum = new SpectrumTap(new EqualizerStage(mixer, Equalizer));
+        var spectrum = new SpectrumTap(new EqualizerStage(mixer, Equalizer), VisualizerPcm);
         var gain = new GainStage(spectrum) { Volume = _volume, Balance = _balance };
         output.Init(gain);
         output.PlaybackStopped += (_, e) => OnStopped(output, e);

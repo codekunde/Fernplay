@@ -40,4 +40,15 @@
     <ProjectReference Include="..\Fernplay.Core\Fernplay.Core.csproj" />
   </ItemGroup>
 
+  <!--
+    The visualizer: libprojectM 4.1.8 (LGPL-2.1, unmodified) and GLEW 2.2.0 as separate DLLs next to Fernplay.exe, never
+    inside the single file, with their licence texts. Built by tools/Build-ProjectM.ps1 into lib/projectM.
+  -->
+  <ItemGroup>
+    <None Include="..\..\lib\projectM\win-x64\*.dll" Link="%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="..\..\lib\projectM\licenses\*" Link="licenses\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
 </Project>

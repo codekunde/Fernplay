@@ -1,0 +1,186 @@
+<local:SkinWindow x:Class="Fernplay.App.VisualizerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Fernplay.App"
+        Title="Fernplay visualizer" ShowInTaskbar="True">
+    <!--
+        Shell: the window's size in screen DIPs (VisualizerSize). Root holds the frame at SkinWindow.Scale. The picture is a
+        child window (VisualizerView) that WPF cannot draw over, so every control sits in the title bar or the bar below.
+        Full screen: the window is maximised, the bars and the frame go, the picture fills the screen.
+    -->
+    <Grid x:Name="Shell" Width="640" Height="408">
+        <!--
+            The preset chooser: a popup is a window of its own, so unlike WPF controls it can sit over the picture (also in
+            full screen). Type to filter; Up/Down or a click shows a preset at once; Enter or a double-click keeps it and
+            closes; Esc closes.
+        -->
+        <Popup x:Name="Chooser" StaysOpen="False" Placement="Relative" AllowsTransparency="False" Closed="Chooser_Closed">
+            <Border x:Name="ChooserFrame" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5" Padding="3">
+                <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
+                <DockPanel Width="190">
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,2">
+                        <TextBlock Text="PRESETS" Style="{StaticResource SkinLabel}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="ChooserCount" Style="{StaticResource SkinLabel}" FontWeight="Normal" Foreground="{StaticResource SkinTextDim}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                    <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Style="{StaticResource SkinTextBox}" TextChanged="Search_TextChanged"
+                             AutomationProperties.Name="Find a preset"
+                             AutomationProperties.HelpText="Type part of the name. Up and Down show the presets in the list; Enter keeps one; Esc closes." />
+                    <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5.5" Foreground="{StaticResource SkinTextDim}"
+                               Margin="0,2,0,0" Text="↑↓ show · Enter keep · Esc close" />
+                    <Border Style="{StaticResource Inset}" Margin="0,2,0,0">
+                        <ListBox x:Name="PresetList" Background="Transparent" BorderThickness="0" Padding="0" Height="150"
+                                 IsTextSearchEnabled="False" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Item"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" DisplayMemberPath="Name"
+                                 SelectionChanged="PresetList_SelectionChanged" MouseDoubleClick="PresetList_DoubleClick"
+                                 AutomationProperties.Name="Presets">
+                            <ListBox.Template>
+                                <ControlTemplate TargetType="ListBox">
+                                    <ScrollViewer Style="{StaticResource SkinScrollViewer}" Focusable="False" CanContentScroll="True"
+                                                  HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter />
+                                    </ScrollViewer>
+                                </ControlTemplate>
+                            </ListBox.Template>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                                    <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+                                    <Setter Property="ToolTip" Value="{Binding Path}" />
+                                    <Setter Property="Foreground" Value="{StaticResource SkinText}" />
+                                    <Setter Property="FontFamily" Value="{StaticResource SkinFont}" />
+                                    <Setter Property="FontSize" Value="6.5" />
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="Row" Background="Transparent" Padding="2,0.5,3,0.5">
+                                                    <ContentPresenter TextBlock.Foreground="{TemplateBinding Foreground}" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Row" Property="Background" Value="#14301A" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="Row" Property="Background" Value="#1D4A26" />
+                                                        <Setter Property="Foreground" Value="{StaticResource LcdGreen}" />
+                                                    </Trigger>
+                                                    <MultiTrigger>
+                                                        <MultiTrigger.Conditions>
+                                                            <Condition Property="IsKeyboardFocused" Value="True" />
+                                                            <Condition Property="local:FocusRing.Visible" Value="True" />
+                                                        </MultiTrigger.Conditions>
+                                                        <Setter TargetName="Row" Property="BorderBrush" Value="#6FAE62" />
+                                                        <Setter TargetName="Row" Property="BorderThickness" Value="0.5" />
+                                                    </MultiTrigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+                    </Border>
+                </DockPanel>
+            </Border>
+        </Popup>
+
+        <Border x:Name="Root" Background="{StaticResource PanelBrush}" BorderBrush="#5A5F72" BorderThickness="0.5">
+            <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid x:Name="TitleBar" Height="10" Margin="2,2,2,0" Style="{StaticResource TitleBar}">
+                    <!-- The visualizer's menu (also on a right-click on the picture, which matters in full screen). -->
+                    <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Left" Padding="1,1">
+                        <Button x:Name="MenuButton" Width="8" Height="8" Click="MenuButton_Click" Cursor="Hand"
+                                FocusVisualStyle="{StaticResource SkinFocus}"
+                                ToolTip="Presets and options (or right-click the picture)" AutomationProperties.Name="Visualizer menu">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="Transparent"><ContentPresenter /></Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <Image x:Name="MenuIcon" Width="8" Height="8" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <Button.ContextMenu>
+                                <!-- The shortcut in the line itself (as in the player's menu): Fernplay's menu template draws no gesture column. -->
+                                <ContextMenu x:Name="VisMenu" Opened="VisMenu_Opened">
+                                    <MenuItem x:Name="ChooseMenuItem" Header="Choose preset…   Ctrl+F" Click="Choose_Click"
+                                              AutomationProperties.Name="Choose preset" AutomationProperties.AcceleratorKey="Ctrl+F" />
+                                    <MenuItem x:Name="ShuffleMenuItem" Header="Shuffle" IsCheckable="True" Checked="ShuffleMenu_Changed" Unchecked="ShuffleMenu_Changed"
+                                              AutomationProperties.HelpText="On: presets in random order. Off: A to Z from the one showing." />
+                                    <MenuItem x:Name="LockMenuItem" Header="Lock preset   L" IsCheckable="True" Checked="LockMenu_Changed" Unchecked="LockMenu_Changed"
+                                              AutomationProperties.Name="Lock preset" AutomationProperties.AcceleratorKey="L" />
+                                    <MenuItem x:Name="OnTopMenuItem" Header="Always on top" IsCheckable="True" Checked="OnTopMenu_Changed" Unchecked="OnTopMenu_Changed" />
+                                    <Separator />
+                                    <MenuItem x:Name="FullMenuItem" Header="Full screen   F" Click="Full_Click"
+                                              AutomationProperties.Name="Full screen" AutomationProperties.AcceleratorKey="F" />
+                                    <MenuItem Header="Preset folder…" Click="Folder_Click" />
+                                    <Separator />
+                                    <MenuItem Header="Close   Ctrl+Shift+K" Click="Close_Click"
+                                              AutomationProperties.Name="Close the visualizer" AutomationProperties.AcceleratorKey="Ctrl+Shift+K" />
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                    </Border>
+                    <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Center" Padding="5,0">
+                        <TextBlock Text="FERNPLAY VISUALIZER" Style="{StaticResource TitleLabel}" VerticalAlignment="Center" />
+                    </Border>
+                    <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Right" Padding="1,1">
+                        <Button Style="{StaticResource TitleButton}" Content="x" Click="Close_Click"
+                                ToolTip="Close the visualizer (Ctrl+Shift+K)" AutomationProperties.Name="Close the visualizer" />
+                    </Border>
+                </Grid>
+
+                <!-- The picture, or a message in its place (no preset folder yet, no presets, cannot run here). -->
+                <!-- Focusable: it holds the keyboard when the bars are hidden (full screen), so Esc, N, P… keep working. -->
+                <Border x:Name="PictureFrame" Grid.Row="1" Margin="4,3,4,0" Background="Black" BorderBrush="#24262F" BorderThickness="0.5"
+                        Focusable="True" FocusVisualStyle="{x:Null}" AutomationProperties.Name="Visualizer picture"
+                        MouseRightButtonUp="Picture_RightClick">
+                    <Grid x:Name="Picture">
+                        <StackPanel x:Name="MessagePanel" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="260" Visibility="Collapsed">
+                            <TextBlock x:Name="MessageText" Style="{StaticResource SkinLabel}" FontWeight="Normal" Foreground="{StaticResource SkinText}"
+                                       TextWrapping="Wrap" TextAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+                            <Button x:Name="MessageFolderButton" Style="{StaticResource SkinButton}" Content="CHOOSE PRESET FOLDER…" Height="11" Padding="6,0"
+                                    HorizontalAlignment="Center" Margin="0,6,0,0" Click="Folder_Click"
+                                    AutomationProperties.Name="Choose a folder with MilkDrop presets" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Grid x:Name="BottomBar" Grid.Row="2" Height="11" Margin="4,3,4,3">
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="BackButton" Style="{StaticResource SkinButton}" Content="BACK" Width="24" Click="Back_Click"
+                                ToolTip="Previous preset (P)" AutomationProperties.Name="Previous preset" AutomationProperties.AcceleratorKey="P" />
+                        <Button x:Name="NextButton" Style="{StaticResource SkinButton}" Content="NEXT" Width="24" Margin="2,0,0,0" Click="Next_Click"
+                                ToolTip="Next preset (N)" AutomationProperties.Name="Next preset" AutomationProperties.AcceleratorKey="N" />
+                        <ToggleButton x:Name="LockToggle" Style="{StaticResource LedToggle}" Content="LOCK" Height="11" Margin="2,0,0,0"
+                                      Checked="Lock_Changed" Unchecked="Lock_Changed"
+                                      ToolTip="Keep this preset until NEXT or BACK (L)" AutomationProperties.Name="Lock the preset" AutomationProperties.AcceleratorKey="L" />
+                        <Button x:Name="FullButton" Style="{StaticResource SkinButton}" Content="FULL SCREEN" Padding="4,0" Margin="6,0,0,0" Click="Full_Click"
+                                ToolTip="Full screen (F or double-click the picture; Esc to leave)" AutomationProperties.Name="Full screen" AutomationProperties.AcceleratorKey="F" />
+                        <Button x:Name="FolderButton" Style="{StaticResource SkinButton}" Content="FOLDER…" Padding="4,0" Margin="2,0,0,0" Click="Folder_Click"
+                                ToolTip="Choose the folder with MilkDrop presets (.milk)" AutomationProperties.Name="Choose the preset folder" />
+                    </StackPanel>
+                    <!-- The preset showing. -->
+                    <TextBlock x:Name="PresetText" Style="{StaticResource LcdText}" FontSize="6" HorizontalAlignment="Right" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" Margin="190,0,10,0" AutomationProperties.LiveSetting="Polite" />
+                    <Thumb x:Name="Grip" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="8" Height="8" Margin="0,0,-3,-2" Cursor="SizeNWSE"
+                           Focusable="False" ToolTip="Drag to resize the visualizer" DragStarted="Grip_DragStarted" DragDelta="Grip_DragDelta"
+                           DragCompleted="Grip_DragCompleted">
+                        <Thumb.Template>
+                            <ControlTemplate TargetType="Thumb">
+                                <Grid Background="Transparent">
+                                    <Path Data="M7,1 L1,7 M7,4 L4,7" Stroke="#9CA2B5" StrokeThickness="0.6" />
+                                </Grid>
+                            </ControlTemplate>
+                        </Thumb.Template>
+                    </Thumb>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</local:SkinWindow>

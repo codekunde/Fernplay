@@ -159,17 +159,53 @@ public partial class App : Application
         if (library.Index.Folders.Count > 0)
             Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => _ = library.ScanAsync()); // pick up changes since the last run
 
-        foreach (var panel in new Window[] { main, eq, playlist, libraryWindow })
-        {
+        void RouteKeys(Window panel) =>
             panel.PreviewKeyDown += (s, args) =>
             {
+                if (args.Handled) return; // the visualizer's own keys (N, P, F…) come first
                 var key = args.Key == System.Windows.Input.Key.System ? args.SystemKey : args.Key;
                 var mods = System.Windows.Input.Keyboard.Modifiers;
                 // Typing in the library's search box: letters and Space are text, not player keys (Alt+L still works).
                 if (System.Windows.Input.Keyboard.FocusedElement is System.Windows.Controls.TextBox && !(key == System.Windows.Input.Key.L && mods == System.Windows.Input.ModifierKeys.Alt)) return;
-                if (main.HandleKey(key, mods, s == main)) args.Handled = true;
+                if (main.HandleKey(key, mods, s == main))
+                {
+                    args.Handled = true;
+                    FocusRing.KeyWasShortcut(panel);
+                }
             };
+        foreach (var panel in new Window[] { main, eq, playlist, libraryWindow }) RouteKeys(panel);
+
+        // The visualizer: made when opened, closed (projectM and its GL context freed) when closed.
+        VisualizerWindow? visualizer = null;
+        void RememberVisualizer(VisualizerWindow v)
+        {
+            var size = v.VisualizerSize;
+            (_settings.VisualizerWidth, _settings.VisualizerHeight) = (size.Width, size.Height);
+            if (!v.IsFullScreen) _settings.Visualizer = new WindowPlace(v.Left, v.Top);
         }
+        void ShowVisualizer(bool show)
+        {
+            if (!show) { visualizer?.Close(); return; }
+            if (visualizer is null)
+            {
+                // Not owned by the player: an owned window is always above its owner, and becomes topmost with it, so
+                // with the player "always on top" the visualizer covered everything (owner's laptop, 2026-11-13). Its own
+                // taskbar button instead, and its own "always on top" (VisualizerOnTop, off by default).
+                var v = visualizer = new VisualizerWindow(c.Engine.VisualizerPcm, _settings) { Topmost = _settings.VisualizerOnTop };
+                RouteKeys(v);
+                v.Closing += (_, _) => RememberVisualizer(v);
+                v.Closed += (_, _) => { if (visualizer == v) visualizer = null; if (!quitting) _settings.VisualizerOpen = false; };
+                // Beside the player's stack (or the library when it is beside the player), unless a place was saved.
+                var right = libraryWindow.IsVisible && Math.Abs(libraryWindow.Top - main.Top) < 1 ? libraryWindow : (Window)main;
+                Place(v, _settings.Visualizer, new Point(right.Left + right.ActualWidth, main.Top));
+                v.Show();
+                _settings.VisualizerOpen = true;
+            }
+            visualizer.Activate();
+        }
+        main.ShowVisualizer = ShowVisualizer;
+        main.VisualizerShown = () => visualizer is not null;
+        if (_settings.VisualizerOpen) ShowVisualizer(true);
         ApplyWindowSettings(_settings);
         main.Activate();
 
@@ -184,6 +220,8 @@ public partial class App : Application
             library.SaveNow();
             podcasts.SaveNow();
             _settings.LibraryVisible = libraryWindow.IsVisible;
+            _settings.VisualizerOpen = visualizer is not null;
+            if (visualizer is not null) RememberVisualizer(visualizer);
             if (libraryPlaced) _settings.Library = new WindowPlace(libraryWindow.Left, libraryWindow.Top);
             _settings.LibraryWidth = libraryWindow.LibrarySize.Width;
             _settings.LibraryHeight = libraryWindow.LibrarySize.Height;
@@ -319,7 +357,7 @@ public partial class App : Application
     {
         SkinWindow.SnapEnabled = s.SnapPanels;
         foreach (Window w in Current.Windows)
-            if (w is SkinWindow) w.Topmost = s.AlwaysOnTop;
+            if (w is SkinWindow and not VisualizerWindow) w.Topmost = s.AlwaysOnTop; // the visualizer has its own setting
     }
 
     /// <summary>Uses the saved position when it is still on a screen, otherwise the fallback.</summary>

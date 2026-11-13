@@ -4,11 +4,14 @@ using NAudio.Wave;
 namespace Fernplay.Core.Audio;
 
 /// <summary>
-/// Keeps the most recent samples (mixed to mono) so the window can draw a spectrum analyser.
-/// Passes audio through unchanged.
+/// Keeps the most recent samples (mixed to mono) so the window can draw a spectrum analyser, and hands them in
+/// stereo to <see cref="Pcm"/> for the visualizer. Passes audio through unchanged.
 /// </summary>
-public sealed class SpectrumTap(ISampleProvider source) : ISampleProvider
+public sealed class SpectrumTap(ISampleProvider source, PcmRing? pcm = null) : ISampleProvider
 {
+    /// <summary>The visualizer's samples (it keeps nothing while switched off).</summary>
+    public PcmRing? Pcm { get; } = pcm;
+
     private const int Size = 1024; // FFT length (power of two)
     private readonly float[] _ring = new float[Size];
     private int _pos;
@@ -20,6 +23,7 @@ public sealed class SpectrumTap(ISampleProvider source) : ISampleProvider
     {
         int n = source.Read(buffer);
         int ch = WaveFormat.Channels;
+        Pcm?.Write(buffer[..n], ch);
         lock (_gate)
         {
             for (int i = 0; i + ch <= n; i += ch)

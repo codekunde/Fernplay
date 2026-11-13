@@ -23,8 +23,22 @@ public static class FocusRing
         EventManager.RegisterClassHandler(typeof(Window), UIElement.PreviewMouseDownEvent,
             new MouseButtonEventHandler((s, _) => SetVisible((Window)s, false)), handledEventsToo: true);
         EventManager.RegisterClassHandler(typeof(Window), UIElement.PreviewKeyDownEvent,
-            new KeyEventHandler((s, e) => { if (!IsModifierOnly(e)) SetVisible((Window)s, true); }), handledEventsToo: true);
+            new KeyEventHandler((s, e) =>
+            {
+                if (IsModifierOnly(e)) return;
+                _before = GetVisible((Window)s);
+                SetVisible((Window)s, true);
+            }), handledEventsToo: true);
     }
+
+    private static bool _before; // the ring before the key now being handled (one UI thread)
+
+    /// <summary>
+    /// The key was a shortcut (Space, Z X C V B, N…), not keyboard navigation: the ring goes back to how it was. Without
+    /// this, Space after clicking STOP drew the ring around STOP until the next mouse click (owner, Windows 11, 2026-11-13).
+    /// Class handlers run before the windows' own, so this undoes the change made above for the same key.
+    /// </summary>
+    public static void KeyWasShortcut(Window w) => SetVisible(w, _before);
 
     // Alt, Ctrl, Shift or Windows alone (Alt+Tab to another app, for example) is not keyboard navigation.
     private static bool IsModifierOnly(KeyEventArgs e)

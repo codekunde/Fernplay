@@ -94,6 +94,20 @@ Open it from the app menu (Media library…) or with Alt+L. It is optional: noth
 
 The library docks beside the player, as tall as the panels together, and keeps that height when the skin or its size changes, until you drag its bottom-right corner. It is kept in `library.json` next to the settings.
 
+## Visualizer
+
+Open it from the app menu (Visualizer…) or with Ctrl+Shift+K. It draws MilkDrop presets with [projectM](https://github.com/projectM-visualizer/projectm) from what Fernplay plays (after the equalizer, before the volume, so it moves even when the volume is down), in its own window that you can move, dock and resize from its bottom-right corner.
+
+- **Presets:** Fernplay comes without presets. The first time, CHOOSE PRESET FOLDER… picks a folder with MilkDrop presets (`.milk` files; subfolders count too), for example the `presets` folder of MilkDrop 2 or 3 or of Winamp, or one of projectM's preset packs. FOLDER… changes it later. Textures named by presets are looked for in that folder and in a `textures` folder in it or next to it.
+- **Switching:** a new preset every 20 seconds, in random order (Settings → ADVANCED → VISUALIZER PRESET TIME, 5 seconds to 5 minutes; a change applies at once). NEXT (N) and BACK (P or Backspace) go forward and back through the presets shown; LOCK (L) keeps the current one until you press NEXT or BACK. The preset's name shows bottom right.
+- **Menu:** the button at the top left, or a right-click on the picture (also in full screen): Choose preset…, Shuffle (off: NEXT and the timer go A to Z from the preset showing), Lock preset, Always on top, Full screen, Preset folder…, Close.
+- **Choose preset… (Ctrl+F):** every preset A to Z, with a search box: type part of a name (several words narrow it down). Up and Down, or a click, show a preset at once; Enter or a double-click keeps it and closes the list; Esc closes it.
+- **On top:** the visualizer has its own window and taskbar button and stays behind other programs unless you tick Always on top in its menu (the player's "always on top" leaves it alone). Full screen is always on top.
+- **Full screen:** FULL SCREEN, F, F11, Alt+Enter or a double-click on the picture; Esc or the same again goes back. It fills the screen the window is on.
+- Nothing is drawn while the window is minimised or closed, and closing it frees the graphics memory. It needs OpenGL 3.3 (any graphics driver from the last ten years); if it cannot run, it says why in the window and the player carries on.
+
+Fernplay remembers the folder, LOCK, Shuffle, Always on top, and the window's place and size, and opens the visualizer again at the next start if it was open.
+
 ## File info (editing tags)
 
 Alt+3, as on the classic player, opens a track's file info: title, artist, album, album artist, track number, year, genre, composer and comment. In the playlist and the library it is the selected track (also on the right-click menu, and on a classic skin's MISC button); on the player it is the track that is playing. SAVE writes only the fields you changed into the file; an emptied field is removed. Several artists go in one field with a semicolon (`A; B`).
@@ -115,6 +129,10 @@ Tags are written by Windows itself, the same way Explorer's Details pane edits t
 | Alt+3 | File info: edit the tags of the selected track (playlist, library) or the playing one (player) |
 | Alt+L | Show or hide the media library |
 | Ctrl+W | Windowshade: roll the player up to a thin strip, or down again |
+| Ctrl+Shift+K | Open or close the visualizer |
+| N / P or Backspace / L | Next preset, previous preset, lock the preset (visualizer) |
+| F, F11 or Alt+Enter / Esc | Full screen on or off / off (visualizer) |
+| Ctrl+F | Choose a preset from the list (visualizer) |
 | Ctrl+F | Search the library; Esc clears the search, Esc again hands the keys back to the player |
 | Shift+Enter | Add the selected tracks to the playlist (library) |
 | 0 to 5 | Rate the selected tracks (library) |
@@ -133,8 +151,6 @@ A media-button pause in the first 3 seconds of a song is ignored: some Windows 1
 
 Open them from the Fernplay icon at the top left of the player (Settings…, About Fernplay, Exit). About shows the version; CHECK FOR UPDATE asks GitHub for the newest release. When there is a newer one, the installed Fernplay offers UPDATE (download, check, install, restart); a portable or zip copy offers DOWNLOAD, which opens the release page.
 
-**Visualizer (MilkDrop3)…** in the same menu starts [MilkDrop3](https://github.com/milkdrop2077/MilkDrop3), a separate free program that shows full-screen visuals for whatever the PC plays (Fernplay does not hand it any audio). The first time, point Fernplay at `MilkDrop 3.exe` in MilkDrop3's folder; it remembers the place and asks again if the file has moved.
-
 Settings has two tabs. **General:**
 
 - **Keep Fernplay on top** of other windows.
@@ -146,6 +162,7 @@ Settings has two tabs. **General:**
 **Advanced:**
 
 - **Crossfade:** how long one song fades into the next when XFADE is on, 1 to 12 seconds.
+- **Visualizer preset time:** how long the visualizer shows each preset, 5 seconds to 5 minutes (20 seconds at first).
 - **Volume levelling:** OFF, TRACK (every song at the same loudness) or ALBUM (every album at the same loudness, the quiet and loud songs within it kept). Fernplay reads the ReplayGain tags in MP3 (ID3v2, APEv2), FLAC and M4A files; a tagger such as foobar2000, MusicBee or rsgain writes them. While it is on, files without tags and radio stations play 6 dB quieter, so they sit close to tagged music.
 - **Phone remote:** lets the Fernplay app on your phone control this player over the home Wi-Fi (play, pause, stop, skip, seek, volume, shuffle, repeat, crossfade, pick from the playlist). Off by default. **Pair a phone…** shows a 6-digit code for 2 minutes to type into the app once; paired phones are listed with REMOVE. The connection is encrypted and only phones on the local network are answered (TCP port 47800, discovery on UDP 47801). Windows Firewall asks once the first time it is switched on: allow it on private networks.
 
@@ -182,6 +199,8 @@ The published exe (about 2 MB) is framework-dependent: it needs the .NET 10 Desk
 dotnet publish src/Fernplay.App -c Release -o publish-standalone -p:SelfContained=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
 ```
 
+The visualizer's native DLLs (projectM, GLEW) are committed in `lib/projectM` and copied next to the exe by the build; `tools/Build-ProjectM.ps1` rebuilds them (needs Visual Studio's C++ build tools; see `lib/projectM/README.md`).
+
 `tools/Build-Release.ps1` builds the release files (MSI and both portable zips) into `dist/<version>`. The MSI is built with the [WiX Toolset](https://wixtoolset.org) 5.0.2 SDK (MS-RL), which NuGet fetches (`-SkipMsi` builds only the zips). It stays on 5.0.2: later WiX versions add maintenance-fee terms. App and file icons are drawn by `tools/Make-FernplayIcons.ps1`.
 
 ## How it is built
@@ -190,9 +209,10 @@ Three parts in a chain, each replaceable on its own: **decoder → EQ → output
 
 | Folder | What |
 |---|---|
-| `src/Fernplay.Core` | No UI. `PlayerEngine` (load in the background, play, pause, stop, seek, volume, track end, stream titles), `Audio/` (`MediaFoundationDecoder`; `IcyMp3Decoder`, `IcyStream` and `IcyMetadata` for radio song titles; `Equalizer` and `EqualizerStage` (RBJ peaking biquads), `SpectrumTap` (FFT), `GainStage`, `WasapiAudioOutput`, `ReplayGain` (its own reader for ReplayGain tags, and the gain rule)), `Playlist` (shuffle, repeat, remove, move, opening playlists), `M3u` and `Pls`, `PanelLayout` (snapping and docking maths), `PlaylistHeight`, `Track` and `TagReader` (Windows property system), `ShellRegistration` (Explorer entries under HKCU), `DataFolder` (where settings live: installed or portable), `OpenRequest`, `PlaybackErrors` (including why a station could not be reached), `UpdateCheck` (GitHub's latest release), `TimeFormat`; `Skins/` (`ClassicSkin`: `.wsz` reader with size limits, own `BmpDecoder`, `SkinTextFiles` for PLEDIT/VISCOLOR/REGION, `SpriteMap`, `SkinFont`, `ClassicLayout` and `ClassicPlaylist` positions, `SkinLibrary`, `GenSkin` for the library's frame and colours); `Library/` (`LibraryIndex` (the JSON index, play counts, ratings, history), `LibraryScanner` (background scan, only changed files re-read), `LibraryQuery` (views, search, panes, status line), `PathTags`, `CoverFiles`, `PlayRules`) |
-| `src/Fernplay.App` | `Fernplay.exe`, WPF: `Skin.xaml` (Fernplay's own look: palette, buttons, sliders, menus, scroll bar, glyphs; all drawn, no bitmaps), `SkinControls` (7-segment clock, spectrum, marquee, EQ curve), `SkinWindow` (dragging, snapping, docked panels following a size change), `MainWindow`, `EqWindow`, `PlaylistWindow` (each with a `.Classic.cs` part that builds the skinned view over the same controls), `Classic/` (sprite buttons, sliders, text, clock, spectrum, EQ graph, `GenFrame` for the library), `LibraryWindow` and `LibraryService` (index file, scans, play counting), `CoverCache` (Windows thumbnails and folder pictures), `StarRating`, `SettingsWindow`, `AboutWindow`, `PlayerController`, `MediaSession` (Windows media session through COM, no WinRT package), `SingleInstance`, `ShellNotify`, `FocusRing`, `UserSettings`, `DiagnosticLog` |
+| `src/Fernplay.Core` | No UI. `PlayerEngine` (load in the background, play, pause, stop, seek, volume, track end, stream titles), `Audio/` (`MediaFoundationDecoder`; `IcyMp3Decoder`, `IcyStream` and `IcyMetadata` for radio song titles; `Equalizer` and `EqualizerStage` (RBJ peaking biquads), `SpectrumTap` (FFT, and stereo samples for the visualizer through `PcmRing`), `GainStage`, `WasapiAudioOutput`, `ReplayGain` (its own reader for ReplayGain tags, and the gain rule)), `Playlist` (shuffle, repeat, remove, move, opening playlists), `M3u` and `Pls`, `PanelLayout` (snapping and docking maths), `PlaylistHeight`, `Track` and `TagReader` (Windows property system), `ShellRegistration` (Explorer entries under HKCU), `DataFolder` (where settings live: installed or portable), `OpenRequest`, `PlaybackErrors` (including why a station could not be reached), `UpdateCheck` (GitHub's latest release), `TimeFormat`; `Skins/` (`ClassicSkin`: `.wsz` reader with size limits, own `BmpDecoder`, `SkinTextFiles` for PLEDIT/VISCOLOR/REGION, `SpriteMap`, `SkinFont`, `ClassicLayout` and `ClassicPlaylist` positions, `SkinLibrary`, `GenSkin` for the library's frame and colours); `Library/` (`LibraryIndex` (the JSON index, play counts, ratings, history), `LibraryScanner` (background scan, only changed files re-read), `LibraryQuery` (views, search, panes, status line), `PathTags`, `CoverFiles`, `PlayRules`) |
+| `src/Fernplay.App` | `Fernplay.exe`, WPF: `Skin.xaml` (Fernplay's own look: palette, buttons, sliders, menus, scroll bar, glyphs; all drawn, no bitmaps), `SkinControls` (7-segment clock, spectrum, marquee, EQ curve), `SkinWindow` (dragging, snapping, docked panels following a size change), `MainWindow`, `EqWindow`, `PlaylistWindow` (each with a `.Classic.cs` part that builds the skinned view over the same controls), `Classic/` (sprite buttons, sliders, text, clock, spectrum, EQ graph, `GenFrame` for the library), `LibraryWindow` and `LibraryService` (index file, scans, play counting), `VisualizerWindow` and `Visualizer/` (`VisualizerView`: a child window with an OpenGL context on its own render thread running projectM; `Native`: projectM, its playlist library, GLEW and WGL calls), `CoverCache` (Windows thumbnails and folder pictures), `StarRating`, `SettingsWindow`, `AboutWindow`, `PlayerController`, `MediaSession` (Windows media session through COM, no WinRT package), `SingleInstance`, `ShellNotify`, `FocusRing`, `UserSettings`, `DiagnosticLog` |
 | `installer` | WiX 5.0.2 MSI (`Package.wxs`): per-user, Start menu entry, in-place upgrades, `Fernplay.exe /register` on install and update, `/unregister` on uninstall |
+| `lib/projectM` | The visualizer's native DLLs (libprojectM 4.1.8, LGPL 2.1, unmodified; GLEW 2.2.0) and their licence texts, built by `tools/Build-ProjectM.ps1` |
 | `tests/Fernplay.Tests` | xUnit tests; they write their own audio and use a fake output, so they need no sound card or internet (the station error tests use small servers on localhost) |
 
 Audio: [NAudio](https://github.com/naudio/NAudio) 3.2 (MIT), Media Foundation for decoding, Windows' MP3 codec (ACM) for radio stations with song titles, WASAPI shared mode for output (follows the default device when it changes). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

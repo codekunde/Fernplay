@@ -21,6 +21,8 @@ public partial class SettingsWindow : SkinDialog
         (settings.SkinSize switch { 1 => Size1, 3 => Size3, _ => Size2 }).IsChecked = true;
         XfadeSlider.Value = Player?.CrossfadeSeconds ?? settings.CrossfadeSeconds;
         ShowXfadeLength();
+        PresetTimeSlider.Value = Fernplay.Core.VisualizerTimes.StepIndex(settings.VisualizerPresetSeconds);
+        ShowPresetTime();
         ((Player?.Levelling ?? settings.Levelling) switch
         {
             Fernplay.Core.Audio.LevelMode.Track => LevelTrack,
@@ -167,6 +169,24 @@ public partial class SettingsWindow : SkinDialog
         if (XfadeText is null) return; // during InitializeComponent
         ShowXfadeLength();
         if (_ready) Player?.SetCrossfadeSeconds((int)Math.Round(XfadeSlider.Value));
+    }
+
+    private int PresetSeconds => Fernplay.Core.VisualizerTimes.Steps[(int)Math.Round(PresetTimeSlider.Value)];
+
+    private void PresetTime_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (PresetTimeText is null) return; // during InitializeComponent
+        ShowPresetTime();
+        if (!_ready) return;
+        _settings.VisualizerPresetSeconds = PresetSeconds;
+        foreach (var v in Application.Current.Windows.OfType<VisualizerWindow>()) v.ApplyPresetSeconds(); // an open visualizer at once
+    }
+
+    private void ShowPresetTime()
+    {
+        var text = Fernplay.Core.VisualizerTimes.Format(PresetSeconds);
+        PresetTimeText.Text = text;
+        System.Windows.Automation.AutomationProperties.SetItemStatus(PresetTimeSlider, text.Replace(" S", " seconds").Replace(" MIN", " minutes"));
     }
 
     private void ShowXfadeLength()

@@ -35,8 +35,8 @@
                                 <!-- The shortcut in the line itself (as in the library's menus): Fernplay's menu template draws no gesture column. -->
                                 <MenuItem Header="Media library…   Alt+L" Click="Library_Click"
                                           AutomationProperties.Name="Media library" AutomationProperties.AcceleratorKey="Alt+L" />
-                                <MenuItem Header="Visualizer (MilkDrop3)…" Click="Visualizer_Click"
-                                          ToolTip="Starts MilkDrop3, a separate program that shows what the PC is playing" />
+                                <MenuItem Header="Visualizer…   Ctrl+Shift+K" Click="Visualizer_Click"
+                                          AutomationProperties.Name="Visualizer" AutomationProperties.AcceleratorKey="Ctrl+Shift+K" />
                                 <MenuItem x:Name="XfadeMenuItem" Header="Crossfade" IsCheckable="True"
                                           Checked="XfadeMenu_Changed" Unchecked="XfadeMenu_Changed" />
                                 <MenuItem Header="Settings…" Click="Settings_Click" />

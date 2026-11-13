@@ -32,8 +32,26 @@ public sealed class UserSettings
     public int CrossfadeSeconds { get; set; } = PlayerController.DefaultCrossfade;
     /// <summary>Volume levelling by ReplayGain tags: Off, Track or Album.</summary>
     public Fernplay.Core.Audio.LevelMode Levelling { get; set; }
-    /// <summary>MilkDrop3's exe ("MilkDrop 3.exe") as found once by the user (app menu: Visualizer); null until then.</summary>
+    /// <summary>
+    /// MilkDrop3's exe as found by the user for 0.9.0's Visualizer menu item (which started MilkDrop3); now only a hint
+    /// where presets may be when the preset folder is chosen.
+    /// </summary>
     public string? VisualizerPath { get; set; }
+    /// <summary>The visualizer: folder with MilkDrop presets (subfolders included); null until the user picks one.</summary>
+    public string? VisualizerFolder { get; set; }
+    /// <summary>Seconds each preset shows before the next (5 to 300; Settings offers Fernplay.Core.VisualizerTimes.Steps).</summary>
+    public int VisualizerPresetSeconds { get; set; } = Fernplay.Core.VisualizerTimes.Default;
+    /// <summary>The preset stays until NEXT or BACK.</summary>
+    public bool VisualizerLocked { get; set; }
+    /// <summary>NEXT and the timer pick presets at random; off: A–Z from the one showing.</summary>
+    public bool VisualizerShuffle { get; set; } = true;
+    /// <summary>The visualizer stays above other programs (its own choice, not the player's "always on top").</summary>
+    public bool VisualizerOnTop { get; set; }
+    /// <summary>The visualizer window: open at the last close, its place, its size in skin pixels (0 = default).</summary>
+    public bool VisualizerOpen { get; set; }
+    public WindowPlace? Visualizer { get; set; }
+    public double VisualizerWidth { get; set; }
+    public double VisualizerHeight { get; set; }
     /// <summary>The phone remote: on (listening on the home network) and its TCP port.</summary>
     public bool RemoteOn { get; set; }
     public int RemotePort { get; set; } = Fernplay.Core.Remote.RemoteServer.DefaultPort;

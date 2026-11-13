@@ -153,43 +153,12 @@ public partial class MainWindow : SkinWindow
     private void Settings_Click(object sender, RoutedEventArgs e) => new SettingsWindow(_settings) { Owner = this }.ShowDialog();
     private void About_Click(object sender, RoutedEventArgs e) => new AboutWindow { Owner = this }.ShowDialog();
 
-    /// <summary>Where MilkDrop3 is downloaded from (shown in the file picker's title).</summary>
-    internal const string MilkDropPage = "github.com/milkdrop2077/MilkDrop3";
+    /// <summary>Opens (true) or closes the visualizer window (set by App).</summary>
+    public Action<bool>? ShowVisualizer { get; set; }
+    /// <summary>Whether the visualizer window is open (set by App).</summary>
+    public Func<bool>? VisualizerShown { get; set; }
 
-    /// <summary>
-    /// Starts MilkDrop3 (a separate program; it listens to whatever the PC plays, so no audio is handed over).
-    /// The first time, or when the remembered file is gone, the user points at MilkDrop 3.exe once.
-    /// </summary>
-    private void Visualizer_Click(object sender, RoutedEventArgs e)
-    {
-        var path = _settings.VisualizerPath;
-        if (path is null || !System.IO.File.Exists(path))
-        {
-            var dialog = new Microsoft.Win32.OpenFileDialog
-            {
-                // The release's exe is "MilkDrop 3.exe" (with a space); older ones were MilkDrop3.exe.
-                Title = $"Find MilkDrop 3.exe (download MilkDrop3 from {MilkDropPage})",
-                Filter = "MilkDrop (MilkDrop*.exe)|MilkDrop*.exe|Programs (*.exe)|*.exe",
-            };
-            if (dialog.ShowDialog(this) != true) return;
-            path = _settings.VisualizerPath = dialog.FileName;
-        }
-        try
-        {
-            // Its presets and textures sit next to the exe, so start it in its own folder.
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path)
-            {
-                UseShellExecute = true,
-                WorkingDirectory = System.IO.Path.GetDirectoryName(path)!,
-            });
-            DiagnosticLog.Write($"visualizer started: {System.IO.Path.GetFileName(path)}");
-        }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException)
-        {
-            DiagnosticLog.Write($"visualizer failed: {ex.Message}");
-            _settings.VisualizerPath = null; // ask again next time
-        }
-    }
+    private void Visualizer_Click(object sender, RoutedEventArgs e) => ShowVisualizer?.Invoke(true);
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
@@ -234,6 +203,11 @@ public partial class MainWindow : SkinWindow
             // Alt+3 on the player: file info of the playing track (the playlist and library use their selection).
             if (_c.NowPlaying is { } now) TagEditorWindow.Open(this, _c, now);
             else _c.ShowNotice("Nothing is playing. Select a track in the playlist and press Alt+3 for its file info.");
+            return true;
+        }
+        if (key == Key.K && mods == (ModifierKeys.Control | ModifierKeys.Shift) && ShowVisualizer is not null)
+        {
+            ShowVisualizer(VisualizerShown?.Invoke() != true); // Ctrl+Shift+K opens or closes the visualizer (Winamp's key)
             return true;
         }
         if (key == Key.W && mods == ModifierKeys.Control)

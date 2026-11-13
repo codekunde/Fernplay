@@ -21,7 +21,7 @@
                     <RadioButton x:Name="GeneralTab" GroupName="SettingsTab" Style="{StaticResource LedToggle}" Content="GENERAL" Checked="Tab_Checked"
                                  ToolTip="Windows, playlist, Explorer and skin" AutomationProperties.Name="General settings" />
                     <RadioButton x:Name="AdvancedTab" GroupName="SettingsTab" Style="{StaticResource LedToggle}" Content="ADVANCED" Margin="2,0,0,0" Checked="Tab_Checked"
-                                 ToolTip="Crossfade length, volume levelling and the phone remote" AutomationProperties.Name="Advanced settings" />
+                                 ToolTip="Crossfade length, volume levelling, visualizer preset time and the phone remote" AutomationProperties.Name="Advanced settings" />
                 </StackPanel>
                 <Border Height="0.5" Background="#4A4F62" Margin="0,5,0,6" />
 
@@ -95,6 +95,22 @@
                         </StackPanel>
                         <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5" Margin="0,3,0,0" TextWrapping="Wrap"
                                    Text="Uses the ReplayGain tags in MP3, FLAC and M4A files (a tagger such as foobar2000 or MusicBee writes them). Files without tags and stations play 6&#160;dB quieter, to match." />
+
+                        <Border Height="0.5" Background="#4A4F62" Margin="0,7,0,6" />
+                        <TextBlock Text="VISUALIZER PRESET TIME" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" Margin="0,0,0,4" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="28" />
+                            </Grid.ColumnDefinitions>
+                            <!-- The value is a step number (VisualizerTimes.Steps): 5 s to 5 min. -->
+                            <Slider x:Name="PresetTimeSlider" Style="{StaticResource SkinSliderH}" Minimum="0" Maximum="11" SmallChange="1" LargeChange="1"
+                                    IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" ValueChanged="PresetTime_ValueChanged"
+                                    AutomationProperties.Name="Visualizer: time each preset shows" />
+                            <TextBlock x:Name="PresetTimeText" Grid.Column="1" Style="{StaticResource SkinLabel}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5" Margin="0,3,0,0" TextWrapping="Wrap"
+                                   Text="How long the visualizer shows each preset before the next (LOCK in the visualizer keeps one). From 5 seconds to 5 minutes." />
 
                         <Border Height="0.5" Background="#4A4F62" Margin="0,7,0,6" />
                         <TextBlock Text="PHONE REMOTE" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" Margin="0,0,0,4" />
