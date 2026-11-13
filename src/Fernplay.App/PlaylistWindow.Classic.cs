@@ -262,12 +262,15 @@ public partial class PlaylistWindow
         var f = v.Frame;
         f.Children.Clear();
         f.Width = width; f.Height = height;
+        // The frame is put together at the skin's own pixels and shown as one image. Each 25 px tile as its own Image,
+        // scaled 1.5x, landed on half pixels and some drew a 1 px line from the row next to it: grey dashes along the
+        // title bar on Bento (owner, 2026-11-13; the same as the library's GEN frame).
+        var visual = new DrawingVisual();
+        var dc = visual.RenderOpen();
         void Img(string sprite, int x, int y)
         {
             var s = SpriteMap.Get(sprite);
-            var img = new Image { Source = bm[sprite], Width = s.W, Height = s.H, Stretch = Stretch.Fill };
-            Canvas.SetLeft(img, x); Canvas.SetTop(img, y);
-            f.Children.Add(img);
+            if (bm[sprite] is { } source) dc.DrawImage(source, new Rect(x, y, s.W, s.H));
         }
         string state = v.Active ? "Active" : "Inactive";
         for (int x = 25; x < width - 25; x += 25) Img($"Pl.TopTile.{state}", x, 0);
@@ -283,6 +286,11 @@ public partial class PlaylistWindow
         if (P.VisualizerX(width) is { } vx) Img("Pl.Visualizer", vx, bottomY);
         Img("Pl.BottomLeft", 0, bottomY);
         Img("Pl.BottomRight", bottomRight, bottomY);
+        dc.Close();
+        var composed = new System.Windows.Media.Imaging.RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        composed.Render(visual);
+        composed.Freeze();
+        f.Children.Add(new Image { Source = composed, Width = width, Height = height, Stretch = Stretch.Fill });
 
         v.ListArea.Width = P.ListWidth(width);
         v.ListArea.Height = listHeight;

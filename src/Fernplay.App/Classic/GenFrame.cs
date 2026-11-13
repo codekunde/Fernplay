@@ -28,7 +28,7 @@ public sealed class GenFrame : FrameworkElement
     public GenSkin? Gen
     {
         get => _gen;
-        set { _gen = value; _bitmaps = value is null ? null : new SkinBitmaps(value.Skin); _cut.Clear(); InvalidateVisual(); }
+        set { _gen = value; _bitmaps = value is null ? null : new SkinBitmaps(value.Skin); _cut.Clear(); _composed = null; InvalidateVisual(); }
     }
 
     private double _scale = 1;
@@ -73,8 +73,30 @@ public sealed class GenFrame : FrameworkElement
         if (_gen is null || _scale <= 0) return;
         int w = (int)Math.Round(ActualWidth / _scale), h = (int)Math.Round(ActualHeight / _scale);
         if (w <= 0 || h <= 0) return;
-        dc.PushClip(new RectangleGeometry(new Rect(0, 0, ActualWidth, ActualHeight)));
-        dc.PushTransform(new ScaleTransform(_scale, _scale));
+        // The frame is put together at the skin's own pixels and scaled once, as one image. Scaling each 25 px tile on
+        // its own at 1.5x put tiles on half pixels, and some drew a 1 px line from the row next to it: light dashes along
+        // Bento's title bar (owner, 2026-11-13).
+        var key = (w, h, _active, _closePressed, _title);
+        if (_composed is null || _composedKey != key)
+        {
+            var visual = new DrawingVisual();
+            RenderOptions.SetBitmapScalingMode(visual, BitmapScalingMode.NearestNeighbor);
+            using (var frame = visual.RenderOpen()) DrawFrame(frame, w, h);
+            var bitmap = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(visual);
+            bitmap.Freeze();
+            (_composed, _composedKey) = (bitmap, key);
+        }
+        dc.DrawImage(_composed, new Rect(0, 0, w * _scale, h * _scale));
+    }
+
+    private RenderTargetBitmap? _composed;
+    private (int, int, bool, bool, string) _composedKey;
+
+    /// <summary>The whole frame at the skin's own pixels (1 unit = 1 skin pixel).</summary>
+    private void DrawFrame(DrawingContext dc, int w, int h)
+    {
+        if (_gen is null) return;
         string state = _active ? "Active" : "Inactive";
 
         void Draw(string sprite, int x, int y, int pw, int ph)
@@ -108,7 +130,5 @@ public sealed class GenFrame : FrameworkElement
                 if (Letter(sheetX, lw) is { } bmp) dc.DrawImage(bmp, new Rect(tx + lx, GenSkin.LettersTop, lw, GenSkin.LetterHeight));
 
         if (_closePressed) Draw("Gen.Close.Pressed", w - GenSkin.CloseRight, GenSkin.CloseTop, GenSkin.CloseSize, GenSkin.CloseSize);
-        dc.Pop();
-        dc.Pop();
     }
 }

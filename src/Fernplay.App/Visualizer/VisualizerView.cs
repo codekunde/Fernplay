@@ -38,8 +38,9 @@ internal sealed class VisualizerView : HwndHost
 
     /// <summary>The preset now showing (its place in the A–Z list, file name without .milk); raised on the UI thread.</summary>
     public event Action<int, string>? PresetChanged;
-    /// <summary>Right-click on the picture (the child window gets the mouse, not WPF); raised on the UI thread.</summary>
-    public event Action? MenuWanted;
+    /// <summary>Right-click on the picture (the child window gets the mouse, not WPF), at this screen point in device
+    /// pixels; raised on the UI thread.</summary>
+    public event Action<System.Windows.Point>? MenuWanted;
     /// <summary>The visualizer cannot run here (reason for the user); raised on the UI thread, once.</summary>
     public event Action<string>? Failed;
     /// <summary>The folder has no presets projectM can read; raised on the UI thread.</summary>
@@ -62,10 +63,60 @@ internal sealed class VisualizerView : HwndHost
     public bool Paused { get => _paused; set => _paused = value; }
 
     /// <summary>
-    /// The window is being resized by hand: no frames are drawn until it ends. Drawing on while Windows moves the child
-    /// window, and projectM rebuilding its textures for every new size, made dragging the grip sluggish (2026-11-13).
+    /// The window is being resized by hand. The picture keeps playing at its size until the drag ends: made smaller, it
+    /// is cut to the new size by a window region (which leaves projectM's drawing surface alone); made larger, the new
+    /// part stays black. On Windows 11 every resize of the picture's window blanks it until the next frame, so resizing
+    /// it along with the mouse made the drag sluggish (every move) or flicker (every 100 ms), and drawing nothing left it
+    /// black (owner, 2026-11-13).
     /// </summary>
-    public bool Resizing { get => _resizing; set => _resizing = value; }
+    public bool Resizing
+    {
+        get => _resizing;
+        set
+        {
+            if (_resizing == value) return;
+            _resizing = value;
+            if (value || _hwnd == IntPtr.Zero) return;
+            SetWindowRgn(_hwnd, IntPtr.Zero, true); // the whole picture again
+            _clip = null;
+            if (_pendingBox is { } box) { _pendingBox = null; Place(box); }
+        }
+    }
+
+    private System.Windows.Rect? _pendingBox;
+    private (int W, int H)? _clip;
+
+    protected override void OnWindowPositionChanged(System.Windows.Rect box)
+    {
+        if (_resizing && _placed != System.Windows.Rect.Empty)
+        {
+            _pendingBox = box; // placed when the drag ends
+            // Cut the picture to the new size where it is smaller (device pixels, from the picture's top left).
+            var clip = ((int)Math.Round(Math.Min(box.Width, _placed.Width)), (int)Math.Round(Math.Min(box.Height, _placed.Height)));
+            if (clip != _clip && _hwnd != IntPtr.Zero)
+            {
+                _clip = clip;
+                SetWindowRgn(_hwnd, CreateRectRgn(0, 0, clip.Item1, clip.Item2), true); // Windows owns the region from here
+            }
+            return;
+        }
+        _pendingBox = null;
+        Place(box);
+    }
+
+    [DllImport("gdi32")] private static extern IntPtr CreateRectRgn(int left, int top, int right, int bottom);
+    [DllImport("user32")] private static extern int SetWindowRgn(IntPtr hwnd, IntPtr region, bool redraw);
+
+    // WPF calls OnWindowPositionChanged on every layout pass (about 20 times a second while playing): an unchanged place
+    // is not sent to Windows again. (HwndHost holds the child to the layout's rectangle; it cannot be placed otherwise.)
+    private System.Windows.Rect _placed = System.Windows.Rect.Empty;
+
+    private void Place(System.Windows.Rect box)
+    {
+        if (box == _placed) return;
+        _placed = box;
+        base.OnWindowPositionChanged(box);
+    }
 
     /// <summary>Shuffle off: NEXT goes on in A–Z order from the preset showing.</summary>
     public void SetShuffle(bool on) => _commands.Enqueue((_, pl) => Presets.projectm_playlist_set_shuffle(pl, _shuffle = on));
@@ -87,6 +138,10 @@ internal sealed class VisualizerView : HwndHost
     /// <summary>Locked: the preset stays until Next or Back (no automatic change).</summary>
     public void SetLocked(bool locked) => _commands.Enqueue((_, _) => { _locked = locked; _presetShown.Restart(); });
 
+    /// <summary>Held: no automatic change for now (the preset chooser is open), whatever LOCK says.</summary>
+    public void SetHeld(bool held) => _commands.Enqueue((_, _) => { _held = held; _presetShown.Restart(); });
+    private bool _held; // render thread
+
     /// <summary>Takes effect for the preset showing now: one shown longer than the new time moves on at once.</summary>
     public void SetPresetSeconds(double seconds) => _commands.Enqueue((_, _) => _presetSeconds = seconds);
 
@@ -100,8 +155,6 @@ internal sealed class VisualizerView : HwndHost
         {
             var wc = new WNDCLASSEX
             {
-                // No CS_HREDRAW/CS_VREDRAW: while the window is resized (no frames drawn) the last frame stays and only
-                // the part that is new gets painted black.
                 cbSize = Marshal.SizeOf<WNDCLASSEX>(), style = CS_OWNDC | CS_DBLCLKS,
                 lpfnWndProc = Marshal.GetFunctionPointerForDelegate(Proc), hInstance = GetModuleHandle(null),
                 hCursor = LoadCursor(IntPtr.Zero, 32512), lpszClassName = ClassName, // IDC_ARROW
@@ -129,13 +182,15 @@ internal sealed class VisualizerView : HwndHost
 
     private static IntPtr WindowProc(IntPtr hwnd, int msg, IntPtr w, IntPtr l)
     {
-        // projectM paints every pixel, so no flash of the class background; while resizing nothing is drawn, so the
-        // part of the window that is new is painted black.
-        if (msg == WM_ERASEBKGND && !(Views.TryGetValue(hwnd, out var e) && e._resizing)) return 1;
+        if (msg == WM_ERASEBKGND) return 1; // projectM paints every pixel: no flash of the class background
         if (msg == WM_LBUTTONDBLCLK && Views.TryGetValue(hwnd, out var v))
             v.Dispatcher.BeginInvoke(() => v.DoubleClicked?.Invoke());
         if (msg == WM_RBUTTONUP && Views.TryGetValue(hwnd, out var m))
-            m.Dispatcher.BeginInvoke(() => m.MenuWanted?.Invoke());
+        {
+            var at = new POINT { X = (short)(l.ToInt64() & 0xFFFF), Y = (short)((l.ToInt64() >> 16) & 0xFFFF) };
+            ClientToScreen(hwnd, ref at);
+            m.Dispatcher.BeginInvoke(() => m.MenuWanted?.Invoke(new System.Windows.Point(at.X, at.Y)));
+        }
         // The picture never keeps the keyboard: with the focus in this child window WPF gets no keys at all, so Esc,
         // N, P and the player's keys would stop working. Hand it back to WPF.
         if (msg == WM_SETFOCUS && Views.TryGetValue(hwnd, out var f))
@@ -210,15 +265,8 @@ internal sealed class VisualizerView : HwndHost
                     frame = 0;
                     continue;
                 }
-                if (_resizing)
-                {
-                    Thread.Sleep(15); // the size is taken once the drag ends
-                    clock.Restart();
-                    frame = 0;
-                    continue;
-                }
                 _presetShown.Start();
-                if (!_locked && _presetShown.Elapsed.TotalSeconds >= _presetSeconds)
+                if (!_locked && !_held && _presetShown.Elapsed.TotalSeconds >= _presetSeconds)
                 {
                     _presetShown.Restart(); // also when the folder has no presets: try again after the time, not every frame
                     Presets.projectm_playlist_play_next(pl, false);
@@ -304,6 +352,8 @@ internal sealed class VisualizerView : HwndHost
     private static extern bool SetWaitableTimer(IntPtr timer, ref long due, int period, IntPtr completion, IntPtr arg, bool resume);
     [DllImport("kernel32")] private static extern uint WaitForSingleObject(IntPtr handle, uint ms);
     [DllImport("kernel32")] private static extern bool CloseHandle(IntPtr handle);
+    [StructLayout(LayoutKind.Sequential)] private struct POINT { public int X, Y; }
+    [DllImport("user32")] private static extern bool ClientToScreen(IntPtr hwnd, ref POINT point);
 }
 
 /// <summary>Why the visualizer cannot run, in words for the user.</summary>

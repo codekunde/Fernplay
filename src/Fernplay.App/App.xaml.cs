@@ -122,10 +122,12 @@ public partial class App : Application
             libraryWindow.Top = main.Top;
         }
         main.SkinApplying += NoteLibrarySide;
+        VisualizerWindow? visualizer = null;
         main.SkinApplied += (skin, size) =>
         {
             libraryWindow.ApplySkin(skin, size);
             KeepLibraryBeside();
+            visualizer?.ApplySkin(skin, size);
         };
         main.ShadeChanging += NoteLibrarySide;
         main.ShadeChanged += KeepLibraryBeside;
@@ -176,7 +178,6 @@ public partial class App : Application
         foreach (var panel in new Window[] { main, eq, playlist, libraryWindow }) RouteKeys(panel);
 
         // The visualizer: made when opened, closed (projectM and its GL context freed) when closed.
-        VisualizerWindow? visualizer = null;
         void RememberVisualizer(VisualizerWindow v)
         {
             var size = v.VisualizerSize;
@@ -192,6 +193,7 @@ public partial class App : Application
                 // with the player "always on top" the visualizer covered everything (owner's laptop, 2026-11-13). Its own
                 // taskbar button instead, and its own "always on top" (VisualizerOnTop, off by default).
                 var v = visualizer = new VisualizerWindow(c.Engine.VisualizerPcm, _settings) { Topmost = _settings.VisualizerOnTop };
+                v.ApplySkin(main.Skin, _settings.SkinSize);
                 RouteKeys(v);
                 v.Closing += (_, _) => RememberVisualizer(v);
                 v.Closed += (_, _) => { if (visualizer == v) visualizer = null; if (!quitting) _settings.VisualizerOpen = false; };

@@ -2,8 +2,10 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Automation;
 using Fernplay.App.Visualizer;
 using Fernplay.Core.Audio;
+using Fernplay.Core.Skins;
 
 namespace Fernplay.App;
 
@@ -29,7 +31,14 @@ public partial class VisualizerWindow : SkinWindow
         _settings = settings;
         InitializeComponent();
         AttachDragHandle(TitleBar);
+        AttachDragHandle(FrameTitle);
         MenuIcon.Source = AppIcon.Frame(16);
+        Activated += (_, _) => Frame.IsActiveLook = true;
+        Deactivated += (_, _) => Frame.IsActiveLook = false;
+        DpiChanged += (_, _) => ApplyChrome();
+        SourceInitialized += (_, _) => ApplyChrome(); // the skin's pixel scale depends on the screen's DPI
+        System.ComponentModel.DependencyPropertyDescriptor.FromProperty(ButtonBase.IsPressedProperty, typeof(System.Windows.Controls.Button))
+            .AddValueChanged(FrameClose, (_, _) => Frame.ClosePressed = FrameClose.IsPressed);
         VisualizerSize = new Size(settings.VisualizerWidth, settings.VisualizerHeight);
         LockToggle.IsChecked = settings.VisualizerLocked;
         PreviewKeyDown += OnKey;
@@ -47,12 +56,72 @@ public partial class VisualizerWindow : SkinWindow
         {
             double w = value.Width > 0 ? Math.Max(value.Width, MinSkinWidth) : DefaultWidth;
             double h = value.Height > 0 ? Math.Max(value.Height, MinSkinHeight) : DefaultHeight;
-            Shell.Width = Math.Round(w * Scale);
-            Shell.Height = Math.Round(h * Scale);
+            SetShell(w * Scale, h * Scale);
         }
     }
 
     public bool IsFullScreen => _full;
+
+    /// <summary>
+    /// The window's size in DIPs: whole DIPs, and on a classic skin whole skin pixels, so the frame meets its edges.
+    /// </summary>
+    private void SetShell(double widthDip, double heightDip)
+    {
+        double step = FrameScale > 0 ? FrameScale : 1;
+        Shell.Width = Math.Max(step, Math.Round(widthDip / step) * step);
+        Shell.Height = Math.Max(step, Math.Round(heightDip / step) * step);
+    }
+
+    // ================= Classic skin =================
+
+    private GenSkin? _gen;
+    private int _skinSize = 2;
+    private const string FrameTitleText = "FERNPLAY VISUALIZER"; // drawn in the skin's letters
+
+    /// <summary>Screen DIPs per classic skin pixel while the classic frame is on; 0 in Fernplay's look.</summary>
+    private double FrameScale => _gen is null ? 0 : ClassicScale(_skinSize);
+
+    /// <summary>
+    /// A classic skin (null: Fernplay's look, also for a skin without GEN.BMP): the visualizer then looks like Winamp's
+    /// MilkDrop window, GEN.BMP's frame around the picture and nothing else; presets and options are in the menu
+    /// (right-click) and on the keys.
+    /// </summary>
+    public void ApplySkin(ClassicSkin? skin, int size)
+    {
+        _skinSize = Math.Clamp(size, 1, 3);
+        _gen = skin is null ? null : GenSkin.From(skin);
+        Frame.Gen = _gen;
+        Frame.Title = FrameTitleText;
+        ApplyChrome();
+    }
+
+    /// <summary>What surrounds the picture: Fernplay's bars, the classic frame, or nothing (full screen).</summary>
+    private void ApplyChrome()
+    {
+        bool classic = _gen is not null && !_full, own = _gen is null && !_full;
+        Frame.Visibility = FrameTitle.Visibility = FrameClose.Visibility = FrameGrip.Visibility = classic ? Visibility.Visible : Visibility.Collapsed;
+        TitleBar.Visibility = BottomBar.Visibility = own ? Visibility.Visible : Visibility.Collapsed;
+        PictureFrame.Margin = own ? new Thickness(4, 3, 4, 0) : new Thickness(0);
+        PictureFrame.BorderThickness = Root.BorderThickness = new Thickness(own ? 0.5 : 0);
+        Root.Background = own ? (System.Windows.Media.Brush)FindResource("PanelBrush") : System.Windows.Media.Brushes.Black;
+        double s = FrameScale;
+        if (classic && s > 0)
+        {
+            Frame.SkinScale = s;
+            Root.Margin = new Thickness(GenSkin.LeftWidth * s, GenSkin.TitleHeight * s, GenSkin.RightWidth * s, GenSkin.BottomHeight * s);
+            FrameTitle.Height = GenSkin.TitleHeight * s;
+            FrameClose.Width = FrameClose.Height = GenSkin.CloseSize * s;
+            FrameClose.Margin = new Thickness(0, GenSkin.CloseTop * s, (GenSkin.CloseRight - GenSkin.CloseSize) * s, 0);
+            FrameGrip.Width = FrameGrip.Height = GenSkin.BottomHeight * s;
+        }
+        // Full screen: the picture stops 1 device pixel short of the screen's bottom (a black line). An OpenGL window
+        // covering the whole monitor can be taken over by the driver as exclusive full screen, and Windows then shows no
+        // menu or popup over it: the right-click menu did not appear in full screen on Windows 11 (owner, 2026-11-13).
+        // On Root's margin (screen DIPs), not inside its skin scaling, where layout rounding made one pixel two or none.
+        else Root.Margin = _full ? new Thickness(0, 0, 0, 1 / System.Windows.Media.VisualTreeHelper.GetDpi(this).DpiScaleY) : new Thickness(0);
+        Shell.Background = _full ? System.Windows.Media.Brushes.Black : null;
+        if (!_full) SetShell(Shell.Width, Shell.Height);
+    }
 
     // ================= Picture =================
 
@@ -68,7 +137,7 @@ public partial class VisualizerWindow : SkinWindow
         }
         var view = _view = new VisualizerView(_pcm, folder, PresetSeconds, LockToggle.IsChecked == true, _settings.VisualizerShuffle);
         view.PresetChanged += (index, name) => { _showing = index; PresetText.Text = name; };
-        view.MenuWanted += () => OpenMenu(atMouse: true);
+        view.MenuWanted += OpenMenuAt;
         view.NoPresets += f => PresetText.Text = $"No presets in {Path.GetFileName(f)}";
         view.Failed += reason =>
         {
@@ -205,6 +274,18 @@ public partial class VisualizerWindow : SkinWindow
         VisMenu.IsOpen = true;
     }
 
+    /// <summary>The menu where the picture was right-clicked (a screen point in device pixels).</summary>
+    private void OpenMenuAt(Point devicePixels)
+    {
+        var fromDevice = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformFromDevice ?? System.Windows.Media.Matrix.Identity;
+        var at = fromDevice.Transform(devicePixels);
+        VisMenu.PlacementTarget = PictureFrame;
+        VisMenu.Placement = PlacementMode.AbsolutePoint;
+        VisMenu.HorizontalOffset = at.X;
+        VisMenu.VerticalOffset = at.Y;
+        VisMenu.IsOpen = true;
+    }
+
     private void VisMenu_Opened(object sender, RoutedEventArgs e)
     {
         _syncingMenu = true;
@@ -212,7 +293,12 @@ public partial class VisualizerWindow : SkinWindow
         LockMenuItem.IsChecked = LockToggle.IsChecked == true;
         OnTopMenuItem.IsChecked = _settings.VisualizerOnTop;
         _syncingMenu = false;
-        foreach (var item in new[] { ChooseMenuItem, ShuffleMenuItem, LockMenuItem }) item.IsEnabled = _view is not null;
+        foreach (var item in new[] { ChooseMenuItem, NextMenuItem, BackMenuItem, ShuffleMenuItem, LockMenuItem }) item.IsEnabled = _view is not null;
+        // The preset showing, as a TextBlock: a plain string header would take "_" in a name as an access key.
+        bool named = !string.IsNullOrEmpty(PresetText.Text);
+        ShowingMenuItem.Header = new System.Windows.Controls.TextBlock { Text = named ? PresetText.Text : "" };
+        ShowingMenuItem.Visibility = ShowingSeparator.Visibility = named ? Visibility.Visible : Visibility.Collapsed;
+        AutomationProperties.SetName(ShowingMenuItem, named ? $"Showing {PresetText.Text}" : "");
         FullMenuItem.Header = _full ? "Leave full screen   Esc" : "Full screen   F";
     }
 
@@ -272,6 +358,7 @@ public partial class VisualizerWindow : SkinWindow
             Chooser.HorizontalOffset = 4 * Scale;
             Chooser.VerticalOffset = 4 * Scale;
             Chooser.IsOpen = true;
+            _view.SetHeld(true); // no timed change while choosing: the list would no longer match the picture
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, () =>
             {
                 Keyboard.Focus(SearchBox);
@@ -360,6 +447,7 @@ public partial class VisualizerWindow : SkinWindow
 
     private void Chooser_Closed(object sender, EventArgs e)
     {
+        _view?.SetHeld(false); // the timer starts over for the preset chosen
         PresetList.ItemsSource = null; // free the list until next time
         _presetView = null;
         _presets = [];
@@ -376,9 +464,7 @@ public partial class VisualizerWindow : SkinWindow
         {
             _sizeBeforeFull = VisualizerSize;
             _full = true;
-            TitleBar.Visibility = BottomBar.Visibility = Visibility.Collapsed;
-            PictureFrame.Margin = new Thickness(0);
-            PictureFrame.BorderThickness = Root.BorderThickness = new Thickness(0);
+            ApplyChrome();
             SizeToContent = SizeToContent.Manual;
             Shell.Width = Shell.Height = double.NaN;
             Topmost = true;
@@ -390,9 +476,7 @@ public partial class VisualizerWindow : SkinWindow
             _full = false;
             WindowState = WindowState.Normal;
             Topmost = _settings.VisualizerOnTop;
-            TitleBar.Visibility = BottomBar.Visibility = Visibility.Visible;
-            PictureFrame.Margin = new Thickness(4, 3, 4, 0);
-            PictureFrame.BorderThickness = Root.BorderThickness = new Thickness(0.5);
+            ApplyChrome();
             VisualizerSize = _sizeBeforeFull;
             SizeToContent = SizeToContent.WidthAndHeight;
         }
@@ -430,8 +514,8 @@ public partial class VisualizerWindow : SkinWindow
         double minW = MinSkinWidth * Scale, minH = MinSkinHeight * Scale;
         double maxW = Math.Max(Math.Max(minW, _gripStartSize.Width), desk.Right - Left);
         double maxH = Math.Max(Math.Max(minH, _gripStartSize.Height), desk.Bottom - Top);
-        Shell.Width = Math.Round(Math.Clamp(_gripStartSize.Width + p.X - _gripStart.X, minW, maxW));
-        Shell.Height = Math.Round(Math.Clamp(_gripStartSize.Height + p.Y - _gripStart.Y, minH, maxH));
+        SetShell(Math.Clamp(_gripStartSize.Width + p.X - _gripStart.X, minW, maxW),
+                 Math.Clamp(_gripStartSize.Height + p.Y - _gripStart.Y, minH, maxH));
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
