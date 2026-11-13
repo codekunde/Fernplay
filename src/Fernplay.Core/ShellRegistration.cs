@@ -74,15 +74,30 @@ public sealed class ShellRegistration(RegistryKey root, string exePath, string f
     }
 
     /// <summary>
-    /// True when registered, but for another exe path (the app was moved) or without a file type a newer
-    /// Fernplay plays (.pls came later): call <see cref="Register"/> again.
+    /// True when registered, but for another exe path (the app was moved), without a file type a newer
+    /// Fernplay plays (.pls came later), or with the old second "Add to Fernplay playlist" verb that 0.10.0 and
+    /// earlier wrote under the ProgIDs: call <see cref="Register"/> again.
     /// </summary>
     public bool NeedsRefresh()
     {
         using var k = root.OpenSubKey($@"{Classes}\{AudioProgId}\shell\open\command");
         if (k is null) return false;
         if (!string.Equals(k.GetValue(null) as string, OpenCommand, StringComparison.OrdinalIgnoreCase)) return true;
+        if (OldEnqueueKeys.Any(KeyExists)) return true;
         return AudioExtensions.Any(e => !HasProgId(e, AudioProgId)) || PlaylistExtensions.Any(e => !HasProgId(e, PlaylistProgId));
+    }
+
+    /// <summary>
+    /// Up to 0.10.0 "Add to Fernplay playlist" was also a verb of Fernplay's own file types. Where Fernplay is the
+    /// default app, Explorer then listed it twice (that verb and the SystemFileAssociations one).
+    /// </summary>
+    private static readonly string[] OldEnqueueKeys =
+        [$@"{Classes}\{AudioProgId}\shell\enqueue", $@"{Classes}\{PlaylistProgId}\shell\enqueue"];
+
+    private bool KeyExists(string path)
+    {
+        using var k = root.OpenSubKey(path);
+        return k is not null;
     }
 
     private bool HasProgId(string ext, string progId)
@@ -155,7 +170,9 @@ public sealed class ShellRegistration(RegistryKey root, string exePath, string f
         using (var icon = k.CreateSubKey("DefaultIcon")) icon.SetValue(null, $"\"{fileIconPath}\"");
         using (var shell = k.CreateSubKey("shell")) shell.SetValue(null, "open");
         WriteVerb($@"{Classes}\{progId}\shell\open", "&Play in Fernplay", OpenCommand);
-        WriteVerb($@"{Classes}\{progId}\shell\enqueue", "&Add to Fernplay playlist", AddCommand);
+        // "Add to Fernplay playlist" comes from SystemFileAssociations only (see WriteExtension), so it shows
+        // once whichever app is the default; the old ProgID copy is removed.
+        DeleteTree($@"{Classes}\{progId}\shell\enqueue");
     }
 
     private void WriteExtension(string ext, string progId)

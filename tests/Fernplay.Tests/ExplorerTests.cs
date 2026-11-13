@@ -42,7 +42,11 @@ public sealed class ExplorerTests : IDisposable
         Assert.False(reg.NeedsRefresh());
 
         Assert.Equal($"\"{Exe}\" \"%1\"", Value(@"Software\Classes\Fernplay.Audio\shell\open\command"));
-        Assert.Equal($"\"{Exe}\" /add \"%1\"", Value(@"Software\Classes\Fernplay.Audio\shell\enqueue\command"));
+        // "Add to Fernplay playlist" once: from SystemFileAssociations, not also as a verb of Fernplay's file types.
+        Assert.False(KeyExists(@"Software\Classes\Fernplay.Audio\shell\enqueue"));
+        Assert.False(KeyExists(@"Software\Classes\Fernplay.Playlist\shell\enqueue"));
+        Assert.Equal($"\"{Exe}\" /add \"%1\"", Value(@"Software\Classes\SystemFileAssociations\.mp3\shell\Fernplay.Enqueue\command"));
+        Assert.Equal($"\"{Exe}\" /add \"%1\"", Value(@"Software\Classes\SystemFileAssociations\.m3u\shell\Fernplay.Enqueue\command"));
         Assert.Equal("Player", Value(@"Software\Classes\Fernplay.Audio\shell\open", "MultiSelectModel"));
         Assert.Equal($"\"{Icon}\"", Value(@"Software\Classes\Fernplay.Playlist\DefaultIcon"));
 
@@ -80,6 +84,27 @@ public sealed class ExplorerTests : IDisposable
             Assert.Equal(["OtherPlayer.mp3"], owp!.GetValueNames());
         using (var apps = _root.OpenSubKey(@"Software\RegisteredApplications"))
             Assert.Equal(["OtherPlayer"], apps!.GetValueNames());
+    }
+
+    [Fact]
+    public void The_old_second_add_verb_from_0_10_0_is_removed_on_the_next_start()
+    {
+        var reg = new ShellRegistration(_root, Exe, Icon);
+        reg.Register();
+        // What 0.10.0 and earlier also wrote: Explorer showed "Add to Fernplay playlist" twice where Fernplay is the default.
+        foreach (var progId in new[] { "Fernplay.Audio", "Fernplay.Playlist" })
+        {
+            using var cmd = _root.CreateSubKey($@"Software\Classes\{progId}\shell\enqueue\command");
+            cmd.SetValue(null, $"\"{Exe}\" /add \"%1\"");
+        }
+        Assert.True(reg.NeedsRefresh());
+
+        reg.Register();
+        Assert.False(reg.NeedsRefresh());
+        Assert.False(KeyExists(@"Software\Classes\Fernplay.Audio\shell\enqueue"));
+        Assert.False(KeyExists(@"Software\Classes\Fernplay.Playlist\shell\enqueue"));
+        Assert.True(KeyExists(@"Software\Classes\Fernplay.Audio\shell\open\command"));
+        Assert.True(KeyExists(@"Software\Classes\SystemFileAssociations\.mp3\shell\Fernplay.Enqueue\command"));
     }
 
     [Fact]
