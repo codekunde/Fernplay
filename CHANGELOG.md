@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.0 (2026-11-13)
 
 - Visualizer inside Fernplay: app menu → Visualizer… (or Ctrl+Shift+K) opens a window that draws MilkDrop presets with projectM from what Fernplay plays. Pick a folder with presets (`.milk`) the first time; Fernplay ships none. A new preset comes every 20 seconds; Settings → ADVANCED → VISUALIZER PRESET TIME sets 5 seconds to 5 minutes. NEXT and BACK (N, P) step through the presets, LOCK (L) keeps one, FULL SCREEN (F, F11, Alt+Enter or a double-click; Esc leaves) fills the screen. Choose preset… (Ctrl+F, in the menu at the top left or on a right-click on the picture) lists every preset A to Z with a search box; Up and Down show each one at once. Shuffle can be turned off (A to Z instead), and the visualizer stays behind other programs unless its own Always on top is ticked. The window can be moved, docked and resized (the picture holds still while you drag), and is remembered with the folder. With a classic skin on, it takes the skin's general-window frame (`GEN.BMP`), as Winamp's MilkDrop did, and the controls move to the right-click menu and the keys. Nothing is drawn while it is minimised or closed. This replaces 0.9.0's menu item that started MilkDrop3; MilkDrop3's `presets` folder works here. The installer and zips grow by about 0.7 MB (projectM, GLEW and their licence texts).
 - Fixed: on some classic skins (Bento, for example) at 1.5x, the playlist's and the library's frames showed faint grey dashes along the title bar. Each frame is now drawn at the skin's own pixels and scaled as one picture.

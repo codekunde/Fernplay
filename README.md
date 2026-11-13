@@ -1,6 +1,6 @@
 # <img src="docs/fernplay.svg" width="28" height="32" alt=""> Fernplay
 
-A small music player for Windows in the style of the late-90s desktop players: a player panel with a green LCD, a 10-band equalizer and a playlist, as three panels that snap together and come apart. It also plays internet radio and has an optional media library. No account, and nothing goes online except the radio stations you play and the update check when you press it.
+A small music player for Windows in the style of the late-90s desktop players: a player panel with a green LCD, a 10-band equalizer and a playlist, as three panels that snap together and come apart. It also plays internet radio and has an optional media library. No account, and nothing goes online except the radio stations and podcast episodes you play, the podcast feeds you subscribe to, and the update check when you press it.
 
 Windows 10 (1607 or later) and 11, x64.
 
@@ -10,7 +10,7 @@ Download from [Releases](https://github.com/codekunde/Fernplay/releases). Most p
 
 ### Installer (recommended)
 
-**`Fernplay-<version>-win-x64.msi`** (about 56 MB, .NET included, nothing else to install)
+**`Fernplay-<version>-win-x64.msi`** (about 57 MB, .NET included, nothing else to install)
 
 1. Double-click the MSI. It installs in a few seconds, for your Windows account only, with no admin prompt.
 2. Start Fernplay from the Start menu (type "Fernplay").
@@ -25,8 +25,8 @@ The installer puts Fernplay in `%LOCALAPPDATA%\Programs\Fernplay` and sets it up
 
 ### Portable (no install)
 
-- **`Fernplay-<version>-win-x64-standalone.zip`** (about 57 MB, .NET included)
-- **`Fernplay-<version>-win-x64.zip`** (under 1 MB): needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (x64). If it is missing, Fernplay says so at start with a link to it.
+- **`Fernplay-<version>-win-x64-standalone.zip`** (about 58 MB, .NET included)
+- **`Fernplay-<version>-win-x64.zip`** (about 2 MB): needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (x64). If it is missing, Fernplay says so at start with a link to it.
 
 Unzip anywhere, a USB stick included, and run `Fernplay.exe`. A portable Fernplay keeps its settings, library and skins in a `Data` folder next to `Fernplay.exe`, because of the `portable.txt` file beside it. On its first start it copies them from an installed Fernplay, if there is one. Delete `portable.txt` to use `%APPDATA%\CodeKunde\Fernplay` instead.
 
@@ -91,6 +91,7 @@ Open it from the app menu (Media library…) or with Alt+L. It is optional: noth
 - **Covers:** the picture inside the file, or `folder.jpg`, `cover.jpg`, `front.jpg` or an `AlbumArt` picture in the album's folder.
 - **Ratings:** click the stars (the same star again clears it), press 0 to 5, or right-click. Ratings stay in Fernplay's library; music files are never changed.
 - **Missing tags** are filled from folder and file names: `Artist\Album\01 - Title.mp3` or `01 - Artist - Title.mp3`.
+- **Podcasts:** PODCASTS ▸ Add podcast… takes a show's RSS feed address (or its Apple Podcasts or pod.link link) and lists its episodes, newest first, with length, how much you heard (✓ when played) and the date. Episodes play from the internet (nothing is downloaded) and carry on where you stopped, a few seconds back; one counts as played in its last minute or last 5 %. Feeds are checked again when the library opens (at most every 30 minutes); the number beside a show counts new episodes not yet started. Right-click a show or an episode to check for new episodes, mark played or not played, copy the feed address, or unsubscribe. Subscriptions and progress are kept in `podcasts.json` next to the settings.
 
 The library docks beside the player, as tall as the panels together, and keeps that height when the skin or its size changes, until you drag its bottom-right corner. It is kept in `library.json` next to the settings.
 
@@ -165,7 +166,7 @@ Settings has two tabs. **General:**
 - **Crossfade:** how long one song fades into the next when XFADE is on, 1 to 12 seconds.
 - **Visualizer preset time:** how long the visualizer shows each preset, 5 seconds to 5 minutes (20 seconds at first).
 - **Volume levelling:** OFF, TRACK (every song at the same loudness) or ALBUM (every album at the same loudness, the quiet and loud songs within it kept). Fernplay reads the ReplayGain tags in MP3 (ID3v2, APEv2), FLAC and M4A files; a tagger such as foobar2000, MusicBee or rsgain writes them. While it is on, files without tags and radio stations play 6 dB quieter, so they sit close to tagged music.
-- **Phone remote:** lets the Fernplay app on your phone control this player over the home Wi-Fi (play, pause, stop, skip, seek, volume, shuffle, repeat, crossfade, pick from the playlist). Off by default. **Pair a phone…** shows a 6-digit code for 2 minutes to type into the app once; paired phones are listed with REMOVE. The connection is encrypted and only phones on the local network are answered (TCP port 47800, discovery on UDP 47801). Windows Firewall asks once the first time it is switched on: allow it on private networks.
+- **Phone remote:** lets [Fernplay for Android](https://github.com/codekunde/Fernplay-Android) on your phone control this player over the home Wi-Fi (play, pause, stop, skip, seek, volume, shuffle, repeat, crossfade, pick from the playlist). Off by default. **Pair a phone…** shows a 6-digit code for 2 minutes to type into the app once; paired phones are listed with REMOVE. The connection is encrypted and only phones on the local network are answered (TCP port 47800, discovery on UDP 47801). Windows Firewall asks once the first time it is switched on: allow it on private networks.
 
 Fernplay remembers the panel positions, which panels are shown, volume, balance, EQ and your own EQ presets, shuffle, repeat, crossfade, volume levelling, whether the phone remote is on, the playlist's height and width, the skin and its size, the playlist and station names in `%APPDATA%\CodeKunde\Fernplay\settings.json` (a portable copy: `Data\settings.json` next to `Fernplay.exe`). The `FERNPLAY_DATA` environment variable points it at another folder. The phone remote keeps its certificate (`remote-cert.bin`) and the paired phones (`remote-phones.bin`) beside it, encrypted for your Windows account.
 
