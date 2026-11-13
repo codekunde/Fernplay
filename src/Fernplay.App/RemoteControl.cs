@@ -85,7 +85,7 @@ public sealed class RemoteControl : IRemoteHost, IDisposable
             server.Start(_settings.RemotePort, LoopbackOnly ? IPAddress.Loopback : IPAddress.Any);
             _server = server;
             try { _discovery = new RemoteDiscovery(LoopbackOnly ? 0 : RemoteDiscovery.DefaultPort, PcName, server.Port, server.Fingerprint); }
-            catch (SocketException) { } // another program holds the discovery port: typing the address still works
+            catch (SocketException ex) { DiagnosticLog.Write($"remote: discovery off, UDP {RemoteDiscovery.DefaultPort} taken ({ex.SocketErrorCode})"); } // typing the address still works
             DiagnosticLog.Write($"remote on, port {server.Port}{(LoopbackOnly ? " (this PC only)" : "")}");
         }
         catch (SocketException ex)
@@ -98,6 +98,7 @@ public sealed class RemoteControl : IRemoteHost, IDisposable
         {
             Problem = $"Could not start the remote: {ex.Message}";
         }
+        if (Problem is not null) DiagnosticLog.Write($"remote not started: {Problem}");
         StatusChanged?.Invoke(this, EventArgs.Empty);
         return IsOn;
     }
@@ -118,7 +119,11 @@ public sealed class RemoteControl : IRemoteHost, IDisposable
         StatusChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public void RemovePhone(string id) => PhonesStore.Remove(id);
+    public void RemovePhone(string id)
+    {
+        DiagnosticLog.Write("remote: a paired phone removed in Settings");
+        PhonesStore.Remove(id);
+    }
 
     /// <summary>
     /// The PC's IPv4 addresses on its real networks, for typing into the phone. Networks without a gateway (WSL,

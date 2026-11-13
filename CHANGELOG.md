@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The diagnostics log is now off unless switched on from the command line: `Fernplay.exe /diagnostics on`, `/diagnostics off` and `/diagnostics status` (or `--diagnostics`). A running Fernplay starts or stops logging within two seconds; the command opens no window and plays nothing. Each copy has its own switch (`diagnostics.on` beside the settings). Switching off keeps what was logged. Copies updated from 0.10.0 stop writing `diagnostics.log` until it is switched on.
+- The diagnostics log notes more: which Fernplay and Windows when it starts, each file or station opened (decoder, format, time taken), the audio device and its errors, what a station's server answered, its titles, drops and reconnects, messages Fernplay showed, stop and play requests and what asked for them, podcast feed errors, update checks and downloads, phone remote connections, pairing and sign-in refusals (never keys), library scans, settings that could not be read or saved, a skin that could not be loaded, the Windows media session, and errors nothing else caught. The visualizer's preset folder is logged by its name only.
 - Fixed: where Fernplay is the default app for a file type, Explorer's right-click menu showed "Add to Fernplay playlist" twice. It shows once now; the first start after the update tidies up the old entry.
 
 ## 0.10.0 (2026-11-13)

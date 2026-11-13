@@ -56,6 +56,7 @@ public sealed unsafe class MediaSession : IDisposable
         }
         catch (Exception ex) when (ex is COMException or EntryPointNotFoundException or DllNotFoundException or InvalidOperationException)
         {
+            Fernplay.Core.DiagnosticLog.Write($"Windows media session not joined (no media keys or lock-screen card): {ex.GetType().Name} 0x{ex.HResult:X8}");
             s.Dispose();
             return null;
         }

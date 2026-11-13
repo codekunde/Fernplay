@@ -165,20 +165,24 @@ public sealed class PlayerEngine : IDisposable
     {
         int opening = ++_generation;
         Detach();
+        long started = Environment.TickCount64;
         var (decoder, tags) = await Task.Run(() => Open(path));
         if (opening != _generation) { decoder.Dispose(); throw new OperationCanceledException("Another track was loaded meanwhile."); }
+        DiagnosticLog.Write($"opened {DiagnosticLog.Name(path)} in {Environment.TickCount64 - started} ms: {Describe(decoder)}{(tags is null ? "" : ", ReplayGain tags")}");
         try
         {
             if (_output is null || _outputBroken)
             {
+                DiagnosticLog.Write(_outputBroken ? "audio output: opening a new one after an error" : "audio output: opening");
                 CloseOutput();
                 var output = await _createOutput();
                 if (opening != _generation) { output.Dispose(); throw new OperationCanceledException("Another track was loaded meanwhile."); }
                 OpenChain(output, decoder.WaveFormat.SampleRate);
             }
         }
-        catch
+        catch (Exception ex)
         {
+            if (ex is not OperationCanceledException) DiagnosticLog.Write($"audio output could not be opened: {PlaybackErrors.Detail(ex)}");
             decoder.Dispose();
             throw;
         }
@@ -298,6 +302,14 @@ public sealed class PlayerEngine : IDisposable
         mixer?.SetCurrent(null);
     }
 
+    /// <summary>"MediaFoundationDecoder, 44100 Hz 2 ch, 3:41" for the log.</summary>
+    private static string Describe(ITrackDecoder d)
+    {
+        var f = d.WaveFormat;
+        string length = d.TotalTime > TimeSpan.Zero ? $", {d.TotalTime:h\\:mm\\:ss}" : ", live";
+        return $"{d.GetType().Name}, {f.SampleRate} Hz {f.Channels} ch{length}";
+    }
+
     private void OnSwitched(TrackMixer mixer, ITrackDecoder decoder)
     {
         if (mixer != _mixer || decoder != _queuedDecoder || _queuedPath is not { } path) return;
@@ -310,6 +322,7 @@ public sealed class PlayerEngine : IDisposable
         if (output != _output) return;
         if (e.Exception is not null)
         {
+            DiagnosticLog.Write($"audio output stopped with an error (device gone or changed?): {PlaybackErrors.Detail(e.Exception)}");
             _outputBroken = true; // the next load opens a new one
             SetState(PlayState.Stopped);
             PlaybackFailed?.Invoke(this, e.Exception);

@@ -119,7 +119,12 @@ public sealed class RemoteServer : IAsyncDisposable
             var remote = (client.Client.RemoteEndPoint as IPEndPoint)?.Address;
             bool full;
             lock (_gate) full = _sessions.Count >= MaxSessions;
-            if (remote is null || !IsLocalNetwork(remote) || full) { client.Dispose(); continue; }
+            if (remote is null || !IsLocalNetwork(remote) || full)
+            {
+                DiagnosticLog.Write($"remote: connection refused ({(full ? "too many connections" : "not from the local network")})");
+                client.Dispose();
+                continue;
+            }
             _ = Task.Run(() => RunAsync(client, ct), ct);
         }
     }
@@ -154,18 +159,25 @@ public sealed class RemoteServer : IAsyncDisposable
                         if (!await AuthenticateAsync(session, first!, hs.Token)) return;
                         break;
                     default:
+                        DiagnosticLog.Write("remote: connection without hello, closed");
                         await session.SendAsync(Error("expected-hello"));
                         return;
                 }
             }
+            DiagnosticLog.Write($"remote: {session.Phone!.Name} connected");
             PhonesChanged?.Invoke(this, EventArgs.Empty);
             await session.SendAsync(new JsonObject { ["t"] = "welcome", ["pc"] = _host.PcName });
             await Task.WhenAll(ReadCommandsAsync(session), PushAsync(session));
         }
-        catch (Exception ex) when (ex is IOException or OperationCanceledException or AuthenticationException or SocketException or ObjectDisposedException or InvalidDataException) { }
+        catch (Exception ex) when (ex is IOException or OperationCanceledException or AuthenticationException or SocketException or ObjectDisposedException or InvalidDataException)
+        {
+            // A closed app or a phone leaving the Wi-Fi ends this way too; the type tells a TLS or timeout problem apart.
+            if (!serverCt.IsCancellationRequested) DiagnosticLog.Write($"remote: {session.Phone?.Name ?? "connection"} ended: {ex.GetType().Name}");
+        }
         finally
         {
             bool wasPhone = session.Phone is not null;
+            if (wasPhone) DiagnosticLog.Write($"remote: {session.Phone!.Name} disconnected");
             lock (_gate) _sessions.Remove(session);
             session.Close();
             client.Dispose();
@@ -178,6 +190,7 @@ public sealed class RemoteServer : IAsyncDisposable
         var result = _pairing.Try(Str(message, "proof"), Fingerprint);
         if (result != PairingResult.Paired)
         {
+            DiagnosticLog.Write($"remote: pairing refused ({result})");
             await session.SendAsync(Error(result switch
             {
                 PairingResult.WrongCode => "wrong-code",
@@ -188,6 +201,7 @@ public sealed class RemoteServer : IAsyncDisposable
             return;
         }
         var phone = _phones.Add(Str(message, "name") ?? "Phone");
+        DiagnosticLog.Write($"remote: {phone.Name} paired"); // never the key
         await session.SendAsync(new JsonObject { ["t"] = "paired", ["id"] = phone.Id, ["key"] = Convert.ToBase64String(phone.Key), ["pc"] = _host.PcName });
         PhonesChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -201,6 +215,7 @@ public sealed class RemoteServer : IAsyncDisposable
         var auth = await session.Reader!.ReadAsync(ct);
         if (Type(auth) != "auth" || phone is null || !RemoteSecurity.SameProof(Str(auth!, "proof"), RemoteSecurity.AuthProof(phone.Key, nonce, Fingerprint)))
         {
+            DiagnosticLog.Write($"remote: sign-in refused ({(phone is null ? "unknown phone, removed or paired with another PC" : $"{phone.Name}, wrong proof")})");
             await session.SendAsync(Error(phone is null ? "unknown-phone" : "bad-proof"));
             return false;
         }

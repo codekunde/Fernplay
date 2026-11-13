@@ -75,19 +75,49 @@ public sealed class IcyMp3Decoder : ITrackDecoder, ILiveStream
                 response = Http.Send(again, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             }
         }
-        catch (HttpRequestException ex) when (ex.HttpRequestError == HttpRequestError.InvalidResponse) { return null; } // e.g. an old "ICY 200 OK" server
-        catch (OperationCanceledException ex) when (timeout.IsCancellationRequested) { throw new TimeoutException($"No answer from {url}.", ex); }
+        catch (HttpRequestException ex) when (ex.HttpRequestError == HttpRequestError.InvalidResponse)
+        {
+            DiagnosticLog.Write($"station {Host(url)}: not plain HTTP (old ICY server?), Media Foundation plays it without titles");
+            return null; // e.g. an old "ICY 200 OK" server
+        }
+        catch (OperationCanceledException ex) when (timeout.IsCancellationRequested)
+        {
+            DiagnosticLog.Write($"station {Host(url)}: no answer in {ConnectTimeout.TotalSeconds:0} s");
+            throw new TimeoutException($"No answer from {url}.", ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            DiagnosticLog.Write($"station {Host(url)}: {PlaybackErrors.Detail(ex)}");
+            throw;
+        }
         try
         {
+            var final = response.RequestMessage?.RequestUri;
+            string type = response.Content.Headers.ContentType?.MediaType ?? "no type";
+            string metaHeader = Header(response, "icy-metaint") ?? "none";
+            DiagnosticLog.Write($"station {Host(url)}: HTTP {(int)response.StatusCode}, {type}, icy-metaint {metaHeader}, icy-br {Header(response, "icy-br") ?? "-"}" +
+                (final is not null && !string.Equals(final.Host, Host(url), StringComparison.OrdinalIgnoreCase) ? $", via {final.Scheme}://{final.Host}" : ""));
             response.EnsureSuccessStatusCode();
             bool mp3 = string.Equals(response.Content.Headers.ContentType?.MediaType, "audio/mpeg", StringComparison.OrdinalIgnoreCase);
             int metaInt = int.TryParse(Header(response, "icy-metaint"), out var m) ? m : 0;
-            if (!mp3 || metaInt <= 0) { response.Dispose(); return null; }
+            if (!mp3 || metaInt <= 0)
+            {
+                DiagnosticLog.Write($"station {Host(url)}: {(mp3 ? "no titles offered" : "not MP3")}, Media Foundation plays it");
+                response.Dispose();
+                return null;
+            }
             return new IcyMp3Decoder(response.Content.ReadAsStream(), metaInt, Header(response, "icy-name"), response);
         }
-        catch (MmException) { response.Dispose(); return null; } // no ACM MP3 codec
+        catch (MmException ex)
+        {
+            DiagnosticLog.Write($"station {Host(url)}: no Windows MP3 codec ({ex.Message}), Media Foundation plays it");
+            response.Dispose();
+            return null;
+        }
         catch { response.Dispose(); throw; }
     }
+
+    private static string Host(string url) => Uri.TryCreate(url, UriKind.Absolute, out var u) ? u.Host : url;
 
     private static string? Header(HttpResponseMessage r, string name) =>
         r.Headers.TryGetValues(name, out var v) || r.Content.Headers.TryGetValues(name, out v) ? v.FirstOrDefault() : null;
@@ -208,6 +238,9 @@ public sealed class IcyMp3Decoder : ITrackDecoder, ILiveStream
         {
             _finished = true;
             _decompressor.Dispose();
+            if (!_stop.IsCancellationRequested)
+                DiagnosticLog.Write($"station stream ended after {TimeSpan.FromSeconds(Interlocked.Read(ref _decodedFrames) / (double)_sampleRate):h\\:mm\\:ss}: " +
+                    (Error is { } e ? PlaybackErrors.Detail(e) : "the station closed it or changed format"));
         }
     }
 
@@ -237,6 +270,7 @@ public sealed class IcyMp3Decoder : ITrackDecoder, ILiveStream
     {
         _finished = true;
         Error ??= new TimeoutException("The station stopped sending.");
+        DiagnosticLog.Write($"station sent nothing for {StallLimit.TotalSeconds:0} s: dropping the connection");
         ThreadPool.QueueUserWorkItem(_ => CloseConnection());
     }
 

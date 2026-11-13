@@ -47,6 +47,7 @@ public sealed class PlayerController : IDisposable
         Engine.StreamTitleChanged += (_, title) => _ui.BeginInvoke(() =>
         {
             if (NowPlaying is not { IsStream: true } || title == StreamTitle) return;
+            DiagnosticLog.Write($"station title: {title ?? "(none)"}");
             StreamTitle = title;
             NowPlayingChanged?.Invoke(this, EventArgs.Empty);
         });
@@ -159,12 +160,16 @@ public sealed class PlayerController : IDisposable
         _reconnects.RemoveAll(t => now - t > ReconnectWindow);
         if (_reconnects.Count >= MaxReconnects || Playlist.Current?.Path != station.Path)
         {
+            DiagnosticLog.Write(_reconnects.Count >= MaxReconnects
+                ? $"station: no reconnect, already {MaxReconnects} in the last minute"
+                : "station: no reconnect, another track is current");
             SetStatus(error is null
                 ? $"Lost the connection to {station.DisplayName}. Press play to try again."
                 : PlaybackErrors.Describe(error, station.Path, station.DisplayName));
             return;
         }
         _reconnects.Add(now);
+        DiagnosticLog.Write($"station: reconnect {_reconnects.Count} of {MaxReconnects} in 2 s ({(error is null ? "stream ended" : "error")})");
         int request = _request;
         SetStatus($"Reconnecting to {station.DisplayName}…");
         await Task.Delay(TimeSpan.FromSeconds(2));
@@ -308,6 +313,7 @@ public sealed class PlayerController : IDisposable
     {
         int request = ++_request;
         if (!reconnecting) _reconnects.Clear();
+        DiagnosticLog.Write($"play #{index + 1} of {Playlist.Tracks.Count}{(forward ? "" : ", going back")}{(reconnecting ? ", reconnecting" : "")} by {DiagnosticLog.Callers(count: 4)}");
         // A track picked here cuts in (no fade); whatever was queued for the old one is dropped by the load.
         _plan++; _queued = null; _nearEndSeen = false;
         string? skipped = null;
@@ -383,6 +389,7 @@ public sealed class PlayerController : IDisposable
     /// <summary>Stop. A station is disconnected (Play connects again, live); a file goes back to its start.</summary>
     public void Stop()
     {
+        DiagnosticLog.Write($"stop asked while {Engine.State} by {DiagnosticLog.Callers()}");
         _request++; // a station still connecting gives up
         if (NowPlaying is { IsStream: true })
         {
@@ -483,6 +490,7 @@ public sealed class PlayerController : IDisposable
 
     public void SetStatus(string? text)
     {
+        if (text is not null && text != Status) DiagnosticLog.Write($"shown: {text}");
         Status = text;
         StatusChanged?.Invoke(this, EventArgs.Empty);
     }

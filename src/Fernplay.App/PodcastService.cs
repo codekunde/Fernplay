@@ -63,7 +63,7 @@ public sealed class PodcastService : IEpisodeSource
         _positionDirty = false;
         if (Store.Shows.Count == 0 && !File.Exists(FilePath)) return;
         try { Store.Save(FilePath); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _c.ShowNotice($"Podcasts not saved: {ex.Message}"); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _c.ShowNotice($"Podcasts not saved: {ex.Message}"); } // logged as shown
     }
 
     // ================= IEpisodeSource =================
@@ -104,9 +104,14 @@ public sealed class PodcastService : IEpisodeSource
             SaveNow();
             return (show, null);
         }
-        catch (FeedException ex) { return (null, ex.Message); }
+        catch (FeedException ex)
+        {
+            DiagnosticLog.Write($"podcast not added: {ex.Message}");
+            return (null, ex.Message);
+        }
         catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or InvalidOperationException or System.Net.Http.HttpRequestException)
         {
+            DiagnosticLog.Write($"podcast not added: {PlaybackErrors.Detail(ex)}");
             return (null, $"Could not read that feed: {ex.Message}");
         }
         finally { SetStatus(null); }
@@ -136,8 +141,12 @@ public sealed class PodcastService : IEpisodeSource
                     var feed = await _client.FetchAsync(show.FeedUrl);
                     Store.Apply(show, feed, DateTime.UtcNow); // back on the UI thread (no ConfigureAwait)
                 }
-                catch (FeedException ex) { Store.SetError(show, ex.Message); }
-                catch (Exception ex) when (ex is IOException or InvalidOperationException or System.Net.Http.HttpRequestException) { Store.SetError(show, ex.Message); }
+                catch (FeedException ex) { Store.SetError(show, ex.Message); DiagnosticLog.Write($"podcast feed {show.Title}: {ex.Message}"); }
+                catch (Exception ex) when (ex is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
+                {
+                    Store.SetError(show, ex.Message);
+                    DiagnosticLog.Write($"podcast feed {show.Title}: {PlaybackErrors.Detail(ex)}");
+                }
                 finally { gate.Release(); }
             }));
         }
@@ -147,6 +156,7 @@ public sealed class PodcastService : IEpisodeSource
             SetStatus(null);
         }
         int added = due.Sum(s => s.Episodes.Count) - before;
+        DiagnosticLog.Write($"podcasts checked: {due.Count} feed{(due.Count == 1 ? "" : "s")}, {added} new episode{(added == 1 ? "" : "s")}, {due.Count(s => s.Error is not null)} failed");
         if (added > 0) _c.ShowNotice($"{added} new podcast episode{(added == 1 ? "" : "s")}.");
     }
 

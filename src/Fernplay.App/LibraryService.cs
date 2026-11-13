@@ -59,7 +59,7 @@ public sealed class LibraryService
     {
         if (Index.Folders.Count == 0 && !File.Exists(FilePath)) return; // never used: no file
         try { Index.Save(FilePath); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _c.ShowNotice($"Library not saved: {ex.Message}"); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _c.ShowNotice($"Library not saved: {ex.Message}"); } // logged as shown
     }
 
     public bool IsScanning => _scan is not null;
@@ -99,8 +99,9 @@ public sealed class LibraryService
             int added = changes.Upserts.Count(u => !known.ContainsKey(u.Path)), changed = changes.Upserts.Count - added;
             string missing = changes.MissingFolders.Count == 0 ? "" : $"; not found: {string.Join(", ", changes.MissingFolders.Select(Path.GetFileName))}";
             LastScan = $"Scanned in {changes.Elapsed.TotalSeconds:0.0} s: {added:N0} new, {changed:N0} changed, {changes.Removed.Count:N0} gone{missing}";
+            DiagnosticLog.Write($"library: {LastScan} ({folders.Count} folder{(folders.Count == 1 ? "" : "s")}, {Index.Tracks.Count:N0} tracks)");
         }
-        catch (OperationCanceledException) { LastScan = "Scan stopped."; }
+        catch (OperationCanceledException) { LastScan = "Scan stopped."; DiagnosticLog.Write("library: scan stopped"); }
         finally
         {
             _scan.Dispose();

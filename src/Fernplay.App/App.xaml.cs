@@ -30,11 +30,27 @@ public partial class App : Application
         base.OnStartup(e);
         if (e.Args is ["/register"]) { RegisterForInstall(); Shutdown(); return; }
         if (e.Args is ["/unregister"]) { UnregisterForUninstall(); Shutdown(); return; }
+        string dataFolder = Path.GetDirectoryName(UserSettings.FilePath)!;
+        DiagnosticLog.Folder = dataFolder;
+        DiagnosticLog.Header = DiagnosticsHeader;
+        // "/diagnostics on|off|status": switches the log for this data folder and exits; a running Fernplay picks the
+        // change up by itself (it watches the switch file), so nothing is sent to it and no window opens.
+        if (DiagnosticsCli.Parse(e.Args) is { } command)
+        {
+            var (text, code) = DiagnosticsCli.Run(command, dataFolder);
+            CliConsole.WriteLine(text, error: code != 0);
+            Shutdown(code);
+            return;
+        }
         var request = OpenRequest.FromArgs(e.Args, Environment.CurrentDirectory);
         _instance = SingleInstance.Claim(request);
         if (_instance is null) { Shutdown(); return; } // handed to the running Fernplay
 
-        if (UserSettings.IsPortable) DataFolder.SeedPortable(UserSettings.AppDataFolder, Path.GetDirectoryName(UserSettings.FilePath)!);
+        // Seeding first: it runs only while the portable data folder does not exist, and the log would create it.
+        bool seeded = UserSettings.IsPortable && DataFolder.SeedPortable(UserSettings.AppDataFolder, dataFolder);
+        WatchForUnhandledErrors();
+        DiagnosticLog.Write($"start: {(request.Paths.Count == 0 ? "no files" : $"{request.Paths.Count} {(request.Add ? "to add" : "to open")}")}");
+        if (seeded) DiagnosticLog.Write("portable: settings copied from the installed copy");
         FocusRing.Install();
         KeepShellRegistrationCurrent();
         _settings = UserSettings.Load();
@@ -255,7 +271,42 @@ public partial class App : Application
 
         if (request.Paths.Count == 0 || request.Add) c.Restore(_settings.Playlist, _settings.CurrentIndex, _settings.StationNames);
         if (request.Paths.Count > 0) Queue(request);
-        _instance.Listen(r => Dispatcher.BeginInvoke(() => { Queue(r); BringToFront(main); }));
+        _instance.Listen(r =>
+        {
+            DiagnosticLog.Write($"another launch handed over {r.Paths.Count} {(r.Add ? "to add" : "to open")}");
+            Dispatcher.BeginInvoke(() => { Queue(r); BringToFront(main); });
+        });
+    }
+
+    /// <summary>First line of the log each time it starts: which Fernplay, where, on what.</summary>
+    private static string DiagnosticsHeader()
+    {
+        string data = Environment.GetEnvironmentVariable("FERNPLAY_DATA") is { Length: > 0 } ? "FERNPLAY_DATA"
+            : UserSettings.IsPortable ? "portable" : "AppData";
+        bool msi = UpdateInstaller.IsInstalledCopy(AppContext.BaseDirectory,
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), UserSettings.IsPortable,
+            Environment.GetEnvironmentVariable("FERNPLAY_DATA"));
+        return $"Fernplay {AppIcon.Version} ({(msi ? "installed" : "zip or own build")}), Windows {Environment.OSVersion.Version}, " +
+            $".NET {Environment.Version}, data folder {data}";
+    }
+
+    /// <summary>Errors nothing caught: noted in the log (they are handled as before: WPF still shows or ends as it did).</summary>
+    private void WatchForUnhandledErrors()
+    {
+        DispatcherUnhandledException += (_, args) => DiagnosticLog.Write($"unhandled error on the UI thread{Where(args.Exception)}: {PlaybackErrors.Detail(args.Exception)}");
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+            DiagnosticLog.Write(args.ExceptionObject is Exception ex
+                ? $"unhandled error{(args.IsTerminating ? ", Fernplay ends" : "")}{Where(ex)}: {PlaybackErrors.Detail(ex)}"
+                : $"unhandled error: {args.ExceptionObject}");
+        TaskScheduler.UnobservedTaskException += (_, args) => DiagnosticLog.Write($"unobserved task error: {PlaybackErrors.Detail(args.Exception)}");
+    }
+
+    /// <summary>" in Type.Method" where the error was thrown, or nothing.</summary>
+    private static string Where(Exception ex)
+    {
+        var inner = ex;
+        while (inner.InnerException is not null) inner = inner.InnerException;
+        return inner.TargetSite is { } m ? $" in {m.DeclaringType?.Name}.{m.Name}" : "";
     }
 
     /// <summary>Puts the remembered classic skin on the player; one that is gone or broken is dropped with a notice.</summary>
@@ -270,6 +321,7 @@ public partial class App : Application
         }
         catch (Fernplay.Core.Skins.SkinLoadException ex)
         {
+            DiagnosticLog.Write($"skin {name} not used: {ex.Message}");
             _settings.Skin = null;
             c.ShowNotice($"Skin not used: {ex.Message}");
         }
@@ -349,6 +401,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        if (_instance is not null) DiagnosticLog.Write("exit");
         _controller?.Dispose();
         _instance?.Dispose();
         base.OnExit(e);
