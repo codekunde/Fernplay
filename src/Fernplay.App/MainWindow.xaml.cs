@@ -96,6 +96,7 @@ public partial class MainWindow : SkinWindow
         ShowRepeat();
         XfadeToggle.IsChecked = _c.CrossfadeOn;
         ShowXfade();
+        SetUpVis();
 
         _c.StateChanged += (_, _) => UpdateState();
         _c.NowPlayingChanged += (_, _) => ShowNowPlaying();
@@ -538,9 +539,8 @@ public partial class MainWindow : SkinWindow
     {
         _frame++;
         if (_shaded) ShadeMarquee.Step(); else TitleMarquee.Step();
-        var levels = _c.Engine.GetSpectrum(SpectrumBars.Bands);
-        Spectrum.Push(levels);
-        ClassicAnimate(levels);
+        AnimateVis();
+        ClassicAnimate();
         if (_frame % 3 == 0) UpdateClock();
     }
 

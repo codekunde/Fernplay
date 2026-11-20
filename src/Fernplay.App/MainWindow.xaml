@@ -37,6 +37,8 @@
                                           AutomationProperties.Name="Media library" AutomationProperties.AcceleratorKey="Alt+L" />
                                 <MenuItem Header="Visualizer…   Ctrl+Shift+K" Click="Visualizer_Click"
                                           AutomationProperties.Name="Visualizer" AutomationProperties.AcceleratorKey="Ctrl+Shift+K" />
+                                <!-- The display area's modes and options (also on a right-click on the area); filled when the menu opens. -->
+                                <MenuItem x:Name="DisplayMenuItem" Header="Display" AutomationProperties.Name="Display" />
                                 <MenuItem x:Name="XfadeMenuItem" Header="Crossfade" IsCheckable="True"
                                           Checked="XfadeMenu_Changed" Unchecked="XfadeMenu_Changed" />
                                 <MenuItem Header="Settings…" Click="Settings_Click" />
@@ -76,6 +78,8 @@
                     <Grid Margin="3,3,4,2">
                         <Path x:Name="StateGlyph" Fill="{StaticResource LcdGreen}" Stretch="Uniform" Width="5" Height="5"
                               HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,3,0,0" Data="{StaticResource GlyphStop}" />
+                        <!-- The display area: bars and oscilloscope in the bottom strip, the vectorscope in a square at the left. Under the clock button. -->
+                        <local:SpectrumDisplay x:Name="Spectrum" />
                         <Button x:Name="ClockButton" Click="Clock_Click" HorizontalAlignment="Right" VerticalAlignment="Top"
                                 FocusVisualStyle="{StaticResource SkinFocus}" Cursor="Hand"
                                 ToolTip="Switch between time played and time left"
@@ -85,7 +89,6 @@
                             </Button.Template>
                             <local:SevenSegment x:Name="Clock" Text="0:00" />
                         </Button>
-                        <local:SpectrumBars x:Name="Spectrum" Height="14" VerticalAlignment="Bottom" />
                     </Grid>
                 </Border>
 

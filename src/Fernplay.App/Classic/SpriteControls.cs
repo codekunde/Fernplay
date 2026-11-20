@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Fernplay.Core.Audio;
 using Fernplay.Core.Skins;
 
 namespace Fernplay.App.Classic;
@@ -260,54 +261,112 @@ public sealed class SpriteEqGraph : FrameworkElement
 }
 
 /// <summary>
-/// The classic spectrum: 19 bars of 3 px with a 1 px gap in 76x16, coloured per row from VISCOLOR.TXT (2 = top, 17 = bottom),
-/// peak caps in colour 23, drawn over the player background. <see cref="Small"/>: the windowshade strip's 38x5, bars of
-/// 1 px, the 16 colours spread over 5 rows, no peak caps.
+/// The classic display area, drawn over the player background in the skin's VISCOLOR.TXT colours. Bars: thick = 19 bars
+/// of 3 px with a 1 px gap in 76x16, thin = 76 bars of 1 px; coloured per row (2 = top, 17 = bottom), peak caps in colour
+/// 23. Oscilloscope: dots or joined lines in colours 18 (middle, brightest) to 22 (top and bottom). Off: the background
+/// only. <see cref="Small"/>: the windowshade strip's 38x5 (thick = 19 bars of 1 px with a gap, thin = 38), the 16 bar
+/// colours spread over 5 rows, no peak caps. The vectorscope is not offered here (too small): a saved one shows the scope.
 /// </summary>
-public sealed class SpriteSpectrum : FrameworkElement
+public sealed class SpriteSpectrum : FrameworkElement, IVisDisplay
 {
-    private readonly float[] _levels = new float[ClassicLayout.SpectrumBars];
-    private readonly float[] _peaks = new float[ClassicLayout.SpectrumBars];
-    private readonly Brush[] _rows;
+    private readonly Brush[] _rows, _osc;
     private readonly Brush _peak;
-    private readonly int _height, _barWidth;
+    private readonly int _width, _height;
     private readonly bool _small;
+    private readonly SpectrumSmoother _smooth = new();
+    private readonly int[] _scopeRows = new int[ClassicLayout.SpectrumWidth];
+    private bool _live;
+    private VisSettings _s = new();
+    private VisMode _mode = VisMode.Bars;
 
     public SpriteSpectrum(ClassicSkin skin, bool small = false)
     {
         _small = small;
         _height = small ? ClassicLayout.ShadeSpectrumHeight : ClassicLayout.SpectrumHeight;
-        _barWidth = small ? 1 : 3;
-        Width = small ? ClassicLayout.ShadeSpectrumWidth : ClassicLayout.SpectrumWidth; Height = _height;
+        _width = small ? ClassicLayout.ShadeSpectrumWidth : ClassicLayout.SpectrumWidth;
+        Width = _width; Height = _height;
         _rows = new Brush[_height];
+        _osc = new Brush[_height];
         for (int y = 0; y < _height; y++)
+        {
             _rows[y] = Frozen(SkinBitmaps.ToColor(skin.VisColors[2 + (int)Math.Round(y * 15.0 / (_height - 1))]));
+            _osc[y] = Frozen(SkinBitmaps.ToColor(skin.VisColors[ScopeMath.ColorIndex(y, _height)]));
+        }
         _peak = Frozen(SkinBitmaps.ToColor(skin.VisColors[23]));
-        IsHitTestVisible = false;
+        VisInput.Attach(this, false, () => Clicked?.Invoke(this));
     }
 
     public static SpriteSpectrum Small(ClassicSkin skin) => new(skin, small: true);
 
-    public void Push(float[] levels)
+    public event Action<IVisDisplay>? Clicked;
+    public bool HasVectorscope => false;
+    public VisMode Mode => _mode;
+    public int BandCount => _s.Bars == BarStyle.Thin ? _width : ClassicLayout.SpectrumBars;
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new VisPeer(this, this, () => Clicked?.Invoke(this));
+
+    public void Apply(VisSettings settings)
     {
-        for (int i = 0; i < _levels.Length && i < levels.Length; i++)
+        _s = settings;
+        var mode = VisCycle.Shown(settings.Mode, false);
+        if (mode != _mode) { _smooth.Clear(); _live = false; _mode = mode; }
+        InvalidateVisual();
+    }
+
+    public void PushLevels(float[] levels)
+    {
+        _smooth.Push(levels, _s.BarFalloff, _s.PeakFalloff);
+        InvalidateVisual();
+    }
+
+    public void PushWave(float[] left, float[] right, bool live)
+    {
+        _live = live;
+        if (live)
         {
-            _levels[i] = Math.Max(levels[i], _levels[i] - 0.08f);
-            _peaks[i] = Math.Max(_levels[i], _peaks[i] - 0.015f);
+            int n = Math.Min(ScopeMath.Samples, left.Length), start = left.Length - n;
+            for (int x = 0; x < _width; x++)
+            {
+                int k = start + ScopeMath.SampleIndex(x, _width, n);
+                _scopeRows[x] = ScopeMath.Row((left[k] + right[k]) * 0.5f, _height);
+            }
         }
         InvalidateVisual();
     }
 
     protected override void OnRender(DrawingContext dc)
     {
-        int step = _barWidth + 1, hMax = _height;
-        for (int i = 0; i < _levels.Length; i++)
+        // Transparent over the whole area: it takes the click even when nothing is drawn (off, silence).
+        dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, _width, _height));
+        if (_mode == VisMode.Bars) RenderBars(dc);
+        else if (_mode == VisMode.Oscilloscope && _live) RenderScope(dc);
+    }
+
+    private void RenderBars(DrawingContext dc)
+    {
+        bool thin = _s.Bars == BarStyle.Thin;
+        int barWidth = thin || _small ? 1 : 3, step = thin ? 1 : barWidth + 1, hMax = _height;
+        var levels = _smooth.Levels;
+        var peaks = _smooth.Peaks;
+        for (int i = 0; i < levels.Length; i++)
         {
-            int x = i * step, h = (int)Math.Round(_levels[i] * hMax);
-            for (int y = hMax - h; y < hMax; y++) dc.DrawRectangle(_rows[y], null, new Rect(x, y, _barWidth, 1));
-            if (_small) continue;
-            int p = (int)Math.Round(_peaks[i] * hMax);
-            if (p > 0) dc.DrawRectangle(_peak, null, new Rect(x, Math.Max(0, hMax - p - 1), _barWidth, 1));
+            int x = i * step, h = (int)Math.Round(levels[i] * hMax);
+            if (x >= _width) break;
+            for (int y = hMax - h; y < hMax; y++) dc.DrawRectangle(_rows[y], null, new Rect(x, y, barWidth, 1));
+            if (_small || !_s.Peaks) continue;
+            int p = (int)Math.Round(peaks[i] * hMax);
+            if (p > 0) dc.DrawRectangle(_peak, null, new Rect(x, Math.Max(0, hMax - p - 1), barWidth, 1));
+        }
+    }
+
+    private void RenderScope(DrawingContext dc)
+    {
+        bool lines = _s.Scope == ScopeStyle.Lines;
+        for (int x = 0; x < _width; x++)
+        {
+            int row = _scopeRows[x];
+            var (from, to) = lines && x > 0 ? ScopeMath.Span(row, _scopeRows[x - 1]) : (row, row);
+            for (int r = from; r <= to; r++) dc.DrawRectangle(_osc[r], null, new Rect(x, r, 1, 1));
         }
     }
 

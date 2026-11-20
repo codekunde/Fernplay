@@ -61,6 +61,8 @@ public sealed class UserSettings
     public bool RemoteOn { get; set; }
     public int RemotePort { get; set; } = Fernplay.Core.Remote.RemoteServer.DefaultPort;
     public bool ShowRemaining { get; set; }
+    /// <summary>The player's display area: bars, oscilloscope, vectorscope or off, and how each is drawn.</summary>
+    public Fernplay.Core.Audio.VisSettings Vis { get; set; } = new();
     public List<string> Playlist { get; set; } = [];
     /// <summary>Names of the radio stations in <see cref="Playlist"/> (address → name).</summary>
     public Dictionary<string, string> StationNames { get; set; } = [];
@@ -130,6 +132,7 @@ public sealed class UserSettings
                 var s = JsonSerializer.Deserialize<UserSettings>(File.ReadAllText(FilePath), Json) ?? new UserSettings();
                 if (s.Bands.Length != 10) s.Bands = new double[10];
                 s.EqPresets = Fernplay.Core.Audio.UserEqPresets.Clean(s.EqPresets);
+                s.Vis = (s.Vis ?? new()).Clean();
                 return s;
             }
         }

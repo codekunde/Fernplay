@@ -147,6 +147,17 @@ public sealed class PlayerEngine : IDisposable
     public float[] GetSpectrum(int bands) =>
         _spectrum is { } s && State == PlayState.Playing ? s.GetLevels(bands) : new float[bands];
 
+    /// <summary>
+    /// The latest stereo samples (oldest first) for the oscilloscope and the vectorscope, after the EQ and before the
+    /// volume. False (and the spans untouched) when nothing plays, also while paused.
+    /// </summary>
+    public bool GetWave(Span<float> left, Span<float> right)
+    {
+        if (_spectrum is not { } s || State != PlayState.Playing) return false;
+        s.CopyWave(left, right);
+        return true;
+    }
+
     /// <summary>0 to 1.</summary>
     public float Volume
     {

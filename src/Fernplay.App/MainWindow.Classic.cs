@@ -233,6 +233,7 @@ public partial class MainWindow
         clockButton.Normal = clockButton.Pressed = null; // an invisible button over the digits
         clockButton.Width = clock.Width; clockButton.Height = clock.Height;
         var spectrum = Place(new SpriteSpectrum(skin), L.Spectrum);
+        AttachVis(spectrum);
         var title = Place(new SpriteText(bm) { Scrolls = true, Width = L.TitleWidth, Height = 6 }, L.Title);
         var kbps = Place(new SpriteText(bm) { Width = L.KbpsChars * SkinFont.CharWidth, Height = 6 }, L.Kbps);
         var khz = Place(new SpriteText(bm) { Width = L.KhzChars * SkinFont.CharWidth, Height = 6 }, L.Khz);
@@ -371,6 +372,7 @@ public partial class MainWindow
         Btn("Title.Close", L.Close, (9, 9), "Close Fernplay", "Close Fernplay", Close_Click);
 
         var spectrum = Place(SpriteSpectrum.Small(skin), L.ShadeSpectrum);
+        AttachVis(spectrum);
         var sign = Place(new SpriteText(bm) { Width = SkinFont.CharWidth, Height = SkinFont.CharHeight, IsHitTestVisible = false }, L.ShadeSign);
         var minutes = Place(new SpriteText(bm) { Width = 2 * SkinFont.CharWidth, Height = SkinFont.CharHeight, IsHitTestVisible = false }, L.ShadeMinutes);
         var seconds = Place(new SpriteText(bm) { Width = 2 * SkinFont.CharWidth, Height = SkinFont.CharHeight, IsHitTestVisible = false }, L.ShadeSeconds);
@@ -493,12 +495,10 @@ public partial class MainWindow
         v.Shade.Sign.Text = sign; v.Shade.Minutes.Text = minutes; v.Shade.Seconds.Text = seconds;
     }
 
-    private void ClassicAnimate(float[] levels)
+    private void ClassicAnimate()
     {
-        if (_classic is not { } v) return;
-        if (_shaded) { v.Shade.Spectrum.Push(levels); return; }
+        if (_classic is not { } v || _shaded) return;
         v.Title.Step();
-        v.Spectrum.Push(levels);
     }
 
     private void ClassicActivation(bool active)

@@ -13,7 +13,12 @@ public sealed class SpectrumTap(ISampleProvider source, PcmRing? pcm = null) : I
     public PcmRing? Pcm { get; } = pcm;
 
     private const int Size = 1024; // FFT length (power of two)
+
+    /// <summary>Stereo frames kept for the oscilloscope and the vectorscope (see <see cref="CopyWave"/>).</summary>
+    public const int WaveFrames = Size;
+
     private readonly float[] _ring = new float[Size];
+    private readonly float[] _left = new float[Size], _right = new float[Size];
     private int _pos;
     private readonly Lock _gate = new();
 
@@ -28,9 +33,18 @@ public sealed class SpectrumTap(ISampleProvider source, PcmRing? pcm = null) : I
         {
             for (int i = 0; i + ch <= n; i += ch)
             {
-                float sum = 0;
-                for (int c = 0; c < ch; c++) sum += buffer[i + c];
+                float sum = 0, sl = 0, sr = 0;
+                for (int c = 0; c < ch; c++)
+                {
+                    float v = buffer[i + c];
+                    sum += v;
+                    if (c % 2 == 0) sl += v; else sr += v;
+                }
+                // Mono goes to both sides; more than two channels are averaged as the visualizer's ring does.
+                float l = ch == 1 ? sum : sl / ((ch + 1) / 2), r = ch == 1 ? sum : sr / (ch / 2);
                 _ring[_pos] = sum / ch;
+                _left[_pos] = l;
+                _right[_pos] = r;
                 _pos = (_pos + 1) % Size;
             }
         }
@@ -39,7 +53,27 @@ public sealed class SpectrumTap(ISampleProvider source, PcmRing? pcm = null) : I
 
     public void Clear()
     {
-        lock (_gate) { Array.Clear(_ring); _pos = 0; }
+        lock (_gate) { Array.Clear(_ring); Array.Clear(_left); Array.Clear(_right); _pos = 0; }
+    }
+
+    /// <summary>
+    /// Copies the latest frames, oldest first, into <paramref name="left"/> and <paramref name="right"/> (as many as the
+    /// shorter span holds, at most <see cref="WaveFrames"/>). Allocates nothing.
+    /// </summary>
+    public int CopyWave(Span<float> left, Span<float> right)
+    {
+        int n = Math.Min(Math.Min(left.Length, right.Length), Size);
+        lock (_gate)
+        {
+            int start = (_pos - n + Size) % Size;
+            for (int i = 0; i < n; i++)
+            {
+                int k = (start + i) % Size;
+                left[i] = _left[k];
+                right[i] = _right[k];
+            }
+        }
+        return n;
     }
 
     /// <summary>Levels 0..1 for <paramref name="bands"/> log-spaced bands from 40 Hz to 16 kHz.</summary>

@@ -65,60 +65,6 @@ public sealed class SevenSegment : FrameworkElement
     private static Brush Frozen(Color c) { var b = new SolidColorBrush(c); b.Freeze(); return b; }
 }
 
-/// <summary>Spectrum analyser: bars green to yellow to red with peak caps that fall slowly.</summary>
-public sealed class SpectrumBars : FrameworkElement
-{
-    public const int Bands = 19;
-    private readonly float[] _levels = new float[Bands];
-    private readonly float[] _peaks = new float[Bands];
-    private static readonly Brush Bar;
-    private static readonly Brush Cap = Frozen(Color.FromRgb(0xC8, 0xCC, 0xD6));
-
-    static SpectrumBars()
-    {
-        var g = new LinearGradientBrush { StartPoint = new Point(0, 1), EndPoint = new Point(0, 0), MappingMode = BrushMappingMode.RelativeToBoundingBox };
-        g.GradientStops.Add(new GradientStop(Color.FromRgb(0x2F, 0xB8, 0x45), 0));
-        g.GradientStops.Add(new GradientStop(Color.FromRgb(0xE3, 0xCF, 0x4A), 0.6));
-        g.GradientStops.Add(new GradientStop(Color.FromRgb(0xE8, 0x5A, 0x33), 1));
-        g.Freeze();
-        Bar = g;
-    }
-
-    /// <summary>New levels 0..1; bars fall smoothly instead of jumping down.</summary>
-    public void Push(float[] levels)
-    {
-        for (int i = 0; i < Bands && i < levels.Length; i++)
-        {
-            _levels[i] = Math.Max(levels[i], _levels[i] - 0.08f);
-            _peaks[i] = Math.Max(_levels[i], _peaks[i] - 0.015f);
-        }
-        InvalidateVisual();
-    }
-
-    protected override void OnRender(DrawingContext dc)
-    {
-        double w = ActualWidth / Bands, h = ActualHeight;
-        // The gradient spans the whole height, so tall bars reach the red.
-        var clip = new RectangleGeometry(new Rect(0, 0, ActualWidth, h));
-        dc.PushClip(clip);
-        for (int i = 0; i < Bands; i++)
-        {
-            double x = i * w;
-            double bh = Math.Round(_levels[i] * h);
-            if (bh > 0)
-            {
-                dc.PushClip(new RectangleGeometry(new Rect(x, h - bh, w - 1, bh)));
-                dc.DrawRectangle(Bar, null, new Rect(x, 0, w - 1, h));
-                dc.Pop();
-            }
-            if (_peaks[i] > 0.02f) dc.DrawRectangle(Cap, null, new Rect(x, h - Math.Round(_peaks[i] * h) - 1, w - 1, 0.8));
-        }
-        dc.Pop();
-    }
-
-    private static Brush Frozen(Color c) { var b = new SolidColorBrush(c); b.Freeze(); return b; }
-}
-
 /// <summary>The scrolling song title in the display. Scrolls only when the text does not fit.</summary>
 public sealed class Marquee : FrameworkElement
 {
