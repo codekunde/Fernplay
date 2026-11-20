@@ -105,7 +105,7 @@ Open it from the app menu (Visualizer…) or with Ctrl+Shift+K. It draws MilkDro
 
   None flashes more than three times a second, even on loud beats. They sit in `Assets\Presets` next to `Fernplay.exe`, as `Fernplay - <name>.milk`, under the same MIT licence as Fernplay.
 - **Your own presets:** FOLDER… (or Preset folder… in the menu) picks a folder with MilkDrop presets (`.milk` files; subfolders count too), for example the `presets` folder of MilkDrop 2 or 3 or of Winamp, or one of projectM's preset packs. Fernplay presets in the menu goes back to Fernplay's own; untick it to return to your folder. Textures named by presets are looked for in that folder and in a `textures` folder in it or next to it. If your folder is gone (an unplugged drive, say), Fernplay's own show until it is back.
-- **Switching:** a new preset every 20 seconds, in random order (Settings → ADVANCED → VISUALIZER PRESET TIME, 5 seconds to 5 minutes; a change applies at once). NEXT (N) and BACK (P or Backspace) go forward and back through the presets shown; LOCK (L) keeps the current one until you press NEXT or BACK. The preset's name shows bottom right.
+- **Switching:** a new preset every 20 seconds, in random order (Settings → LOOK → VISUALIZER PRESET TIME, 5 seconds to 5 minutes; a change applies at once). NEXT (N) and BACK (P or Backspace) go forward and back through the presets shown; LOCK (L) keeps the current one until you press NEXT or BACK. The preset's name shows bottom right.
 - **Menu:** the button at the top left, or a right-click on the picture (also in full screen): Choose preset…, Shuffle (off: NEXT and the timer go A to Z from the preset showing), Lock preset, Always on top, Full screen, Fernplay presets (ticked while Fernplay's own show), Preset folder…, Close.
 - **Choose preset… (Ctrl+F):** every preset A to Z, with a search box: type part of a name (several words narrow it down). Up and Down, or a click, show a preset at once; Enter or a double-click keeps it and closes the list; Esc closes it. No preset changes by itself while the list is open.
 - **Classic skin:** with a classic skin on, the visualizer looks like Winamp's MilkDrop window: the skin's general-window frame (`GEN.BMP`) around the picture, with its title, close button and resize corner, and no Fernplay bars. Everything else is in the right-click menu (which also names the preset showing and has Next and Previous preset) and on the keys.
@@ -171,20 +171,25 @@ A media-button pause in the first 3 seconds of a song is ignored: some Windows 1
 
 Open them from the Fernplay icon at the top left of the player (Settings…, About Fernplay, Exit). About shows the version; CHECK FOR UPDATE asks GitHub for the newest release. When there is a newer one, the installed Fernplay offers UPDATE (download, check, install, restart); a portable or zip copy offers DOWNLOAD, which opens the release page.
 
-Settings has two tabs. **General:**
+Settings has three tabs. **General:**
 
 - **Keep Fernplay on top** of other windows.
 - **Snap panels** to each other and to the screen edges.
 - **Remember the playlist** between runs.
 - **Open music and playlists from Explorer** (on after installing with the MSI, off in a portable copy; for the current user only, no admin rights): adds Fernplay to Open with and Default apps, gives the files it plays its file icon, and adds "Add to Fernplay playlist" (files and folders) and "Play in Fernplay" (folders) to the right-click menu. Untick it to remove everything again. **Make Fernplay the default player…** then opens Windows' own page for the choice.
-- **Skin:** CHOOSE SKIN… picks a classic skin file, FERNPLAY LOOK goes back to Fernplay's own drawing, SIZE sets 1x, 1.5x or 1.75x for skins (see below).
-
-**Advanced:**
-
-- **Crossfade:** how long one song fades into the next when XFADE is on, 1 to 12 seconds.
-- **Visualizer preset time:** how long the visualizer shows each preset, 5 seconds to 5 minutes (20 seconds at first).
-- **Volume levelling:** OFF, TRACK (every song at the same loudness) or ALBUM (every album at the same loudness, the quiet and loud songs within it kept). Fernplay reads the ReplayGain tags in MP3 (ID3v2, APEv2), FLAC and M4A files; a tagger such as foobar2000, MusicBee or rsgain writes them. While it is on, files without tags and radio stations play 6 dB quieter, so they sit close to tagged music.
 - **Phone remote:** lets [Fernplay for Android](https://github.com/codekunde/Fernplay-Android) on your phone control this player over the home Wi-Fi (play, pause, stop, skip, seek, volume, shuffle, repeat, crossfade, pick from the playlist). Off by default. **Pair a phone…** shows a 6-digit code for 2 minutes to type into the app once; paired phones are listed with REMOVE. The connection is encrypted and only phones on the local network are answered (TCP port 47800, discovery on UDP 47801). Windows Firewall asks once the first time it is switched on: allow it on private networks.
+
+**Sound:**
+
+- **Output device:** "Windows default (follows changes)" plays on the device chosen in Windows, or pick speakers or headphones by name. A pick takes over at once, from the same place; while the chosen device is unplugged Fernplay plays on the Windows default and goes back when it returns.
+- **Crossfade:** how long one song fades into the next when XFADE is on, 1 to 12 seconds.
+- **Volume levelling:** OFF, TRACK (every song at the same loudness) or ALBUM (every album at the same loudness, the quiet and loud songs within it kept). Fernplay reads the ReplayGain tags in MP3 (ID3v2, APEv2), FLAC and M4A files; a tagger such as foobar2000, MusicBee or rsgain writes them. While it is on, files without tags and radio stations play 6 dB quieter, so they sit close to tagged music.
+
+**Look:**
+
+- **Skin:** CHOOSE SKIN… picks a classic skin file, FERNPLAY LOOK goes back to Fernplay's own drawing, SIZE sets 1x, 1.5x or 1.75x for skins (see below).
+- **Display area:** what the player's display shows (BARS, SCOPE, VECTOR in Fernplay's own look, or OFF), thick or thin bars, peak caps, how fast bars and peaks fall, and an oscilloscope of dots or lines. The same choices as a click or right-click on the display area.
+- **Visualizer preset time:** how long the visualizer shows each preset, 5 seconds to 5 minutes (20 seconds at first).
 
 Fernplay remembers the panel positions, which panels are shown, volume, balance, EQ and your own EQ presets, shuffle, repeat, crossfade, volume levelling, whether the phone remote is on, the playlist's height and width, the skin and its size, the playlist and station names in `%APPDATA%\CodeKunde\Fernplay\settings.json` (a portable copy: `Data\settings.json` next to `Fernplay.exe`). The `FERNPLAY_DATA` environment variable points it at another folder. The phone remote keeps its certificate (`remote-cert.bin`) and the paired phones (`remote-phones.bin`) beside it, encrypted for your Windows account.
 

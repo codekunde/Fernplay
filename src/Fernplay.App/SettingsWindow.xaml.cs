@@ -30,6 +30,7 @@ public partial class SettingsWindow : SkinDialog
             _ => LevelOff,
         }).IsChecked = true;
         ShowSkin();
+        ShowVis();
         RemoteCheck.IsChecked = App.Remote?.IsOn == true;
         _pairTimer.Tick += (_, _) => ShowPairing();
         if (App.Remote is { } remote)
@@ -260,21 +261,72 @@ public partial class SettingsWindow : SkinDialog
         if (dialog.ShowDialog(this) == true && Player?.ApplySkinFile(dialog.FileName) == false)
             SkinText.Text = "That file is not a classic skin; the reason shows in the player's title display.";
         else ShowSkin();
+        ShowVis(); // the vectorscope comes and goes with the look
     }
 
     private void FernplayLook_Click(object sender, RoutedEventArgs e)
     {
         Player?.UseFernplayLook();
         ShowSkin();
+        ShowVis();
     }
 
-    // Checked (not Click): UI Automation selects without a click. The other page is Hidden, so the window keeps its height.
+    // Checked (not Click): UI Automation selects without a click. The other pages are Hidden, so the window keeps its height.
     private void Tab_Checked(object sender, RoutedEventArgs e)
     {
-        if (GeneralPage is null || AdvancedPage is null) return; // during InitializeComponent
-        bool general = GeneralTab.IsChecked == true;
-        GeneralPage.Visibility = general ? Visibility.Visible : Visibility.Hidden;
-        AdvancedPage.Visibility = general ? Visibility.Hidden : Visibility.Visible;
+        if (GeneralPage is null || SoundPage is null || LookPage is null) return; // during InitializeComponent
+        GeneralPage.Visibility = GeneralTab.IsChecked == true ? Visibility.Visible : Visibility.Hidden;
+        SoundPage.Visibility = SoundTab.IsChecked == true ? Visibility.Visible : Visibility.Hidden;
+        LookPage.Visibility = LookTab.IsChecked == true ? Visibility.Visible : Visibility.Hidden;
+    }
+
+    // ================= Display area =================
+
+    /// <summary>Sets the display-area buttons from the settings; VECTOR only in Fernplay's own look.</summary>
+    private void ShowVis()
+    {
+        var vis = _settings.Vis;
+        bool ready = _ready;
+        _ready = false; // setting the buttons is not a choice
+        (vis.Mode switch
+        {
+            Fernplay.Core.Audio.VisMode.Oscilloscope => VisScope,
+            Fernplay.Core.Audio.VisMode.Vectorscope => VisVector,
+            Fernplay.Core.Audio.VisMode.Off => VisOff,
+            _ => VisBars,
+        }).IsChecked = true;
+        (vis.Bars == Fernplay.Core.Audio.BarStyle.Thin ? BarsThin : BarsThick).IsChecked = true;
+        PeaksToggle.IsChecked = vis.Peaks;
+        (vis.BarFalloff switch { Fernplay.Core.Audio.Falloff.Slow => BarFallSlow, Fernplay.Core.Audio.Falloff.Fast => BarFallFast, _ => BarFallNormal }).IsChecked = true;
+        (vis.PeakFalloff switch { Fernplay.Core.Audio.Falloff.Slow => PeakFallSlow, Fernplay.Core.Audio.Falloff.Fast => PeakFallFast, _ => PeakFallNormal }).IsChecked = true;
+        (vis.Scope == Fernplay.Core.Audio.ScopeStyle.Dots ? ScopeDots : ScopeLines).IsChecked = true;
+
+        bool vector = Player?.HasVectorscope ?? true;
+        VisVector.IsEnabled = vector;
+        VisVector.ToolTip = vector ? "Stereo vectorscope: left against right" : "Only in Fernplay's own look";
+        VisNote.Text = "A click on the player's display area switches between these too; a right-click has the same choices."
+            + (vector ? "" : " VECTOR is in Fernplay's own look only; a classic skin shows the oscilloscope instead.");
+        _ready = ready;
+    }
+
+    // Checked/Unchecked (not Click): UI Automation toggles without a click.
+    private void Vis_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || Player is not { } player) return;
+        var vis = _settings.Vis;
+        if (sender == PeaksToggle) vis.Peaks = PeaksToggle.IsChecked == true;
+        else if (sender is FrameworkElement { Tag: string tag } && tag.Split(':') is [var name, var value])
+        {
+            switch (name)
+            {
+                case "Mode": vis.Mode = Enum.Parse<Fernplay.Core.Audio.VisMode>(value); break;
+                case "Bars": vis.Bars = Enum.Parse<Fernplay.Core.Audio.BarStyle>(value); break;
+                case "BarFalloff": vis.BarFalloff = Enum.Parse<Fernplay.Core.Audio.Falloff>(value); break;
+                case "PeakFalloff": vis.PeakFalloff = Enum.Parse<Fernplay.Core.Audio.Falloff>(value); break;
+                case "Scope": vis.Scope = Enum.Parse<Fernplay.Core.Audio.ScopeStyle>(value); break;
+            }
+        }
+        player.ApplyDisplaySettings();
     }
 
     // Checked (not Click): UI Automation selects without a click.

@@ -45,6 +45,12 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>Settings changed the display-area choices: every display area takes them.</summary>
+    public void ApplyDisplaySettings() => ApplyVis();
+
+    /// <summary>The vectorscope exists only in Fernplay's own look (a classic skin's area is too small).</summary>
+    public bool HasVectorscope => _classic is null;
+
     /// <summary>The display area on screen now; Fernplay's rolled-up strip has none.</summary>
     private IVisDisplay? ActiveVis => _classic is { } v ? (_shaded ? v.Shade.Spectrum : v.Spectrum) : _shaded ? null : Spectrum;
 
