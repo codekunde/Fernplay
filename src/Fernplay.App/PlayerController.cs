@@ -1,5 +1,6 @@
 using System.Windows.Threading;
 using Fernplay.Core;
+using Fernplay.Core.Audio;
 
 namespace Fernplay.App;
 
@@ -502,9 +503,64 @@ public sealed class PlayerController : IDisposable
         NowPlayingChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    // ================= Output device =================
+
+    private SystemAudioDevices? _devices;
+    private DispatcherTimer? _devicesSettle;
+
+    /// <summary>The chosen playback device's ID (null: the Windows default), kept while it is not connected.</summary>
+    public string? OutputDevice { get; private set; }
+
+    /// <summary>A playback device was added, removed, plugged in or unplugged (on the UI thread, once per burst).</summary>
+    public event EventHandler? DevicesChanged;
+
+    /// <summary>Every playback device Windows knows, connected or not.</summary>
+    public IReadOnlyList<AudioDevice> Devices() => (_devices ??= WatchDevices()).List();
+
+    /// <summary>
+    /// Plays on this device (null: the Windows default). Takes over at once while a track plays; a device that is not
+    /// connected gives the default until it is back. <paramref name="why"/> goes to the log.
+    /// </summary>
+    public void SetOutputDevice(string? deviceId, string why)
+    {
+        OutputDevice = OutputDevices.Clean(deviceId);
+        _ = ApplyOutputDeviceAsync(why);
+    }
+
+    private async Task ApplyOutputDeviceAsync(string why)
+    {
+        var devices = Devices();
+        var use = OutputDevices.Resolve(OutputDevice, devices);
+        if (DiagnosticLog.Enabled)
+        {
+            string Name(string? id) => id is null ? OutputDevices.DefaultName : devices.FirstOrDefault(d => string.Equals(d.Id, id, StringComparison.OrdinalIgnoreCase))?.Name ?? "unknown device";
+            DiagnosticLog.Write(OutputDevice is not null && use is null
+                ? $"output device ({why}): \"{Name(OutputDevice)}\" is not connected, playing on the Windows default"
+                : $"output device ({why}): {Name(use)}");
+        }
+        try { await Engine.SetOutputDeviceAsync(use); }
+        catch (Exception ex) { DiagnosticLog.Write($"output device: switch failed: {PlaybackErrors.Detail(ex)}"); }
+    }
+
+    private SystemAudioDevices WatchDevices()
+    {
+        var devices = new SystemAudioDevices();
+        // Windows sends several notes for one plug (state, added, per role): act once they settle.
+        _devicesSettle = new DispatcherTimer(TimeSpan.FromMilliseconds(300), DispatcherPriority.Normal, (_, _) =>
+        {
+            _devicesSettle!.Stop();
+            _ = ApplyOutputDeviceAsync("devices changed");
+            DevicesChanged?.Invoke(this, EventArgs.Empty);
+        }, _ui) { IsEnabled = false };
+        devices.Changed += (_, _) => _ui.BeginInvoke(() => { _devicesSettle.Stop(); _devicesSettle.Start(); });
+        return devices;
+    }
+
     public void Dispose()
     {
         _tags?.Cancel();
+        _devicesSettle?.Stop();
+        _devices?.Dispose();
         Engine.Dispose();
     }
 }

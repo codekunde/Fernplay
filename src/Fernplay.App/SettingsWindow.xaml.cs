@@ -45,7 +45,49 @@ public partial class SettingsWindow : SkinDialog
             };
         }
         ShowRemote();
+        if (Player?.Controller is { } controller)
+        {
+            ShowDevices();
+            controller.DevicesChanged += OnDevicesChanged;
+            Closed += (_, _) => controller.DevicesChanged -= OnDevicesChanged;
+        }
         _ready = true;
+    }
+
+    // ================= Output device =================
+
+    private string? _shownDevices;
+
+    private void OnDevicesChanged(object? sender, EventArgs e) => ShowDevices();
+
+    /// <summary>
+    /// Fills the list; the items are replaced only when the devices really changed (new lists of equal items make
+    /// UI Automation, and so Narrator, lose them).
+    /// </summary>
+    private void ShowDevices()
+    {
+        if (Player?.Controller is not { } controller) return;
+        var entries = Fernplay.Core.Audio.OutputDevices.Entries(controller.OutputDevice, controller.Devices());
+        var key = string.Join("|", entries.Select(e => e.Id + "=" + e.Name));
+        bool ready = _ready;
+        _ready = false; // filling and selecting is not a choice
+        if (key != _shownDevices)
+        {
+            _shownDevices = key;
+            OutputDeviceBox.ItemsSource = entries;
+        }
+        OutputDeviceBox.SelectedIndex = Fernplay.Core.Audio.OutputDevices.IndexOf(entries, controller.OutputDevice);
+        _ready = ready;
+    }
+
+    // SelectionChanged also comes for keyboard and UI Automation choices; the guard skips the window's own filling.
+    private void OutputDevice_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (!_ready || Player?.Controller is not { } controller || OutputDeviceBox.SelectedItem is not Fernplay.Core.Audio.OutputDevices.Entry entry) return;
+        if (entry.Id == controller.OutputDevice) return;
+        controller.SetOutputDevice(entry.Id, "chosen in Settings");
+        _settings.OutputDevice = controller.OutputDevice;
+        _settings.Save(); // kept at once, not only at the next close
     }
 
     // ================= Phone remote =================

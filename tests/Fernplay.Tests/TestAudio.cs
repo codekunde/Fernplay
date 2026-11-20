@@ -38,6 +38,9 @@ public sealed class FakeOutput : IAudioOutput
     public bool Playing { get; private set; }
     public bool Disposed { get; private set; }
     public float LastPeak { get; private set; }
+    /// <summary>The device it stands for (null: the Windows default).</summary>
+    public string? DeviceId { get; init; }
+    public bool Initialised => _source is not null;
 
     public event EventHandler<StoppedEventArgs>? PlaybackStopped;
     public void Init(ISampleProvider source) => _source = source;

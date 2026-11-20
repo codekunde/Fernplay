@@ -562,6 +562,106 @@
         </Setter>
     </Style>
 
+    <!--
+        Drop-down list (settings: output device): the closed box is an inset well with light text and a bevelled arrow
+        button; the open list looks like the context menus (amber on charcoal, amber bar on the highlighted line).
+        The list is a popup: WPF gives it the scale of the box it opens from, so it is sized in skin pixels too.
+    -->
+    <Style x:Key="SkinComboItem" TargetType="ComboBoxItem">
+        <Setter Property="Foreground" Value="{StaticResource Amber}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="Bd" Background="Transparent" Padding="4,1.5,6,1.5" SnapsToDevicePixels="True">
+                        <ContentPresenter RecognizesAccessKey="False" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#3A3214" />
+                        </Trigger>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Amber}" />
+                            <Setter Property="Foreground" Value="#1A1C23" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SkinCombo" TargetType="ComboBox">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource SkinFocus}" />
+        <Setter Property="Foreground" Value="{StaticResource SkinText}" />
+        <Setter Property="FontFamily" Value="{StaticResource SkinFont}" />
+        <Setter Property="FontSize" Value="6" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Height" Value="11" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource SkinComboItem}" />
+        <Setter Property="ScrollViewer.CanContentScroll" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <!-- The whole box opens the list on a click; it is not a tab stop of its own. -->
+                        <ToggleButton x:Name="Box" Focusable="False" ClickMode="Press" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Padding="0" MinWidth="0" MinHeight="0"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="Well" Background="{StaticResource Lcd}" BorderBrush="{StaticResource Shadow}" BorderThickness="0.5" SnapsToDevicePixels="True">
+                                        <Border HorizontalAlignment="Right" Width="9" BorderBrush="{StaticResource Shadow}" BorderThickness="0.5,0,0,0">
+                                            <Border x:Name="Face" Background="{StaticResource ButtonFace}" BorderThickness="0.5,0.5,0,0" BorderBrush="#8A90A3">
+                                                <Path Data="M0,0 L4,0 L2,2.4 Z" Fill="{StaticResource SkinText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                        </Border>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Well" Property="Background" Value="#0A0F0B" />
+                                            <Setter TargetName="Face" Property="Background" Value="{StaticResource ButtonFaceHover}" />
+                                        </Trigger>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="Well" Property="BorderBrush" Value="{StaticResource TitleText}" />
+                                            <Setter TargetName="Face" Property="Background" Value="{StaticResource ButtonFacePressed}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <ContentPresenter x:Name="Selected" Margin="3,0,12,0" VerticalAlignment="Center" HorizontalAlignment="Left" IsHitTestVisible="False"
+                                          Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" RecognizesAccessKey="False">
+                            <ContentPresenter.Resources>
+                                <Style TargetType="TextBlock"><Setter Property="TextTrimming" Value="CharacterEllipsis" /></Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                        <Popup x:Name="PART_Popup" Placement="Bottom" VerticalOffset="1" AllowsTransparency="True" Focusable="False" PopupAnimation="None"
+                               IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                            <Border Background="#1A1C23" BorderBrush="#5A5F72" BorderThickness="0.5" Padding="1" SnapsToDevicePixels="True"
+                                    MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                    TextElement.FontFamily="{StaticResource SkinFont}" TextElement.FontSize="6" TextElement.FontWeight="Bold">
+                                <ScrollViewer Style="{StaticResource SkinScrollViewer}" MaxHeight="90" Focusable="False">
+                                    <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Selected" Property="TextElement.Foreground" Value="#FFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.35" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style TargetType="MenuItem">
         <Setter Property="Foreground" Value="{StaticResource Amber}" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />

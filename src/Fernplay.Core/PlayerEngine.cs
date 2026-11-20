@@ -16,8 +16,10 @@ public sealed class PlayerEngine : IDisposable
     public static readonly TimeSpan OpenAhead = TimeSpan.FromSeconds(3);
 
     private readonly Func<string, ITrackDecoder> _openDecoder;
-    private readonly Func<Task<IAudioOutput>> _createOutput;
+    private readonly Func<string?, Task<IAudioOutput>> _createOutput;
     private readonly Func<string, ReplayGain?> _readGain;
+    private string? _outputDevice;
+    private int _outputSwitch; // each change of output gets a number; an older one still opening is dropped
     private ReplayGain? _currentGain, _queuedGain;
     private LevelMode _levelling;
 
@@ -37,6 +39,10 @@ public sealed class PlayerEngine : IDisposable
 
     /// <param name="readGain">Reads a file's ReplayGain tags (null: none); not called for stations. Default: no tags.</param>
     public PlayerEngine(Func<string, ITrackDecoder> openDecoder, Func<Task<IAudioOutput>> createOutput, Func<string, ReplayGain?>? readGain = null)
+        : this(openDecoder, _ => createOutput(), readGain) { }
+
+    /// <param name="createOutput">Opens an output on a playback device by its ID (null: the Windows default).</param>
+    public PlayerEngine(Func<string, ITrackDecoder> openDecoder, Func<string?, Task<IAudioOutput>> createOutput, Func<string, ReplayGain?>? readGain = null)
     {
         _openDecoder = openDecoder;
         _createOutput = createOutput;
@@ -52,8 +58,30 @@ public sealed class PlayerEngine : IDisposable
         new(path => Track.IsStreamPath(path) && isEpisode?.Invoke(path) != true
             ? (ITrackDecoder?)IcyMp3Decoder.TryOpen(path) ?? new MediaFoundationDecoder(path)
             : new MediaFoundationDecoder(path),
-            WasapiAudioOutput.CreateAsync,
+            device => WasapiAudioOutput.CreateAsync(device),
             ReplayGainReader.TryRead);
+
+    /// <summary>The playback device outputs open on (null: the Windows default, following changes).</summary>
+    public string? OutputDevice => _outputDevice;
+
+    /// <summary>The device the open output is fixed to; null when it follows the Windows default or none is open.</summary>
+    public string? ActiveOutputDevice => _output?.DeviceId;
+
+    /// <summary>
+    /// Plays on this device from now on (null: the Windows default). With an output open, a new one is opened on the
+    /// device and takes over the chain at once: the track keeps its place and its playing or paused state (a gap of
+    /// about the output's buffer). Nothing happens when the output is on that device already. The caller checks that
+    /// the device is connected; one that cannot be opened gives the default (see the output factory).
+    /// </summary>
+    public async Task SetOutputDeviceAsync(string? deviceId)
+    {
+        _outputDevice = deviceId;
+        if (_output is not { } current || _outputBroken || current.DeviceId == deviceId) return;
+        await SwitchOutputAsync(current, deviceId, currentFailed: false);
+    }
+
+    /// <summary>The move to the default after a chosen device was lost, while it runs (tests wait for it).</summary>
+    internal Task OutputRecovery { get; private set; } = Task.CompletedTask;
 
     /// <summary>
     /// Volume levelling by ReplayGain tags; changes the playing and queued tracks at once. Untagged files and stations
@@ -175,7 +203,7 @@ public sealed class PlayerEngine : IDisposable
             {
                 DiagnosticLog.Write(_outputBroken ? "audio output: opening a new one after an error" : "audio output: opening");
                 CloseOutput();
-                var output = await _createOutput();
+                var output = await _createOutput(_outputDevice);
                 if (opening != _generation) { output.Dispose(); throw new OperationCanceledException("Another track was loaded meanwhile."); }
                 OpenChain(output, decoder.WaveFormat.SampleRate);
             }
@@ -289,9 +317,66 @@ public sealed class PlayerEngine : IDisposable
         var gain = new GainStage(spectrum) { Volume = _volume, Balance = _balance };
         output.Init(gain);
         output.PlaybackStopped += (_, e) => OnStopped(output, e);
+        _outputSwitch++; // a switch still opening its output was meant for the old chain
         mixer.NearEnd += (_, id) => { if (mixer == _mixer && _decoder is { } d && !Track.IsStreamPath(_currentPath ?? "") && d.TotalTime > TimeSpan.Zero) NearEnd?.Invoke(this, id); };
         mixer.Switched += (_, decoder) => OnSwitched(mixer, decoder);
         (_output, _mixer, _gain, _spectrum, _outputBroken) = (output, mixer, gain, spectrum, false);
+    }
+
+    /// <summary>
+    /// Opens an output on <paramref name="deviceId"/> and moves the chain (mixer → … → volume) over from
+    /// <paramref name="old"/>: the decoders keep their place, so the track goes on where it was. False when it was
+    /// dropped (a newer switch or load came first, or the device gave the same output as before).
+    /// </summary>
+    private async Task<bool> SwitchOutputAsync(IAudioOutput old, string? deviceId, bool currentFailed)
+    {
+        int switching = ++_outputSwitch;
+        long started = Environment.TickCount64;
+        IAudioOutput next;
+        try { next = await _createOutput(deviceId); }
+        catch (Exception ex)
+        {
+            DiagnosticLog.Write($"audio output: could not switch device: {PlaybackErrors.Detail(ex)}");
+            return false;
+        }
+        if (switching != _outputSwitch || old != _output || _gain is not { } source || (!currentFailed && next.DeviceId == old.DeviceId))
+        {
+            next.Dispose();
+            return false;
+        }
+        bool play = State == PlayState.Playing;
+        _output = next; // from here the old output's events (its stop, a late error) are ignored
+        next.PlaybackStopped += (_, e) => OnStopped(next, e);
+        try { old.Dispose(); } // stops it and waits for its audio thread: never two threads reading the chain
+        catch (Exception ex) { DiagnosticLog.Write($"audio output: closing the old one failed: {PlaybackErrors.Detail(ex)}"); }
+        try
+        {
+            next.Init(source);
+            if (play) next.Play();
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLog.Write($"audio output: the new device failed to start: {PlaybackErrors.Detail(ex)}");
+            _outputBroken = true; // the next load opens a new one
+            SetState(PlayState.Stopped);
+            PlaybackFailed?.Invoke(this, ex);
+            return false;
+        }
+        _outputBroken = false;
+        DiagnosticLog.Write($"audio output: moved to {(next.DeviceId is null ? "the Windows default" : "the chosen device")} in {Environment.TickCount64 - started} ms at {Position:m\\:ss\\.f}, {State}");
+        return true;
+    }
+
+    /// <summary>A chosen device was lost (unplugged): go on on the Windows default without stopping, if it opens.</summary>
+    private async Task RecoverOnDefaultAsync(IAudioOutput lost, Exception error)
+    {
+        await Task.Yield(); // off the output's own stop event before it is closed
+        if (lost != _output) return;
+        if (await SwitchOutputAsync(lost, null, currentFailed: true) || lost != _output) return;
+        DiagnosticLog.Write("audio output: the Windows default could not take over either");
+        _outputBroken = true;
+        SetState(PlayState.Stopped);
+        PlaybackFailed?.Invoke(this, error);
     }
 
     private void CloseOutput()
@@ -320,7 +405,12 @@ public sealed class PlayerEngine : IDisposable
     private void OnStopped(IAudioOutput output, StoppedEventArgs e)
     {
         if (output != _output) return;
-        if (e.Exception is not null)
+        if (e.Exception is not null && output.DeviceId is not null)
+        {
+            DiagnosticLog.Write($"audio output: the chosen device stopped with an error (unplugged?), going on on the Windows default: {PlaybackErrors.Detail(e.Exception)}");
+            OutputRecovery = RecoverOnDefaultAsync(output, e.Exception);
+        }
+        else if (e.Exception is not null)
         {
             DiagnosticLog.Write($"audio output stopped with an error (device gone or changed?): {PlaybackErrors.Detail(e.Exception)}");
             _outputBroken = true; // the next load opens a new one

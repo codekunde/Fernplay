@@ -21,7 +21,7 @@
                     <RadioButton x:Name="GeneralTab" GroupName="SettingsTab" Style="{StaticResource LedToggle}" Content="GENERAL" Checked="Tab_Checked"
                                  ToolTip="Windows, playlist, Explorer and skin" AutomationProperties.Name="General settings" />
                     <RadioButton x:Name="AdvancedTab" GroupName="SettingsTab" Style="{StaticResource LedToggle}" Content="ADVANCED" Margin="2,0,0,0" Checked="Tab_Checked"
-                                 ToolTip="Crossfade length, volume levelling, visualizer preset time and the phone remote" AutomationProperties.Name="Advanced settings" />
+                                 ToolTip="Output device, crossfade length, volume levelling, visualizer preset time and the phone remote" AutomationProperties.Name="Advanced settings" />
                 </StackPanel>
                 <Border Height="0.5" Background="#4A4F62" Margin="0,5,0,6" />
 
@@ -69,6 +69,14 @@
                     </StackPanel>
 
                     <StackPanel x:Name="AdvancedPage" Visibility="Hidden">
+                        <TextBlock x:Name="OutputDeviceLabel" Text="OUTPUT DEVICE" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" Margin="0,0,0,4" />
+                        <ComboBox x:Name="OutputDeviceBox" Style="{StaticResource SkinCombo}" SelectionChanged="OutputDevice_SelectionChanged"
+                                  ToolTip="The speakers or headphones Fernplay plays on" AutomationProperties.Name="Output device"
+                                  AutomationProperties.LabeledBy="{Binding ElementName=OutputDeviceLabel}" />
+                        <TextBlock Style="{StaticResource SkinLabel}" FontWeight="Normal" FontSize="5" Margin="0,3,0,0" TextWrapping="Wrap"
+                                   Text="Windows default follows the device chosen in Windows. A device picked here takes over at once; while it is unplugged Fernplay plays on the Windows default and goes back to it when it returns." />
+
+                        <Border Height="0.5" Background="#4A4F62" Margin="0,7,0,6" />
                         <TextBlock Text="CROSSFADE" Style="{StaticResource SkinLabel}" Foreground="{StaticResource TitleText}" Margin="0,0,0,4" />
                         <Grid>
                             <Grid.ColumnDefinitions>

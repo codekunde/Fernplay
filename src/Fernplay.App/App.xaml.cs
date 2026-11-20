@@ -64,6 +64,7 @@ public partial class App : Application
         c.CrossfadeSeconds = _settings.CrossfadeSeconds;
         c.CrossfadeOn = _settings.Crossfade;
         c.Engine.Levelling = _settings.Levelling;
+        c.SetOutputDevice(_settings.OutputDevice, "saved"); // before the first track opens its output
 
         var main = new MainWindow(c, _settings);
         MainWindow = main;
@@ -261,6 +262,7 @@ public partial class App : Application
             _settings.Crossfade = c.CrossfadeOn;
             _settings.CrossfadeSeconds = c.CrossfadeSeconds;
             _settings.Levelling = c.Engine.Levelling;
+            _settings.OutputDevice = c.OutputDevice;
             _settings.Playlist = _settings.RememberPlaylist ? c.Playlist.Tracks.Select(t => t.Path).ToList() : [];
             _settings.CurrentIndex = _settings.RememberPlaylist ? c.Playlist.CurrentIndex : -1;
             _settings.StationNames = _settings.RememberPlaylist

@@ -31,6 +31,9 @@ public partial class MainWindow : SkinWindow
         }
     }
 
+    /// <summary>Settings lists the playback devices and sets the one to play on here.</summary>
+    internal PlayerController Controller => _c;
+
     // ================= Phone remote: same paths as the controls, so the window shows what the phone did =================
 
     /// <summary>Volume, shuffle, repeat or crossfade changed (the phone remote tells the phone).</summary>

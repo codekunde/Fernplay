@@ -33,6 +33,11 @@ public sealed class UserSettings
     /// <summary>Volume levelling by ReplayGain tags: Off, Track or Album.</summary>
     public Fernplay.Core.Audio.LevelMode Levelling { get; set; }
     /// <summary>
+    /// The playback device chosen in Settings, by its Windows endpoint ID (not its name); null, empty or a device that
+    /// is not connected = the Windows default, following changes.
+    /// </summary>
+    public string? OutputDevice { get; set; }
+    /// <summary>
     /// MilkDrop3's exe as found by the user for 0.9.0's Visualizer menu item (which started MilkDrop3); now only a hint
     /// where presets may be when the preset folder is chosen.
     /// </summary>
