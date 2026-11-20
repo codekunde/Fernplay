@@ -54,6 +54,7 @@ public partial class MainWindow : SkinWindow
     private Window? _eq, _playlist;
     private bool _ready; // false while the constructor sets controls from the saved settings
     private MediaSession? _media; // Windows media session: background media keys and the overlay
+    private TaskbarThumbBar? _thumbBar; // Previous, Play/Pause, Next in the taskbar thumbnail
     /// <summary>
     /// On some Windows 11 PCs a media-button Pause arrives 50 ms to 2 s after a new track starts, with no key pressed
     /// (laptop diagnostics.log, 2026-11-06), leaving the next song paused. A Pause that soon after a start is ignored.
@@ -99,8 +100,8 @@ public partial class MainWindow : SkinWindow
         _c.Playlist.Changed += (_, _) => UpdateState();
         _anim.Tick += (_, _) => Animate();
         _anim.Start();
-        Closed += (_, _) => { _anim.Stop(); _media?.Dispose(); };
-        SourceInitialized += (_, _) => { StartMediaSession(); ApplyClassicScale(); };
+        Closed += (_, _) => { _anim.Stop(); _media?.Dispose(); _thumbBar?.Dispose(); };
+        SourceInitialized += (_, _) => { StartMediaSession(); StartThumbBar(); ApplyClassicScale(); };
         ShowNowPlaying();
         UpdateState();
         _ready = true;
@@ -292,6 +293,28 @@ public partial class MainWindow : SkinWindow
             PlayState.Paused => MediaSession.Status.Paused,
             _ => MediaSession.Status.Stopped,
         });
+    }
+
+    // ================= Taskbar thumbnail buttons =================
+
+    private void StartThumbBar()
+    {
+        _thumbBar = new TaskbarThumbBar(this, button => _ = TaskbarButtonAsync(button));
+        UpdateThumbBar();
+    }
+
+    private void UpdateThumbBar() => _thumbBar?.Update(_c.Engine.State, _c.Engine.IsLoaded, _c.Playlist.Tracks.Count);
+
+    /// <summary>A taskbar thumbnail button: the same calls as the player's buttons (Play/Pause as Space).</summary>
+    private async Task TaskbarButtonAsync(ThumbButton button)
+    {
+        DiagnosticLog.Write($"taskbar button {button} while {_c.Engine.State}");
+        switch (button)
+        {
+            case ThumbButton.Previous: await _c.PreviousAsync(); break;
+            case ThumbButton.PlayPause: await PlayPauseAsync(); break;
+            case ThumbButton.Next: await _c.NextAsync(); break;
+        }
     }
 
     private async Task PlayPauseAsync()
@@ -583,5 +606,6 @@ public partial class MainWindow : SkinWindow
         ClassicUpdateState(state);
         UpdateClock();
         UpdateMediaSession();
+        UpdateThumbBar();
     }
 }

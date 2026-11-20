@@ -147,6 +147,8 @@ If the media keys do nothing while Fernplay plays, another program has taken the
 
 A media-button pause in the first 3 seconds of a song is ignored: some Windows 11 PCs send one by themselves when a new song starts, which left the next song paused.
 
+**Taskbar buttons.** Hover over Fernplay's taskbar button: the preview has Previous, Play/Pause and Next. Play/Pause shows Pause while something plays; the buttons are greyed out while the playlist is empty.
+
 ## Settings
 
 ![Fernplay settings, General tab: keep on top, snap panels, remember the playlist, open from Explorer, skin and skin size](docs/screenshots/settings.png)
