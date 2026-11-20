@@ -48,6 +48,13 @@ $sa = Join-Path $stage 'standalone'
 Invoke-Dotnet publish $appProj -c Release -o $sa -nologo -v q `
     '-p:SelfContained=true' '-p:IncludeNativeLibrariesForSelfExtract=true' '-p:EnableCompressionInSingleFile=true'
 
+# Fernplay's own visualizer presets must be in both builds (the zips take whatever the publish folder holds).
+$presetCount = (Get-ChildItem (Join-Path $repo 'src\Fernplay.App\Assets\Presets') -Filter *.milk).Count
+foreach ($dir in $fd, $sa) {
+    $got = (Get-ChildItem (Join-Path $dir 'Assets\Presets') -Filter *.milk -ErrorAction SilentlyContinue).Count
+    if ($got -ne $presetCount) { throw "$dir has $got of the $presetCount presets in Assets\Presets" }
+}
+
 if (-not $SkipMsi) {
     # The MSI gets the standalone files without portable.txt.
     Invoke-Dotnet build (Join-Path $repo 'installer\Fernplay.Installer.wixproj') -c Release -nologo -v q `

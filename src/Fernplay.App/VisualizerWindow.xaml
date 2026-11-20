@@ -130,7 +130,11 @@
                                     <Separator />
                                     <MenuItem x:Name="FullMenuItem" Header="Full screen   F" Click="Full_Click"
                                               AutomationProperties.Name="Full screen" AutomationProperties.AcceleratorKey="F" />
-                                    <MenuItem Header="Preset folder…" Click="Folder_Click" />
+                                    <MenuItem x:Name="OwnPresetsMenuItem" Header="Fernplay presets" IsCheckable="True"
+                                              Checked="OwnPresetsMenu_Changed" Unchecked="OwnPresetsMenu_Changed"
+                                              AutomationProperties.Name="Fernplay presets"
+                                              AutomationProperties.HelpText="On: the presets that come with Fernplay. Off: your own preset folder." />
+                                    <MenuItem Header="Preset folder…" Click="Folder_Click" AutomationProperties.Name="Preset folder" />
                                     <Separator />
                                     <MenuItem Header="Close   Ctrl+Shift+K" Click="Close_Click"
                                               AutomationProperties.Name="Close the visualizer" AutomationProperties.AcceleratorKey="Ctrl+Shift+K" />

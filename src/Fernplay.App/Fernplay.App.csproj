@@ -26,6 +26,8 @@
     <Resource Include="Assets\Fernplay.ico" />
     <!-- File icon for audio files and playlists opened with Fernplay; shipped next to the exe for the file association. -->
     <None Include="Assets\FernplayFile.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <!-- Fernplay's own visualizer presets (MIT, ours), next to the exe in Assets\Presets; the installer lists each file. -->
+    <None Include="Assets\Presets\*.milk" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
   <!-- One exe that uses the installed .NET 10 Desktop Runtime (x64). -->

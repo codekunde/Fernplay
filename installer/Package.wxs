@@ -29,7 +29,9 @@
     <StandardDirectory Id="LocalAppDataFolder">
       <Directory Id="UserProgramsFolder" Name="Programs">
         <Directory Id="INSTALLFOLDER" Name="Fernplay">
-          <Directory Id="AssetsFolder" Name="Assets" />
+          <Directory Id="AssetsFolder" Name="Assets">
+            <Directory Id="PresetsFolder" Name="Presets" />
+          </Directory>
           <Directory Id="LicensesFolder" Name="licenses" />
         </Directory>
       </Directory>
@@ -55,6 +57,25 @@
         <File Id="FernplayFileIco" Source="$(PublishDir)Assets\FernplayFile.ico" />
         <RegistryValue Root="HKCU" Key="Software\CodeKunde\Fernplay\Install" Name="Assets" Type="integer" Value="1" KeyPath="yes" />
         <RemoveFolder Id="RemoveAssetsFolder" On="uninstall" />
+      </Component>
+      <!--
+        Fernplay's own visualizer presets (Assets\Presets). Listed one by one: a component in the user profile needs an
+        HKCU key path, so the files cannot be harvested into one component each. A test checks this list against the folder.
+      -->
+      <Component Id="VisualizerPresets" Directory="PresetsFolder" Guid="B955B51A-4228-458C-97E1-93AB5CD92927">
+        <File Id="PresetAmberTunnel" Source="$(PublishDir)Assets\Presets\Fernplay - Amber Tunnel.milk" />
+        <File Id="PresetBeatBloom" Source="$(PublishDir)Assets\Presets\Fernplay - Beat Bloom.milk" />
+        <File Id="PresetDriftingClouds" Source="$(PublishDir)Assets\Presets\Fernplay - Drifting Clouds.milk" />
+        <File Id="PresetDuskClouds" Source="$(PublishDir)Assets\Presets\Fernplay - Dusk Clouds.milk" />
+        <File Id="PresetKaleidoscope" Source="$(PublishDir)Assets\Presets\Fernplay - Kaleidoscope.milk" />
+        <File Id="PresetNightSky" Source="$(PublishDir)Assets\Presets\Fernplay - Night Sky.milk" />
+        <File Id="PresetPlasma" Source="$(PublishDir)Assets\Presets\Fernplay - Plasma.milk" />
+        <File Id="PresetSlowEq" Source="$(PublishDir)Assets\Presets\Fernplay - Slow EQ.milk" />
+        <File Id="PresetSpectrumHorizon" Source="$(PublishDir)Assets\Presets\Fernplay - Spectrum Horizon.milk" />
+        <File Id="PresetStarfield" Source="$(PublishDir)Assets\Presets\Fernplay - Starfield.milk" />
+        <File Id="PresetWaveformRibbon" Source="$(PublishDir)Assets\Presets\Fernplay - Waveform Ribbon.milk" />
+        <RegistryValue Root="HKCU" Key="Software\CodeKunde\Fernplay\Install" Name="Presets" Type="integer" Value="1" KeyPath="yes" />
+        <RemoveFolder Id="RemovePresetsFolder" On="uninstall" />
       </Component>
       <!-- The visualizer: libprojectM (LGPL-2.1, unmodified, its own DLLs) and GLEW, next to the exe (tools/Build-ProjectM.ps1). -->
       <Component Id="VisualizerFiles" Directory="INSTALLFOLDER" Guid="F0D284A3-27FB-4E6E-8715-9B40D4AD3357">

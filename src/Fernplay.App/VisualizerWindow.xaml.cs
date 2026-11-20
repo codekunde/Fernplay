@@ -12,7 +12,8 @@ namespace Fernplay.App;
 
 /// <summary>
 /// The visualizer: MilkDrop presets drawn by projectM from what Fernplay plays (after the EQ, before the volume).
-/// Its own window, resizable, with full screen. Presets come from a folder the user picks; Fernplay ships none.
+/// Its own window, resizable, with full screen. Fernplay's own presets (Assets\Presets) show until the user picks a
+/// folder of their own; the menu's Fernplay presets goes back to them.
 /// Keys while it is in front: N next preset, P or Backspace back, L lock, F / F11 / Alt+Enter / double-click full
 /// screen, Esc leaves full screen; the player's keys (Z X C V B, Space…) work too.
 /// </summary>
@@ -126,14 +127,15 @@ public partial class VisualizerWindow : SkinWindow
 
     // ================= Picture =================
 
-    /// <summary>Starts projectM on the saved preset folder, or asks for one.</summary>
+    /// <summary>Starts projectM on Fernplay's own presets or the user's folder; asks for a folder only if neither is there.</summary>
     private void Start()
     {
         if (_failed || _view is not null) return;
-        if (_settings.VisualizerFolder is not { } folder || !Directory.Exists(folder))
+        var (folder, _) = PresetSource();
+        if (!Directory.Exists(folder))
         {
-            ShowMessage("Choose a folder with MilkDrop presets (.milk files). Fernplay comes without presets: MilkDrop 2 and 3, " +
-                        "Winamp and projectM's preset packs have them.", folderButton: true);
+            ShowMessage("Fernplay's own presets are missing (reinstalling Fernplay puts them back). Choose a folder with MilkDrop " +
+                        "presets (.milk files): MilkDrop 2 and 3, Winamp and projectM's preset packs have them.", folderButton: true);
             return;
         }
         var view = _view = new VisualizerView(_pcm, folder, PresetSeconds, LockToggle.IsChecked == true, _settings.VisualizerShuffle);
@@ -199,20 +201,58 @@ public partial class VisualizerWindow : SkinWindow
         _view?.SetLocked(_settings.VisualizerLocked);
     }
 
-    private void Folder_Click(object sender, RoutedEventArgs e)
+    /// <summary>Fernplay's own presets, or the user's folder (Fernplay.Core.VisualizerPresets decides).</summary>
+    private (string Folder, bool Own) PresetSource() => Fernplay.Core.VisualizerPresets.Choose(_settings.VisualizerFolder,
+        _settings.VisualizerOwnPresets, Fernplay.Core.VisualizerPresets.OwnFolder(AppContext.BaseDirectory), Directory.Exists);
+
+    private void ShowPresetsFrom(string folder)
+    {
+        PresetText.Text = "";
+        _showing = -1;
+        if (_view is not null) _view.SetFolder(folder);
+        else Start();
+    }
+
+    private void Folder_Click(object sender, RoutedEventArgs e) => PickFolder();
+
+    /// <summary>The user picks a preset folder, which then shows instead of Fernplay's presets; false if cancelled.</summary>
+    private bool PickFolder()
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
             Title = "Folder with MilkDrop presets (.milk); its subfolders are included",
             InitialDirectory = _settings.VisualizerFolder is { } f && Directory.Exists(f) ? f : KnownPresetFolder() ?? "",
         };
-        if (dialog.ShowDialog(this) != true) return;
+        if (dialog.ShowDialog(this) != true) return false;
         _settings.VisualizerFolder = dialog.FolderName;
+        _settings.VisualizerOwnPresets = false;
         _settings.Save();
-        PresetText.Text = "";
-        _showing = -1;
-        if (_view is not null) _view.SetFolder(dialog.FolderName);
-        else Start();
+        ShowPresetsFrom(dialog.FolderName);
+        return true;
+    }
+
+    // Checked/Unchecked rather than Click: Narrator and other UI Automation clients toggle without a click.
+    private void OwnPresetsMenu_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_syncingMenu) return;
+        if (OwnPresetsMenuItem.IsChecked)
+        {
+            _settings.VisualizerOwnPresets = true;
+            _settings.Save();
+            ShowPresetsFrom(PresetSource().Folder);
+        }
+        else if (_settings.VisualizerFolder is { } folder && Directory.Exists(folder))
+        {
+            _settings.VisualizerOwnPresets = false; // back to the folder picked before
+            _settings.Save();
+            ShowPresetsFrom(folder);
+        }
+        else if (!PickFolder()) // no folder of the user's yet (or it is gone): unticking asks for one
+        {
+            _syncingMenu = true;
+            OwnPresetsMenuItem.IsChecked = true;
+            _syncingMenu = false;
+        }
     }
 
     /// <summary>A preset folder of an installed Winamp/MilkDrop, to open the picker there; null if none is found.</summary>
@@ -293,6 +333,7 @@ public partial class VisualizerWindow : SkinWindow
         ShuffleMenuItem.IsChecked = _settings.VisualizerShuffle;
         LockMenuItem.IsChecked = LockToggle.IsChecked == true;
         OnTopMenuItem.IsChecked = _settings.VisualizerOnTop;
+        OwnPresetsMenuItem.IsChecked = PresetSource().Own;
         _syncingMenu = false;
         foreach (var item in new[] { ChooseMenuItem, NextMenuItem, BackMenuItem, ShuffleMenuItem, LockMenuItem }) item.IsEnabled = _view is not null;
         // The preset showing, as a TextBlock: a plain string header would take "_" in a name as an access key.

@@ -44,6 +44,11 @@ public sealed class UserSettings
     public string? VisualizerPath { get; set; }
     /// <summary>The visualizer: folder with MilkDrop presets (subfolders included); null until the user picks one.</summary>
     public string? VisualizerFolder { get; set; }
+    /// <summary>
+    /// The visualizer shows Fernplay's own presets although a folder was picked (menu: Fernplay presets); the folder is
+    /// kept for going back. Without a picked folder Fernplay's own presets show anyway (Fernplay.Core.VisualizerPresets).
+    /// </summary>
+    public bool VisualizerOwnPresets { get; set; }
     /// <summary>Seconds each preset shows before the next (5 to 300; Settings offers Fernplay.Core.VisualizerTimes.Steps).</summary>
     public int VisualizerPresetSeconds { get; set; } = Fernplay.Core.VisualizerTimes.Default;
     /// <summary>The preset stays until NEXT or BACK.</summary>
