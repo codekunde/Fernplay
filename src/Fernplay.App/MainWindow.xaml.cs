@@ -165,6 +165,13 @@ public partial class MainWindow : SkinWindow
 
     private void Visualizer_Click(object sender, RoutedEventArgs e) => ShowVisualizer?.Invoke(true);
 
+    /// <summary>Opens (true) or closes the lyrics window (set by App).</summary>
+    public Action<bool>? ShowLyrics { get; set; }
+    /// <summary>Whether the lyrics window is open (set by App).</summary>
+    public Func<bool>? LyricsShown { get; set; }
+
+    private void Lyrics_Click(object sender, RoutedEventArgs e) => ShowLyrics?.Invoke(true);
+
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
@@ -213,6 +220,11 @@ public partial class MainWindow : SkinWindow
         if (key == Key.K && mods == (ModifierKeys.Control | ModifierKeys.Shift) && ShowVisualizer is not null)
         {
             ShowVisualizer(VisualizerShown?.Invoke() != true); // Ctrl+Shift+K opens or closes the visualizer (Winamp's key)
+            return true;
+        }
+        if (key == Key.L && mods == (ModifierKeys.Control | ModifierKeys.Shift) && ShowLyrics is not null)
+        {
+            ShowLyrics(LyricsShown?.Invoke() != true); // Ctrl+Shift+L opens or closes the lyrics
             return true;
         }
         if (key == Key.W && mods == ModifierKeys.Control)

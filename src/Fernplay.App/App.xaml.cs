@@ -140,11 +140,13 @@ public partial class App : Application
         }
         main.SkinApplying += NoteLibrarySide;
         VisualizerWindow? visualizer = null;
+        LyricsWindow? lyrics = null;
         main.SkinApplied += (skin, size) =>
         {
             libraryWindow.ApplySkin(skin, size);
             KeepLibraryBeside();
             visualizer?.ApplySkin(skin, size);
+            lyrics?.ApplySkin(skin, size);
         };
         main.ShadeChanging += NoteLibrarySide;
         main.ShadeChanged += KeepLibraryBeside;
@@ -225,6 +227,36 @@ public partial class App : Application
         main.ShowVisualizer = ShowVisualizer;
         main.VisualizerShown = () => visualizer is not null;
         if (_settings.VisualizerOpen) ShowVisualizer(true);
+
+        // The lyrics: made when opened (nothing is read or watched while closed), closed when closed. Owned by the player,
+        // as the library is: it goes with it when minimised and follows its "always on top".
+        void RememberLyrics(LyricsWindow l)
+        {
+            var size = l.LyricsSize;
+            (_settings.LyricsWidth, _settings.LyricsHeight) = (size.Width, size.Height);
+            _settings.Lyrics = new WindowPlace(l.Left, l.Top);
+        }
+        void ShowLyrics(bool show)
+        {
+            if (!show) { lyrics?.Close(); return; }
+            if (lyrics is null)
+            {
+                var l = lyrics = new LyricsWindow(c, _settings) { Owner = main, Topmost = _settings.AlwaysOnTop };
+                l.ApplySkin(main.Skin, _settings.SkinSize);
+                RouteKeys(l);
+                l.Closing += (_, _) => RememberLyrics(l);
+                l.Closed += (_, _) => { if (lyrics == l) lyrics = null; if (!quitting) _settings.LyricsOpen = false; };
+                // Beside the player's stack (or the library when it is beside the player), unless a place was saved.
+                var right = libraryWindow.IsVisible && Math.Abs(libraryWindow.Top - main.Top) < 1 ? libraryWindow : (Window)main;
+                Place(l, sameScale ? _settings.Lyrics : null, new Point(right.Left + right.ActualWidth, main.Top));
+                l.Show();
+                _settings.LyricsOpen = true;
+            }
+            lyrics.Activate();
+        }
+        main.ShowLyrics = ShowLyrics;
+        main.LyricsShown = () => lyrics is not null;
+        if (_settings.LyricsOpen) ShowLyrics(true);
         ApplyWindowSettings(_settings);
         main.Activate();
 
@@ -241,6 +273,8 @@ public partial class App : Application
             _settings.LibraryVisible = libraryWindow.IsVisible;
             _settings.VisualizerOpen = visualizer is not null;
             if (visualizer is not null) RememberVisualizer(visualizer);
+            _settings.LyricsOpen = lyrics is not null;
+            if (lyrics is not null) RememberLyrics(lyrics);
             if (libraryPlaced) _settings.Library = new WindowPlace(libraryWindow.Left, libraryWindow.Top);
             _settings.LibraryWidth = libraryWindow.LibrarySize.Width;
             _settings.LibraryHeight = libraryWindow.LibrarySize.Height;

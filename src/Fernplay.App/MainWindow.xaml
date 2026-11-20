@@ -37,6 +37,8 @@
                                           AutomationProperties.Name="Media library" AutomationProperties.AcceleratorKey="Alt+L" />
                                 <MenuItem Header="Visualizer…   Ctrl+Shift+K" Click="Visualizer_Click"
                                           AutomationProperties.Name="Visualizer" AutomationProperties.AcceleratorKey="Ctrl+Shift+K" />
+                                <MenuItem Header="Lyrics…   Ctrl+Shift+L" Click="Lyrics_Click"
+                                          AutomationProperties.Name="Lyrics" AutomationProperties.AcceleratorKey="Ctrl+Shift+L" />
                                 <!-- The display area's modes and options (also on a right-click on the area); filled when the menu opens. -->
                                 <MenuItem x:Name="DisplayMenuItem" Header="Display" AutomationProperties.Name="Display" />
                                 <MenuItem x:Name="XfadeMenuItem" Header="Crossfade" IsCheckable="True"

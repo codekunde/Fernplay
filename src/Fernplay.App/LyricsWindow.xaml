@@ -1,0 +1,148 @@
+<local:SkinWindow x:Class="Fernplay.App.LyricsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Fernplay.App"
+        xmlns:classic="clr-namespace:Fernplay.App.Classic"
+        Title="Fernplay lyrics" ShowInTaskbar="False">
+    <!--
+        Shell: the window's size in screen DIPs (LyricsSize). Root holds the panel at SkinWindow.Scale, so the text keeps
+        Fernplay's size on every skin. Classic skin: Frame draws GEN.BMP around Root (as the library and visualizer do),
+        the title bar and grip go, FrameTitle / FrameClose / FrameGrip take the mouse on the frame, and the colours come
+        from GENEX.BMP. Colours are the "Ly.*" resources set in ApplyColors.
+    -->
+    <Grid x:Name="Shell" Width="374" Height="442">
+        <classic:GenFrame x:Name="Frame" Visibility="Collapsed" />
+
+        <Border x:Name="Root" Background="{DynamicResource Ly.Window}" BorderBrush="#5A5F72" BorderThickness="0.5">
+            <Border.LayoutTransform><ScaleTransform ScaleX="{x:Static local:SkinWindow.Scale}" ScaleY="{x:Static local:SkinWindow.Scale}" /></Border.LayoutTransform>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid x:Name="TitleBar" Height="10" Margin="2,2,2,0" Style="{StaticResource TitleBar}">
+                    <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Center" Padding="5,0">
+                        <TextBlock Text="FERNPLAY LYRICS" Style="{StaticResource TitleLabel}" VerticalAlignment="Center" />
+                    </Border>
+                    <Border Background="{StaticResource FrameDark}" HorizontalAlignment="Right" Padding="1,1">
+                        <Button Style="{StaticResource TitleButton}" Content="x" Click="Close_Click"
+                                ToolTip="Close the lyrics (Ctrl+Shift+L)" AutomationProperties.Name="Close the lyrics" />
+                    </Border>
+                </Grid>
+
+                <!-- The lines; a message in their place when there are none. -->
+                <Border x:Name="Well" Grid.Row="1" Margin="4,3,4,0" Background="{DynamicResource Ly.Bg}" BorderBrush="{DynamicResource Ly.Edge}" BorderThickness="0.5">
+                    <Grid>
+                        <ListBox x:Name="Lines" Background="Transparent" BorderThickness="0" Padding="0" IsTextSearchEnabled="False"
+                                 FocusVisualStyle="{StaticResource SkinFocus}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 VirtualizingPanel.IsVirtualizing="False" SelectionMode="Single"
+                                 AutomationProperties.Name="Lyrics lines"
+                                 AutomationProperties.HelpText="The line being sung is selected. Up, Down, Page Up, Page Down, Home and End scroll; select a line to play from it.">
+                            <ListBox.Template>
+                                <ControlTemplate TargetType="ListBox">
+                                    <ScrollViewer x:Name="Scroller" Focusable="False" CanContentScroll="False"
+                                                  HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                        <ScrollViewer.Template>
+                                            <!-- As SkinScrollViewer (Skin.xaml), with a scroll bar named for this window. -->
+                                            <ControlTemplate TargetType="ScrollViewer">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" CanContentScroll="{TemplateBinding CanContentScroll}" />
+                                                    <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Style="{StaticResource SkinScrollBar}" Margin="1,0,0,0"
+                                                               Minimum="0" Maximum="{TemplateBinding ScrollableHeight}" Value="{TemplateBinding VerticalOffset}"
+                                                               ViewportSize="{TemplateBinding ViewportHeight}" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                                               AutomationProperties.Name="Scroll the lyrics" />
+                                                </Grid>
+                                            </ControlTemplate>
+                                        </ScrollViewer.Template>
+                                        <ItemsPresenter Margin="{TemplateBinding Padding}" />
+                                    </ScrollViewer>
+                                </ControlTemplate>
+                            </ListBox.Template>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Focusable" Value="False" />
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                                    <Setter Property="AutomationProperties.Name" Value="{Binding AutomationName}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource Ly.Text}" />
+                                    <Setter Property="FontFamily" Value="{StaticResource SkinFont}" />
+                                    <Setter Property="FontSize" Value="8" />
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="Row" Background="Transparent" Padding="5,1.5">
+                                                    <TextBlock x:Name="LineText" Text="{Binding Display}" TextWrapping="Wrap" TextAlignment="{Binding Alignment}"
+                                                               Foreground="{TemplateBinding Foreground}" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
+                                                            <Condition Binding="{Binding Clickable}" Value="True" />
+                                                        </MultiDataTrigger.Conditions>
+                                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource Ly.Hover}" />
+                                                        <Setter TargetName="Row" Property="Cursor" Value="Hand" />
+                                                    </MultiDataTrigger>
+                                                    <DataTrigger Binding="{Binding IsGap}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Ly.Dim}" />
+                                                    </DataTrigger>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource Ly.CurrentBg}" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource Ly.Current}" />
+                                                        <Setter TargetName="LineText" Property="FontWeight" Value="Bold" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+
+                        <TextBlock x:Name="MessageText" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="12,0"
+                                   MaxWidth="240" FontFamily="{StaticResource SkinFont}" FontSize="7" Foreground="{DynamicResource Ly.Text}"
+                                   TextWrapping="Wrap" TextAlignment="Center" AutomationProperties.AutomationId="LyricsMessage"
+                                   AutomationProperties.LiveSetting="Polite" />
+                    </Grid>
+                </Border>
+
+                <!-- Where the lyrics came from. -->
+                <Grid x:Name="BottomBar" Grid.Row="2" Height="10" Margin="4,2,4,2">
+                    <TextBlock x:Name="SourceText" FontFamily="{StaticResource SkinFont}" FontSize="6" Foreground="{DynamicResource Ly.Status}"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="1,0,10,0"
+                               AutomationProperties.AutomationId="LyricsSource" />
+                    <Thumb x:Name="Grip" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="8" Height="8" Margin="0,0,-3,-2" Cursor="SizeNWSE"
+                           Focusable="False" ToolTip="Drag to resize the lyrics" DragStarted="Grip_DragStarted" DragDelta="Grip_DragDelta">
+                        <Thumb.Template>
+                            <ControlTemplate TargetType="Thumb">
+                                <Grid Background="Transparent">
+                                    <Path Data="M7,1 L1,7 M7,4 L4,7" Stroke="#9CA2B5" StrokeThickness="0.6" />
+                                </Grid>
+                            </ControlTemplate>
+                        </Thumb.Template>
+                    </Thumb>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Classic skin only: the title bar drags, the skin's close button closes, the corner resizes. -->
+        <Border x:Name="FrameTitle" VerticalAlignment="Top" Background="Transparent" Visibility="Collapsed" />
+        <Button x:Name="FrameClose" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed" Click="Close_Click" Cursor="Hand"
+                Focusable="False" ToolTip="Close the lyrics (Ctrl+Shift+L)" AutomationProperties.Name="Close the lyrics">
+            <Button.Template>
+                <ControlTemplate TargetType="Button"><Border Background="Transparent" /></ControlTemplate>
+            </Button.Template>
+        </Button>
+        <Thumb x:Name="FrameGrip" HorizontalAlignment="Right" VerticalAlignment="Bottom" Visibility="Collapsed" Cursor="SizeNWSE" Focusable="False"
+               ToolTip="Drag to resize the lyrics" DragStarted="Grip_DragStarted" DragDelta="Grip_DragDelta">
+            <Thumb.Template>
+                <ControlTemplate TargetType="Thumb"><Border Background="Transparent" /></ControlTemplate>
+            </Thumb.Template>
+        </Thumb>
+    </Grid>
+</local:SkinWindow>

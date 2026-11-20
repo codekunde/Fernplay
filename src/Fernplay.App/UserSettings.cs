@@ -57,6 +57,11 @@ public sealed class UserSettings
     public WindowPlace? Visualizer { get; set; }
     public double VisualizerWidth { get; set; }
     public double VisualizerHeight { get; set; }
+    /// <summary>The lyrics window: open at the last close, its place, its size in skin pixels (0 = default).</summary>
+    public bool LyricsOpen { get; set; }
+    public WindowPlace? Lyrics { get; set; }
+    public double LyricsWidth { get; set; }
+    public double LyricsHeight { get; set; }
     /// <summary>The phone remote: on (listening on the home network) and its TCP port.</summary>
     public bool RemoteOn { get; set; }
     public int RemotePort { get; set; } = Fernplay.Core.Remote.RemoteServer.DefaultPort;
