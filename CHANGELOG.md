@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.11.0 (2026-11-21)
 
 - Settings has three tabs named for what is on them: GENERAL (on top, snap, remember the playlist, Explorer, phone remote), SOUND (output device, crossfade, volume levelling) and LOOK (skin and size, the display area's choices, visualizer preset time). ADVANCED is gone; its settings moved to SOUND, LOOK and GENERAL.
 - Output device: Settings → SOUND → OUTPUT DEVICE picks the speakers or headphones Fernplay plays on. "Windows default (follows changes)" stays the default and works as before. A device picked while a song plays takes over at once, from the same place and still playing or paused. If the chosen device is unplugged, Fernplay goes on playing on the Windows default and switches back when the device returns; while it is away the list shows it as "(not connected)", so the choice is kept.
